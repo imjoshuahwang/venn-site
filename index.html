@@ -401,7 +401,7 @@ body::after {
 <div id="hero">
   <nav class="h-nav"><button id="aboutBtn">About</button></nav>
   <img id="heroLogo" class="hero-logo" src="Venn_Horizontal_Logo_Light.png" alt="Venn">
-  <p class="begin-cta">Click to start</p>
+  <p class="begin-cta">Join the waitlist</p>
   <footer class="h-footer">
     <a href="mailto:contact@joinvenn.org">contact@joinvenn.org</a>
     <a href="https://linkedin.com/in/joshua-jaekang-hwang" target="_blank" rel="noopener">LinkedIn</a>
@@ -593,14 +593,14 @@ body::after {
         <input class="f-in" id="fEmail" type="email" placeholder="you@email.com" autocomplete="email">
         <p class="f-key">&nbsp;</p>
       </div>
-      <button class="f-btn" id="submitBtn">Send &rarr;</button>
+      <button class="f-btn" id="submitBtn">Join the waitlist &rarr;</button>
     </div>
 
     <!-- 14: success -->
     <div class="sl" data-type="success" data-theme="dark">
-      <p class="suc-h">You're in.</p>
-      <p class="suc-p">I'll reply within 24 hours. &mdash; Joshua</p>
-      <p class="suc-back">tap to go back</p>
+      <p class="suc-h">You're on the list.</p>
+      <p class="suc-p">We'll be in touch within 1&ndash;2 weeks. Not guaranteed, but we read every one.</p>
+      <p class="suc-back">tap anywhere to return</p>
     </div>
 
   </div>
@@ -672,7 +672,7 @@ function closeStory() {
   // reset forms
   ['fOrg','fNeed','fWant','fEmail'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   const btn = document.getElementById('submitBtn');
-  btn.disabled = false; btn.textContent = 'Send \u2192';
+  btn.disabled = false; btn.textContent = 'Join the waitlist \u2192';
   const navBack = document.getElementById('navBack');
   if (navBack) navBack.classList.remove('visible');
 }
@@ -723,6 +723,7 @@ function show(i) {
     if (sp) { sp.classList.remove('in'); raf2(() => sp.classList.add('in')); }
     const sb = s.querySelector('.suc-back');
     if (sb) { sb.classList.remove('in'); setTimeout(() => sb.classList.add('in'), 1600); }
+    setTimeout(() => closeStory(), 4000);
   }
 
   if (type === 'counter') runCounter();
