@@ -46,6 +46,12 @@ const size = (file: string) => {
   .logo-wall a { flex: 0 0 152px; height: 64px; display: flex; align-items: center; justify-content: center; }
   .logo-wall img { width: auto; height: auto; max-width: 130px; max-height: 40px; mix-blend-mode: multiply; filter: saturate(.45); opacity: .8; transition: opacity .3s, filter .3s; }
   .logo-wall a:hover img { opacity: 1; filter: none; }
+  /* Phones: three tighter columns so the wall doesn't push the pitch a full screen down. */
+  @media (max-width: 560px) {
+    .logo-wall { gap: 12px 8px; }
+    .logo-wall a { flex-basis: calc((100% - 16px) / 3); height: 48px; }
+    .logo-wall img { max-width: 92px; max-height: 28px; }
+  }
   .reach-block { margin-top: 64px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
   @media (min-width: 768px) { .reach-block { margin-top: 96px; } }
   .reach { font-size: clamp(3.5rem, 11vw, 7.5rem); font-weight: 600; line-height: 1; letter-spacing: -.055em; color: var(--black); font-variant-numeric: tabular-nums; }

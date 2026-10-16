@@ -125,4 +125,4 @@ It varies with the form and the IRS's current workload. Form 1023-EZ application
 
 ## Get help building it
 
-If you are already running a nonprofit, club, or project, apply to Venn. It is free, runs seasons, and picks a small batch of high school and college builders to connect with college clubs and companies in their field. It has reached 500,321 students across 21 countries. [Apply here](/#apply).
+If you are already running a nonprofit, club, or project, apply to Venn. It is free, runs seasons, and picks a small batch of high school and college builders to connect with college clubs and companies in their field. It has reached 500,320 students across 21 countries. [Apply here](/#apply).

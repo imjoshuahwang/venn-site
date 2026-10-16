@@ -36,7 +36,7 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
     <div class="q" data-step="name" hidden><label class="q-h" for="f-name">What's your name?</label><input id="f-name" name="name" required autocomplete="name"></div>
     <div class="q" data-step="email" hidden><label class="q-h" for="f-email">Where can we reach you?</label><input id="f-email" name="email" type="email" required autocomplete="email" placeholder="you@email.com"></div>
     <div class="q" data-step="org" hidden><label class="q-h" for="f-org" id="l-org">What school do you go to?</label><input id="f-org" name="org" required autocomplete="organization"></div>
-    <div class="q" data-step="link" hidden><label class="q-h" for="f-link">Anywhere we can see it?</label><p class="q-hint">Optional. Website, Instagram, LinkedIn.</p><input id="f-link" name="link" type="url" placeholder="https://"></div>
+    <div class="q" data-step="link" hidden><label class="q-h" for="f-link">Anywhere we can see it?</label><p class="q-hint">Optional. Website, Instagram, LinkedIn.</p><input id="f-link" name="link" inputmode="url" autocapitalize="off" spellcheck="false" placeholder="Link or @handle"></div>
     <div class="q" data-step="working_on" hidden><label class="q-h" for="f-work" id="l-work">What are you working on?</label><textarea id="f-work" name="working_on" required placeholder="What it is, who it's for, how far along it is"></textarea></div>
     <div class="q" data-step="need" hidden><label class="q-h" for="f-need" id="l-need">What would help most right now?</label><p class="q-hint">Optional.</p><textarea id="f-need" name="need" placeholder="A mentor, a partner club, a first event, funding..."></textarea></div>
   </div>
@@ -85,16 +85,20 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
     const el = field(s) as HTMLInputElement | undefined;
     return !el || (el.required ? !!el.value.trim() && el.checkValidity() : el.checkValidity());
   };
+  const hint = (s: string) => ({
+    level: 'Tell us a bit more first.', building: 'Pick at least one.', name: 'Add your name to keep going.',
+    email: 'That email looks off. Try you@email.com.', org: 'Fill this in to keep going.', working_on: 'A sentence or two is plenty.',
+  } as Record<string, string>)[s] ?? 'Answer this one to keep going.';
   const paint = () => {
     const steps = flow(), i = steps.indexOf(at), last = i === steps.length - 1;
-    const k = Math.round((i / steps.length) * 100);
+    const k = Math.round((i / (steps.length - 1)) * 100);
     bar.style.transform = `scaleX(${k / 100})`;
     pct.textContent = `${k}% done`;
     back.style.visibility = i ? 'visible' : 'hidden';
     nav.hidden = !i;
     next.hidden = at === 'role' || (at === 'level' && picked.level !== 'other');
     next.textContent = last ? 'Send application' : (at === 'link' || at === 'need') && !field(at).value.trim() ? 'Skip' : 'Next';
-    next.disabled = !ok(at);
+    next.classList.toggle('off', !ok(at));
   };
   const go = (to: string, dir: 1 | -1) => {
     q(at).hidden = true;
@@ -106,11 +110,12 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
     at = to;
     status.textContent = '';
     paint();
-    el.querySelector<HTMLElement>('input:not([type=checkbox]), textarea')?.focus({ preventScroll: true });
+    // Text steps focus the field; choice steps focus the picked (or first) button so keyboard users stay in the form.
+    (el.querySelector<HTMLElement>('input:not([type=checkbox]), textarea') ?? el.querySelector<HTMLElement>('.choice.on, .choice, .chip input'))?.focus({ preventScroll: true });
   };
   const step = (dir: 1 | -1) => {
     const steps = flow(), i = steps.indexOf(at);
-    if (dir > 0 && !ok(at)) return;
+    if (dir > 0 && !ok(at)) { status.textContent = hint(at); return; }
     if (dir > 0 && i === steps.length - 1) return send();
     go(steps[i + dir], dir);
   };
@@ -136,7 +141,7 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
     setTimeout(() => step(1), 180);
   });
   back.addEventListener('click', () => step(-1));
-  form.addEventListener('input', paint);
+  form.addEventListener('input', () => { status.textContent = ''; paint(); });
   form.addEventListener('change', (e) => {
     if (e.target === other()) {
       const t = field('building_other');
@@ -228,7 +233,7 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
   .chip input:checked + span { background: var(--black); color: #fff; box-shadow: none; }
   .choice:focus-visible, .chip input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
   .q-nav { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-  .q-next:disabled { opacity: .3; cursor: default; transform: none; }
+  .q-next:disabled, .q-next.off { opacity: .3; cursor: default; transform: none; }
   .hp { position: absolute; left: -9999px; }
   .form-status { font-size: 15px; }
   .form-status:empty { display: none; }
