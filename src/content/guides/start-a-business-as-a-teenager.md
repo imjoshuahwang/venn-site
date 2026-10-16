@@ -124,4 +124,4 @@ Freelance digital services for local businesses, selling products or art online,
 
 ## Get help building it
 
-If you are already running a business or startup, apply to Venn. It is free, runs seasons, and picks a small batch of high school builders to connect with college clubs and companies in their field. [Apply here](/#apply).
+If you are already running a business or startup, apply to Venn. It is free, runs seasons, and picks a small batch of high school and college builders to connect with college clubs and companies in their field. [Apply here](/#apply).

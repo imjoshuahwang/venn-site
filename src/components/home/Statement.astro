@@ -96,6 +96,8 @@ const tiles: [number, number, number, number, string, string, string, number, nu
     .tile .ico { width: 30px; height: 30px; margin: 0; border-radius: 9px; transform: none; opacity: 1; background: rgba(255, 255, 255, .7); box-shadow: none; }
     .tile-l { font-size: 13px; font-weight: 500; color: var(--black); letter-spacing: -.01em; }
     .tile:not(.top) > * { opacity: .55; }
+    /* Unlit letters as translucent ink so they stay readable where tiles pass behind them. */
+    .c { color: rgba(24, 24, 26, .24); }
   }
 </style>
 

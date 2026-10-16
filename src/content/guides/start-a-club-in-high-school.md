@@ -139,4 +139,4 @@ Give it a concrete recurring activity, a goal with a deadline, and real roles fo
 
 ## Get help building it
 
-If your club is already up and running and you want to take it further, apply to Venn. It is a free program that runs seasons, picks a small batch of high school builders, and connects them with college clubs and companies in their field. [Apply here](/#apply).
+If your club is already up and running and you want to take it further, apply to Venn. It is a free program that runs seasons, picks a small batch of high school and college builders, and connects them with college clubs and companies in their field. [Apply here](/#apply).

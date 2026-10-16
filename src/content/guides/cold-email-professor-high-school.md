@@ -153,4 +153,4 @@ Some do, especially when the student has relevant skills and the work can be don
 
 ## Get help building it
 
-If you are already working on a research project or something else in your field, apply to Venn. It is free, runs seasons, and picks a small batch of high schoolers who are building things, then connects them with college clubs and companies in their field. [Apply here](/#apply).
+If you are already working on a research project or something else in your field, apply to Venn. It is free, runs seasons, and picks a small batch of high school and college students who are building things, then connects them with college clubs and companies in their field. [Apply here](/#apply).
