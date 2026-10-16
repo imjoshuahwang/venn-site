@@ -7,7 +7,15 @@ export async function getStaticPaths() {
 }
 
 const { g } = Astro.props;
-const { Content, headings } = await render(g);
+const { headings } = await render(g);
+// Split the rendered article on h2 so two Apply cards can sit ~1/3 and ~2/3 of the way through (build time, no JS).
+const parts = (g.rendered?.html ?? '').split(/(?=<h2[\s>])/);
+const n = parts.length - 1;
+const ctaAt = new Map<number, string>();
+if (n >= 3) {
+  ctaAt.set(Math.round(n / 3) + 1, 'Building something? Apply to Venn.');
+  ctaAt.set(Math.min(n, Math.round((2 * n) / 3) + 1), 'Have a project in mind? Apply to Venn.');
+}
 const toc = headings.filter((h) => h.depth === 2);
 const date = g.data.pubDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
 const words = (g.body ?? '').split(/\s+/).length;
@@ -33,12 +41,25 @@ const schema = {
       <span>Written by <b>Joshua Hwang</b> · {date} · {Math.max(1, Math.round(words / 230))} min read</span>
     </div>
   </div>
-  <div class="wrap article-grid">
+  <div class="article-grid">
     <nav class="toc" aria-label="On this page">
       {toc.map((h) => <a href={`#${h.slug}`}>{h.text}</a>)}
     </nav>
-    <article class="prose">
-      <Content />
+    <article class="prose narrow">
+      {parts.map((html, i) => (
+        <>
+          {ctaAt.has(i) && (
+            <aside class="cta-glass" aria-label="Apply to Venn">
+              <div class="cta-card">
+                <p class="cta-h">{ctaAt.get(i)}</p>
+                <p class="cta-sub">Free for students, always.</p>
+                <a class="btn" href="/#apply">Apply to Venn</a>
+              </div>
+            </aside>
+          )}
+          <Fragment set:html={html} />
+        </>
+      ))}
       <div class="cta-box">
         <h2>Building something?</h2>
         <p>Venn connects high schoolers with college clubs and companies in their field. Free.</p>
@@ -63,11 +84,13 @@ const schema = {
   .byline { display: flex; align-items: center; gap: 12px; margin-top: 28px; padding-bottom: 28px; border-bottom: 1px solid var(--line); font-size: 14px; color: var(--muted); }
   .byline img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
   .byline b { color: var(--text); font-weight: 500; }
-  .article-grid { display: grid; gap: 40px; padding-block: 48px 96px; }
-  @media (min-width: 1024px) { .article-grid { grid-template-columns: 220px minmax(0, 680px); justify-content: center; gap: 64px; } }
+  /* The prose column is centered on the page (same 720px measure as the header); the TOC hangs in the left gutter. */
+  .article-grid { padding-block: 48px 96px; }
+  @media (min-width: 1200px) { .article-grid { display: grid; grid-template-columns: 1fr minmax(0, 720px) 1fr; } }
   .toc { display: none; }
-  @media (min-width: 1024px) {
-    .toc { display: block; position: sticky; top: 100px; align-self: start; font-size: 13px; }
+  @media (min-width: 1200px) {
+    .toc { display: block; grid-column: 1; justify-self: end; width: 200px; margin-right: 8px; position: sticky; top: 100px; align-self: start; font-size: 13px; }
+    .prose { grid-column: 2; width: 100%; }
     .toc a { display: block; padding: 5px 0 5px 12px; border-left: 2px solid var(--line); color: var(--faint); text-decoration: none; line-height: 1.4; }
     .toc a:hover, .toc a.active { color: var(--black); border-color: var(--black); }
   }
@@ -83,6 +106,18 @@ const schema = {
   .prose :global(blockquote) { margin-left: 0; padding-left: 20px; border-left: 2px solid var(--black); color: var(--text); }
   .prose :global(table) { width: 100%; border-collapse: collapse; font-size: 15px; display: block; overflow-x: auto; }
   .prose :global(th), .prose :global(td) { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  .cta-glass { position: relative; isolation: isolate; padding: 28px 0; margin-block: 2.4em; }
+  .cta-glass::before, .cta-glass::after { content: ''; position: absolute; z-index: -1; pointer-events: none; border-radius: 50%; }
+  .cta-glass::before { left: 0; top: 0; width: 72%; height: 100%; background: radial-gradient(closest-side, rgba(159, 191, 154, .75), rgba(159, 191, 154, .35) 50%, transparent); }
+  .cta-glass::after { right: 0; top: 0; width: 55%; height: 100%; background: radial-gradient(closest-side, rgba(196, 212, 239, .8), rgba(196, 212, 239, .35) 50%, transparent); }
+  .cta-card {
+    border-radius: 28px; padding: 28px 24px;
+    background: rgba(255, 255, 255, .42); -webkit-backdrop-filter: blur(28px) saturate(1.8); backdrop-filter: blur(28px) saturate(1.8);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .95), inset 0 0 0 1px rgba(255, 255, 255, .6), inset 0 -1px 0 rgba(255, 255, 255, .35), 0 40px 90px -40px rgba(30, 45, 35, .3);
+  }
+  @media (min-width: 640px) { .cta-card { padding: 36px 40px; } }
+  .prose .cta-h { font-size: clamp(1.35rem, 3.5vw, 1.75rem); font-weight: 600; letter-spacing: -.03em; line-height: 1.2; color: var(--text); margin: 0; }
+  .prose .cta-sub { color: var(--muted); margin: 6px 0 20px; }
   .cta-box { margin-top: 64px; background: var(--panel); border-radius: 22px; padding: 32px; }
   .cta-box h2 { font-size: 24px; letter-spacing: -.02em; }
   .cta-box p { color: var(--body); margin: 8px 0 20px; }
