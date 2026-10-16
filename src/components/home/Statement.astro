@@ -1,0 +1,133 @@
+---
+// Big statement: letters light up as you scroll; highlighted words get a small icon.
+const icons: Record<string, string> = {
+  cap: '<path d="M22 10 12 5 2 10l10 5 10-5z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/>',
+  users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5M16 4.6a3.5 3.5 0 0 1 0 6.8M18.5 14.8c1.6.8 2.6 2.6 3 5.2"/>',
+  heart: '<path d="M12 20s-7.5-4.4-9-9.2C2 7.4 4.4 4.5 7.5 4.5c2 0 3.5 1.1 4.5 2.6 1-1.5 2.5-2.6 4.5-2.6 3.1 0 5.5 2.9 4.5 6.3C19.5 15.6 12 20 12 20z"/>',
+  bulb: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>',
+  rocket: '<path d="M5 15c-1.5 1.3-2 4-2 6 2 0 4.7-.5 6-2M9 12a22 22 0 0 1 11-9c0 4-1.5 8-9 11M9 12H5l2-4h5M12 15v4l4-2v-5"/>',
+  columns: '<path d="M3 21h18M4 10h16M12 3l9 5H3zM6 10v8M10 10v8M14 10v8M18 10v8"/>',
+  briefcase: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"/>',
+};
+for (const k in icons) icons[k] = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${icons[k]}</svg>`;
+const statement: [string, string?][] = [
+  ['Venn is a free program for'], ['high school and college students', 'cap'], ['already building something: a'], ['club,', 'users'],
+  ['a'], ['nonprofit,', 'heart'], ['a'], ['project,', 'bulb'], ['or a'], ['startup.', 'rocket'],
+  ['Each season we pick a small batch and connect them with the'], ['college clubs', 'columns'], ['and'],
+  ['companies,', 'briefcase'], ['and students in their field.'],
+];
+
+// Spotlight tiles, placed from viewport center in 1440px-wide units: x, y, w, h, color, icon, label,
+// drift speed, growth, outward direction, and whether it floats above the text (only small ones, out past the text's edges).
+const tiles: [number, number, number, number, string, string, string, number, number, number, boolean][] = [
+  [-461, -132, 253, 317, 'g', 'columns', 'College clubs', 1.15, 2.8, -1, false],
+  [-259, -285, 201, 251, 'b', 'heart', 'Nonprofit', 1.5, 1, 0, false],
+  [-660, 60, 130, 160, 'w', 'bulb', 'Project', 1.25, 1, 0, true],
+  [530, -40, 140, 100, 'g', 'rocket', 'Startup', 1.7, 1, 0, true],
+  [257, 185, 115, 154, 'b', 'users', 'Club', 1.35, 1, 0, false],
+  [318, -262, 213, 266, 'w', 'briefcase', 'Companies', 1.1, 3.2, 1, false],
+];
+---
+<section class="statement">
+  <div class="st-pin">
+    {tiles.map(([x, y, w, h, c, icon, label, s, g, o, top]) => (
+      <div class:list={['tile', c, { top }]} aria-hidden="true" style={`--x:${x};--y:${y};--w:${w};--h:${h};--s:${s};--g:${g};--o:${o}`}>
+        <span class="ico" set:html={icons[icon]} />
+        <span class="tile-l">{label}</span>
+      </div>
+    ))}
+    <div class="wrap">
+      <p class="statement-text" id="statement">
+        {statement.map(([text, icon]) => icon
+          ? <><span class="kw"><span class="ico" set:html={icons[icon]} />{text.split(' ').map((w, i, a) => <><span class="wd">{[...w].map((c) => <span class="c">{c}</span>)}</span>{i < a.length - 1 && ' '}</>)}</span>{' '}</>
+          : text.split(' ').map((w) => <><span class="wd">{[...w].map((c) => <span class="c">{c}</span>)}</span>{' '}</>))}
+      </p>
+      <a class="btn reveal" href="#apply">Apply for Fall ’26</a>
+    </div>
+  </div>
+</section>
+
+<style>
+  .statement { padding-bottom: 0; position: relative; z-index: 1; }
+  .wrap { text-align: center; position: relative; z-index: 2; }
+  .statement-text {
+    font-size: clamp(1.9rem, 4.8vw, 3.6rem); font-weight: 600; letter-spacing: -.04em; line-height: 1.18;
+    max-width: 24ch; margin: 0 auto 48px;
+  }
+  .wd { white-space: nowrap; }
+  .c { color: #c9c9cc; transition: color .3s var(--ease); }
+  .c.lit { color: var(--black); }
+  .ico {
+    display: inline-flex; align-items: center; justify-content: center; vertical-align: -.08em;
+    width: .9em; height: .9em; margin-right: .18em; border-radius: .24em; background: var(--panel);
+    box-shadow: inset 0 0 0 1px var(--line); color: var(--black);
+    transform: scale(.4); opacity: 0; transition: transform .5s cubic-bezier(.34, 1.56, .64, 1), opacity .3s;
+  }
+  .ico :global(svg) { width: 62%; height: 62%; }
+  .kw.lit .ico { transform: none; opacity: 1; }
+  .tile { display: none; }
+
+  /* Spotlight: the text holds dead center on a pinned stage while soft tiles wipe open around it and drift off the top.
+     --p (stage progress), and per tile --r (wipe) and --d (drift) are set from scroll below. */
+  @media (min-width: 900px) and (min-height: 640px) and (prefers-reduced-motion: no-preference) {
+    .statement { height: 350vh; padding: 0; }
+    .st-pin {
+      position: sticky; top: 0; height: 100vh; overflow: hidden; display: grid; place-items: center;
+      --u: calc(100vw / 1440); pointer-events: none;
+    }
+    .wrap { width: 100%; }
+    .statement-text, .wrap .btn { pointer-events: auto; }
+    .tile {
+      display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start;
+      position: absolute; z-index: 1; padding: 16px;
+      left: calc(50% + var(--x) * var(--u)); top: calc(50% + var(--y) * var(--u));
+      width: calc(var(--w) * var(--u)); height: calc(var(--h) * var(--u));
+      --k: calc(1 + (var(--g) - 1) * var(--d, 0));
+      transform: translate(calc(var(--o) * var(--d, 0) * 16vw), calc(var(--d, 0) * var(--s) * -120vh)) scale(var(--k));
+      clip-path: inset(calc((1 - var(--r, 0)) * 100%) 0 0 0 round calc(18px / var(--k)));
+      will-change: transform, clip-path;
+    }
+    .tile.top { z-index: 3; -webkit-backdrop-filter: blur(4px) saturate(1.3); backdrop-filter: blur(4px) saturate(1.3); }
+    .g { background: linear-gradient(160deg, #e3ece1, #c8d9c4); }
+    .b { background: linear-gradient(160deg, #eaf0f9, #c9d8f0); }
+    .w { background: linear-gradient(160deg, #f6f4f1, #e8e4de); }
+    .top.g { background: linear-gradient(160deg, rgba(227, 236, 225, .5), rgba(200, 217, 196, .5)); }
+    .top.w { background: linear-gradient(160deg, rgba(246, 244, 241, .5), rgba(232, 228, 222, .5)); }
+    .tile .ico { width: 30px; height: 30px; margin: 0; border-radius: 9px; transform: none; opacity: 1; background: rgba(255, 255, 255, .7); box-shadow: none; }
+    .tile-l { font-size: 13px; font-weight: 500; color: var(--black); letter-spacing: -.01em; }
+    .tile:not(.top) > * { opacity: .55; }
+  }
+</style>
+
+<script>
+  import { onScroll, clamp, calm } from '../../scripts/scroll';
+
+  const section = document.querySelector<HTMLElement>('.statement')!;
+  const text = document.getElementById('statement')!;
+  const letters = [...text.querySelectorAll<HTMLElement>('.c')];
+  const kws = [...text.querySelectorAll<HTMLElement>('.kw')];
+  const tiles = [...section.querySelectorAll<HTMLElement>('.tile')];
+  const pinMq = matchMedia('(min-width: 900px) and (min-height: 640px) and (prefers-reduced-motion: no-preference)');
+
+  const light = (lit: number) => {
+    letters.forEach((c, i) => c.classList.toggle('lit', i < lit));
+    kws.forEach((k) => k.classList.toggle('lit', !!k.querySelector('.c.lit')));
+  };
+  if (calm) light(letters.length);
+  else onScroll(() => {
+    const vh = innerHeight;
+    if (pinMq.matches) {
+      // Lighting runs over the first 35% of the pin; tiles wipe open from 10%, drift off by 85%.
+      const r = section.getBoundingClientRect();
+      const p = clamp(-r.top / (r.height - vh));
+      light(clamp(p / 0.35) * letters.length);
+      tiles.forEach((t, i) => {
+        t.style.setProperty('--r', clamp((p - 0.1 - i * 0.006) / 0.03).toFixed(4));
+        t.style.setProperty('--d', clamp((p - 0.1) / 0.75).toFixed(4));
+      });
+    } else {
+      const r = text.getBoundingClientRect();
+      light(clamp((vh * 0.8 - r.top) / (r.height + vh * 0.2)) * letters.length);
+    }
+  });
+</script>

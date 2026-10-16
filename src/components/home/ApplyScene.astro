@@ -1,0 +1,102 @@
+---
+import ApplyForm from '../ApplyForm.astro';
+---
+<section class="apply-scene">
+  <div class="apply-stop" id="apply"></div>
+  <div class="apply-pin">
+    <div class="apply-bg" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div class="glass">
+      <span class="glass-tease" aria-hidden="true">Apply to Venn.</span>
+      <div class="glass-in">
+        <h2 class="apply-h">Apply to Venn.</h2>
+        <p class="apply-sub">Free for students, always.</p>
+        <ApplyForm />
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  @property --H { syntax: '<length>'; inherits: true; initial-value: 600px; }
+
+  .apply-scene { padding: 0; position: relative; }
+  /* #apply lands here, so every Apply link arrives at the fully open card. */
+  .apply-stop { position: absolute; left: 0; top: 0; width: 1px; height: 1px; scroll-snap-align: start; scroll-snap-stop: always; }
+  .apply-pin { position: relative; overflow: hidden; padding: 48px 16px 64px; }
+  .apply-bg {
+    position: absolute; inset: 0; pointer-events: none;
+    -webkit-mask-image: linear-gradient(transparent, #000 18%, #000 82%, transparent); mask-image: linear-gradient(transparent, #000 18%, #000 82%, transparent);
+  }
+  .apply-bg i { position: absolute; width: 70vmax; aspect-ratio: 1; animation: drift 22s ease-in-out infinite alternate; }
+  .apply-bg i:nth-child(1) { background: radial-gradient(closest-side, rgba(159, 191, 154, .5), rgba(159, 191, 154, .28) 40%, rgba(159, 191, 154, .1) 70%, transparent); left: -30vmax; top: -18vmax; }
+  .apply-bg i:nth-child(2) { background: radial-gradient(closest-side, rgba(196, 212, 239, .7), rgba(196, 212, 239, .38) 40%, rgba(196, 212, 239, .12) 70%, transparent); right: -32vmax; top: -6vmax; width: 75vmax; animation-duration: 27s; animation-delay: -9s; }
+  .apply-bg i:nth-child(3) { background: radial-gradient(closest-side, rgba(159, 191, 154, .4), rgba(159, 191, 154, .2) 45%, rgba(159, 191, 154, .07) 72%, transparent); left: 10%; bottom: -34vmax; width: 62vmax; animation-duration: 31s; animation-delay: -16s; }
+  @keyframes drift { to { transform: translate(7vw, -5vh) scale(1.12); } }
+  .glass {
+    position: relative; max-width: 760px; margin: 0 auto; padding: 32px 20px; border-radius: 28px;
+    background: rgba(255, 255, 255, .42); -webkit-backdrop-filter: blur(28px) saturate(1.8); backdrop-filter: blur(28px) saturate(1.8);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .95), inset 0 0 0 1px rgba(255, 255, 255, .6), inset 0 -1px 0 rgba(255, 255, 255, .35), 0 40px 90px -40px rgba(30, 45, 35, .3);
+  }
+  @media (min-width: 640px) { .glass { padding: 48px 56px; } }
+  .glass-tease { display: none; }
+  .apply-h { font-size: clamp(2.2rem, 5vw, 3.4rem); font-weight: 600; letter-spacing: -.045em; line-height: 1; }
+  .apply-sub { color: var(--muted); margin-top: 10px; }
+  @media (prefers-reduced-motion: reduce) { .apply-bg i { animation: none; } }
+
+  /* Big screens: the card arrives as a circle (--a), opens into the card (--b) and holds while pinned.
+     The scene tucks up under the statement so the circle surfaces just below its button. */
+  @media (min-width: 900px) and (min-height: 640px) and (prefers-reduced-motion: no-preference) {
+    :global(html) { scroll-snap-type: y proximity; }
+    .apply-scene { height: 250vh; margin-top: calc(56px - 50vh); }
+    .apply-stop { top: calc(60vh + 88px); }
+    .apply-pin {
+      position: sticky; top: 0; height: 100vh; padding: 0; display: grid; place-items: center; pointer-events: none;
+      --D: min(46vh, 380px); --W: min(760px, calc(100vw - 64px));
+    }
+    .glass {
+      max-width: none; margin: 0; padding: 0; overflow: hidden; pointer-events: auto;
+      width: calc(var(--D) + (var(--W) - var(--D)) * var(--b, 0));
+      height: calc(var(--D) + (var(--H) - var(--D)) * var(--b, 0));
+      border-radius: calc(var(--D) / 2 + (36px - var(--D) / 2) * var(--b, 0));
+      transform: scale(calc(.4 + .6 * var(--a, 0)));
+      opacity: var(--a, 0);
+      transition: --H .45s var(--ease);
+    }
+    .glass-tease {
+      display: grid; place-items: center; position: absolute; inset: 0;
+      font-size: clamp(1.6rem, 3vw, 2.2rem); font-weight: 600; letter-spacing: -.04em; color: var(--black);
+      opacity: clamp(0, calc(1 - var(--b, 0) * 2.5), 1);
+    }
+    .glass-in {
+      position: absolute; left: 50%; top: 50%; width: var(--W); translate: -50% -50%;
+      padding: 48px 56px; opacity: clamp(0, calc((var(--b, 0) - .6) * 2.5), 1);
+    }
+  }
+</style>
+
+<script>
+  import { onScroll, clamp, ease } from '../../scripts/scroll';
+
+  const scene = document.querySelector<HTMLElement>('.apply-scene')!;
+  const pin = scene.querySelector<HTMLElement>('.apply-pin')!;
+  const glass = scene.querySelector<HTMLElement>('.glass')!;
+  const inner = scene.querySelector<HTMLElement>('.glass-in')!;
+  const pinMq = matchMedia('(min-width: 900px) and (min-height: 640px) and (prefers-reduced-motion: no-preference)');
+
+  // Card height follows its content (capped to the viewport); --H is a registered length, so it eases between questions.
+  let content = 0, H = '';
+  const fit = () => {
+    const h = `${Math.round(Math.min(content, innerHeight - 64))}px`;
+    if (h !== H) glass.style.setProperty('--H', (H = h));
+  };
+  new ResizeObserver(([e]) => { content = e.borderBoxSize[0].blockSize; fit(); }).observe(inner);
+
+  // Approach: the circle scales in as the scene enters. Morph: it opens over the first 60vh of pinned scroll, then holds.
+  onScroll(() => {
+    if (!pinMq.matches) return;
+    const vh = innerHeight, r = scene.getBoundingClientRect();
+    pin.style.setProperty('--a', ease(clamp((vh - r.top) / vh)).toFixed(4));
+    pin.style.setProperty('--b', ease(clamp(-r.top / (0.6 * vh))).toFixed(4));
+    fit();
+  });
+</script>

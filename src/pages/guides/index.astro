@@ -1,0 +1,36 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getCollection } from 'astro:content';
+
+const guides = (await getCollection('guides')).sort((a, b) => +b.data.pubDate - +a.data.pubDate);
+---
+<Base title="Guides for high school builders | Venn" description="Free, practical guides for high schoolers starting nonprofits, clubs, projects, and startups. Step by step, written for students.">
+  <section style="padding-top:150px">
+    <div class="narrow">
+      <p class="label">Guides</p>
+      <h1 class="h2" style="margin-top:12px">Guides for high school builders.</h1>
+      <p class="lede">Step-by-step guides for starting and growing nonprofits, clubs, projects, and startups in high school.</p>
+      <div class="guide-list">
+        {guides.map((g) => (
+          <a class="guide-row" href={`/guides/${g.id}/`}>
+            <div><h3>{g.data.title}</h3><p>{g.data.description}</p></div>
+            <span class="arrow">→</span>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .lede { font-size: clamp(1.05rem, 2vw, 1.25rem); color: var(--muted); font-weight: 400; margin-top: 16px; max-width: 38rem; }
+  .guide-list { display: grid; gap: 0; margin-top: 40px; border-top: 1px solid var(--line); }
+  .guide-row {
+    display: flex; justify-content: space-between; gap: 24px; align-items: baseline;
+    padding: 22px 0; border-bottom: 1px solid var(--line); text-decoration: none;
+  }
+  .guide-row h3 { font-size: 19px; font-weight: 500; letter-spacing: -.015em; line-height: 1.35; }
+  .guide-row p { font-size: 15px; color: var(--muted); margin-top: 4px; }
+  .guide-row .arrow { color: var(--faint); transition: transform .3s var(--ease); }
+  .guide-row:hover .arrow { transform: translateX(4px); color: var(--black); }
+</style>

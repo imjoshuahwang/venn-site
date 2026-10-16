@@ -1,0 +1,24 @@
+---
+import Base from '../layouts/Base.astro';
+import Hero from '../components/home/Hero.astro';
+import LogoWall from '../components/home/LogoWall.astro';
+import Statement from '../components/home/Statement.astro';
+import ApplyScene from '../components/home/ApplyScene.astro';
+import Faq from '../components/home/Faq.astro';
+
+const schema = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'Venn',
+  url: 'https://joinvenn.org',
+  logo: 'https://joinvenn.org/Venn_Square_Logo_Dark.png',
+  email: 'contact@joinvenn.org',
+};
+---
+<Base title="Venn: the student organization connector" description="Venn is a free program that connects high school and college students building clubs, nonprofits, projects, and startups with college clubs and companies in their field. Apply for Fall ’26." schema={schema}>
+  <Hero />
+  <LogoWall />
+  <Statement />
+  <ApplyScene />
+  <Faq />
+</Base>

@@ -1,0 +1,27 @@
+---
+const faq = [
+  ['Is Venn free?', 'Yes. Venn is free for students, always.'],
+  ['Who can apply?', 'High school and college students who are already building something: a club, a nonprofit, a project, or a startup. It does not need to be big. It needs to be real.'],
+  ['What is a season?', 'Venn runs four seasons a year, like a startup accelerator. The current one is Fall ’26. Each season we pick a small batch of students. High schoolers meet college clubs and companies in their field; college students meet high schoolers and other college builders.'],
+  ['I run a startup. Can I apply?', 'Yes, if you are a high school or college student. We connect you with the clubs, companies, and students who can help you build.'],
+  ['I run a college club. What would you ask of us?', 'One 45-minute virtual session for the batch, where your members show what they build and the students bring their own projects. Partner clubs are featured on the season page.'],
+];
+---
+<section id="faq">
+  <div class="narrow">
+    <h2 class="h2 reveal">Questions</h2>
+    <div class="faq">
+      {faq.map(([q, a]) => <details><summary>{q}</summary><p>{a}</p></details>)}
+    </div>
+  </div>
+</section>
+
+<style>
+  .faq { margin-top: 40px; border-top: 1px solid var(--line); }
+  .faq details { border-bottom: 1px solid var(--line); padding: 20px 0; }
+  .faq summary { cursor: pointer; font-size: 17px; font-weight: 500; list-style: none; display: flex; justify-content: space-between; gap: 16px; }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::after { content: "+"; color: var(--faint); font-weight: 400; }
+  .faq details[open] summary::after { content: "−"; }
+  .faq details p { color: var(--body); margin-top: 12px; max-width: 40rem; }
+</style>

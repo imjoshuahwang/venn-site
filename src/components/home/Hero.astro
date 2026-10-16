@@ -1,0 +1,30 @@
+---
+// Hero headline arrives letter by letter.
+const headline = 'Connecting students with companies';
+let hi = 0;
+const words = headline.split(' ').map((w) => [...w].map((c) => [c, hi++] as const));
+---
+<section class="hero">
+  <div class="wrap">
+    <h1 aria-label={headline}>{words.map((w) => <><span class="hw" aria-hidden="true">{w.map(([c, i]) => <span class="hc" style={`--i:${i}`}>{c}</span>)}</span>{' '}</>)}</h1>
+    <div class="hero-cta reveal">
+      <a class="btn" href="#apply">Apply for Fall ’26</a>
+      <a class="btn btn-ghost" href="#logos">See who we've worked with</a>
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero { padding: 160px 0 0; text-align: center; overflow: hidden; }
+  .hero h1 {
+    font-size: clamp(2.75rem, 8vw, 6rem); font-weight: 600; letter-spacing: -.045em; line-height: 1.02;
+    max-width: 14ch; margin: 0 auto;
+  }
+  .hero .wrap { width: 100%; }
+  .hw { display: inline-block; white-space: nowrap; }
+  .hc { display: inline-block; animation: hc-in .9s var(--ease) both; animation-delay: calc(var(--i) * 28ms); }
+  @keyframes hc-in { from { opacity: 0; transform: translateY(.28em); filter: blur(10px); } }
+  .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 56px; }
+  .hero-cta.reveal { transition-delay: .12s; }
+  @media (prefers-reduced-motion: reduce) { .hc { animation: none; } }
+</style>

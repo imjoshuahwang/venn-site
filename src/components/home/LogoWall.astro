@@ -1,0 +1,73 @@
+---
+import fs from 'node:fs';
+
+const logos = [
+  ['microsoft.svg', 'Microsoft', 'https://www.microsoft.com'], ['runway.svg', 'Runway', 'https://runwayml.com'],
+  ['y-combinator.svg', 'Y Combinator', 'https://www.ycombinator.com'], ['harvard.svg', 'Harvard', 'https://www.harvard.edu'],
+  ['stanford.svg', 'Stanford', 'https://www.stanford.edu'], ['mit.svg', 'MIT', 'https://www.mit.edu'],
+  ['uc-berkeley.svg', 'UC Berkeley', 'https://www.berkeley.edu'], ['columbia.svg', 'Columbia', 'https://www.columbia.edu'],
+  ['yale.svg', 'Yale', 'https://www.yale.edu'], ['princeton.svg', 'Princeton', 'https://www.princeton.edu'],
+  ['caltech.svg', 'Caltech', 'https://www.caltech.edu'], ['johns-hopkins.svg', 'Johns Hopkins', 'https://www.jhu.edu'],
+  ['emory.svg', 'Emory', 'https://www.emory.edu'], ['northwestern.svg', 'Northwestern', 'https://www.northwestern.edu'],
+  ['usc.svg', 'USC', 'https://www.usc.edu'], ['cu-boulder.svg', 'University of Colorado Boulder', 'https://www.colorado.edu'],
+  ['nepc.png', 'National Education Policy Center', 'https://nepc.colorado.edu'],
+];
+
+// Intrinsic size per file so each img reserves its box: SVG viewBox (else width/height), PNG header bytes 16-23.
+const size = (file: string) => {
+  const buf = fs.readFileSync(`public/logos/${file}`);
+  if (file.endsWith('.png')) return [buf.readUInt32BE(16), buf.readUInt32BE(20)];
+  const tag = buf.toString().match(/<svg[^>]*>/)![0];
+  const vb = tag.match(/viewBox="([^"]+)"/)?.[1].trim().split(/[\s,]+/).map(Number);
+  if (vb) return [vb[2], vb[3]].map(Math.round);
+  return ['width', 'height'].map((a) => Math.round(parseFloat(tag.match(new RegExp(`\\s${a}="([^"]+)"`))![1])));
+};
+---
+<section id="logos" class="logos">
+  <div class="wrap">
+    <p class="logos-h">Partners and companies</p>
+    <div class="logo-wall">
+      {logos.map(([file, name, url]) => {
+        const [w, h] = size(file);
+        return <a href={url} target="_blank" rel="noopener"><img src={`/logos/${file}`} alt={name} title={name} width={w} height={h} loading="lazy" decoding="async" /></a>;
+      })}
+    </div>
+    <div class="reach-block reveal">
+      <b class="reach" data-count="500320">500,320</b>
+      <p>students reached by the student organizations we've worked with, across 21 countries</p>
+    </div>
+  </div>
+</section>
+
+<style>
+  .logos { padding: 56px 0 24px; }
+  .logos-h { text-align: center; font-size: 14px; color: var(--muted); }
+  .logo-wall { display: flex; flex-wrap: wrap; justify-content: center; gap: 24px; margin-top: 28px; }
+  .logo-wall a { flex: 0 0 152px; height: 64px; display: flex; align-items: center; justify-content: center; }
+  .logo-wall img { width: auto; height: auto; max-width: 130px; max-height: 40px; mix-blend-mode: multiply; filter: saturate(.45); opacity: .8; transition: opacity .3s, filter .3s; }
+  .logo-wall a:hover img { opacity: 1; filter: none; }
+  .reach-block { margin-top: 64px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+  @media (min-width: 768px) { .reach-block { margin-top: 96px; } }
+  .reach { font-size: clamp(3.5rem, 11vw, 7.5rem); font-weight: 600; line-height: 1; letter-spacing: -.055em; color: var(--black); font-variant-numeric: tabular-nums; }
+  .reach-block p { color: var(--muted); font-size: clamp(15px, 1.6vw, 18px); max-width: 30rem; }
+</style>
+
+<script>
+  import { calm } from '../../scripts/scroll';
+
+  // Reach number counts up once it's on screen.
+  const reach = document.querySelector<HTMLElement>('.reach');
+  const countUp = (el: HTMLElement) => {
+    const to = +el.dataset.count!, t0 = performance.now();
+    const tick = (t: number) => {
+      const k = Math.min(1, (t - t0) / 1600);
+      el.textContent = Math.round(to * (1 - Math.pow(1 - k, 4))).toLocaleString('en-US');
+      if (k < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  };
+  if (reach && !calm) {
+    const io = new IntersectionObserver(([e]) => e.isIntersecting && (countUp(reach), io.disconnect()), { threshold: 0.6 });
+    io.observe(reach);
+  }
+</script>

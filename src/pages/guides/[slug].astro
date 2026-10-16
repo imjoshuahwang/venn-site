@@ -1,0 +1,89 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getCollection, render } from 'astro:content';
+
+export async function getStaticPaths() {
+  return (await getCollection('guides')).map((g) => ({ params: { slug: g.id }, props: { g } }));
+}
+
+const { g } = Astro.props;
+const { Content, headings } = await render(g);
+const toc = headings.filter((h) => h.depth === 2);
+const date = g.data.pubDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+const words = (g.body ?? '').split(/\s+/).length;
+
+const schema = {
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: g.data.title,
+  description: g.data.description,
+  datePublished: g.data.pubDate.toISOString(),
+  author: { '@type': 'Person', name: 'Joshua Hwang' },
+  publisher: { '@type': 'Organization', name: 'Venn', logo: { '@type': 'ImageObject', url: 'https://joinvenn.org/Venn_Square_Logo_Dark.png' } },
+  mainEntityOfPage: new URL(`/guides/${g.id}/`, Astro.site).href,
+};
+---
+<Base title={`${g.data.title} | Venn`} description={g.data.description} type="article" schema={schema}>
+  <div class="narrow article-head">
+    <a href="/guides/" class="label" style="text-decoration:none">← Guides</a>
+    <h1>{g.data.title}</h1>
+    <p class="intro">{g.data.description}</p>
+    <div class="byline">
+      <img src="/founder.jpg" alt="" width="40" height="40">
+      <span>Written by <b>Joshua Hwang</b> · {date} · {Math.max(1, Math.round(words / 230))} min read</span>
+    </div>
+  </div>
+  <div class="wrap article-grid">
+    <nav class="toc" aria-label="On this page">
+      {toc.map((h) => <a href={`#${h.slug}`}>{h.text}</a>)}
+    </nav>
+    <article class="prose">
+      <Content />
+      <div class="cta-box">
+        <h2>Building something?</h2>
+        <p>Venn connects high schoolers with college clubs and companies in their field. Free.</p>
+        <a class="btn" href="/#apply">Apply to Venn</a>
+      </div>
+    </article>
+  </div>
+  <script>
+    const links = [...document.querySelectorAll<HTMLAnchorElement>('.toc a')];
+    const io = new IntersectionObserver((es) => es.forEach((e) => {
+      if (!e.isIntersecting) return;
+      links.forEach((a) => a.classList.toggle('active', a.hash === `#${e.target.id}`));
+    }), { rootMargin: '0px 0px -70% 0px' });
+    document.querySelectorAll('.prose h2[id]').forEach((h) => io.observe(h));
+  </script>
+</Base>
+
+<style>
+  .article-head { padding-top: 140px; padding-bottom: 8px; }
+  .article-head h1 { font-size: clamp(2rem, 6vw, 3.25rem); font-weight: 600; letter-spacing: -.035em; line-height: 1.12; margin-top: 16px; }
+  .article-head .intro { font-size: clamp(1.1rem, 2.2vw, 1.3rem); font-weight: 300; color: #555; margin-top: 20px; line-height: 1.6; }
+  .byline { display: flex; align-items: center; gap: 12px; margin-top: 28px; padding-bottom: 28px; border-bottom: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+  .byline img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+  .byline b { color: var(--text); font-weight: 500; }
+  .article-grid { display: grid; gap: 40px; padding-block: 48px 96px; }
+  @media (min-width: 1024px) { .article-grid { grid-template-columns: 220px minmax(0, 680px); justify-content: center; gap: 64px; } }
+  .toc { display: none; }
+  @media (min-width: 1024px) {
+    .toc { display: block; position: sticky; top: 100px; align-self: start; font-size: 13px; }
+    .toc a { display: block; padding: 5px 0 5px 12px; border-left: 2px solid var(--line); color: var(--faint); text-decoration: none; line-height: 1.4; }
+    .toc a:hover, .toc a.active { color: var(--black); border-color: var(--black); }
+  }
+  .prose { font-size: 17px; line-height: 1.8; color: var(--body); min-width: 0; }
+  .prose > :global(* + *) { margin-top: 1.2em; }
+  .prose :global(h2) { font-size: clamp(1.5rem, 4vw, 2rem); letter-spacing: -.02em; line-height: 1.3; margin-top: 2.4em; }
+  .prose :global(h3) { font-size: 1.2rem; font-weight: 600; letter-spacing: -.01em; line-height: 1.4; margin-top: 1.8em; }
+  .prose :global(a:not(.btn)) { color: var(--black); text-decoration-color: rgba(0, 0, 0, .25); text-underline-offset: 2px; }
+  .prose :global(a:not(.btn):hover) { text-decoration-color: currentColor; }
+  .prose :global(ul), .prose :global(ol) { padding-left: 1.3em; }
+  .prose :global(li + li) { margin-top: .4em; }
+  .prose :global(strong) { color: var(--text); }
+  .prose :global(blockquote) { margin-left: 0; padding-left: 20px; border-left: 2px solid var(--black); color: var(--text); }
+  .prose :global(table) { width: 100%; border-collapse: collapse; font-size: 15px; display: block; overflow-x: auto; }
+  .prose :global(th), .prose :global(td) { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  .cta-box { margin-top: 64px; background: var(--panel); border-radius: 22px; padding: 32px; }
+  .cta-box h2 { font-size: 24px; letter-spacing: -.02em; }
+  .cta-box p { color: var(--body); margin: 8px 0 20px; }
+</style>

@@ -1,0 +1,108 @@
+:root {
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", system-ui, sans-serif;
+  --black: #18181a;
+  --text: #222226;
+  --body: #444;
+  --muted: #6b6b6b;
+  --faint: #999;
+  --line: #eee;
+  --panel: #f7f7f7;
+  --accent: #5b7bb4;
+  --ease: cubic-bezier(.25, 1, .5, 1);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 88px; }
+body {
+  margin: 0;
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.625;
+  color: var(--text);
+  background: #fff;
+  -webkit-font-smoothing: antialiased;
+}
+img { max-width: 100%; display: block; }
+[hidden] { display: none !important; }
+a { color: inherit; }
+h1, h2, h3 { color: var(--black); margin: 0; }
+p { margin: 0; }
+
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+.narrow { max-width: 720px; margin: 0 auto; padding: 0 16px; }
+@media (min-width: 768px) { .wrap, .narrow { padding: 0 32px; } }
+
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.label {
+  font: 400 12px/1.4 var(--mono); letter-spacing: .12em;
+  text-transform: uppercase; color: var(--muted);
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  background: #000; color: #fff; text-decoration: none; border: 0; cursor: pointer;
+  font: 500 16px/1 var(--font); padding: 16px 28px; border-radius: 999px;
+  transition: background .3s var(--ease), transform .3s var(--ease);
+}
+.btn:hover { background: #1f2937; }
+.btn:active { transform: scale(.975); }
+.btn-sm { font-size: 14px; padding: 9px 18px; }
+.btn-ghost { background: transparent; color: var(--black); box-shadow: inset 0 0 0 1px #ddd; }
+.btn-ghost:hover { background: var(--panel); }
+
+/* Nav: transparent, then a frosted pill once you scroll */
+.nav { position: fixed; inset: 0 0 auto; z-index: 50; padding: 12px 16px; }
+.nav-inner {
+  max-width: 52rem; margin: 0 auto; padding: 8px 8px 8px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-radius: 999px; position: relative; overflow: hidden;
+  background: rgba(255, 255, 255, .5);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .07), inset 0 1px 0 rgba(255, 255, 255, .7);
+  transition: max-width .46s cubic-bezier(.34, 1.28, .42, 1), background .3s, box-shadow .3s;
+}
+.nav.scrolled .nav-inner {
+  max-width: 44rem;
+  background: rgba(255, 255, 255, .62);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .07), inset 0 1px 0 rgba(255, 255, 255, .7), 0 10px 30px -14px rgba(15, 23, 42, .22);
+}
+/* Scroll position: a soft line along the bottom of the pill, eased so fast scrolls glide */
+.nav-progress {
+  position: absolute; left: 20px; right: 20px; bottom: 0; height: 2px; border-radius: 2px;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, .35));
+  transform-origin: left; transform: scaleX(var(--p, 0)); pointer-events: none;
+}
+.nav nav { display: flex; align-items: center; gap: 10px; }
+.brand img { filter: saturate(.6); height: 37px; width: auto; flex-shrink: 0; }
+@media (max-width: 520px) { .brand img { height: 30px; } .nav nav { gap: 8px; } .nav nav a[href="/#faq"] { display: none; } }
+
+/* Sections */
+section { padding: 64px 0; }
+@media (min-width: 768px) { section { padding: 104px 0; } }
+.h2 {
+  font-size: clamp(2rem, 5vw, 3.25rem); font-weight: 600;
+  letter-spacing: -.035em; line-height: 1.1;
+}
+
+/* Footer */
+.footer { border-top: 1px solid var(--line); padding: 56px 0 32px; font-size: 14px; overflow: hidden; }
+.footer-mark { width: min(860px, 92%); height: auto; margin: 64px auto 0; filter: saturate(.6); }
+.footer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 40px; }
+@media (min-width: 820px) { .footer-grid { grid-template-columns: 2fr 1fr 1fr 1fr; } }
+.footer-grid > div { display: flex; flex-direction: column; gap: 8px; }
+.footer-grid a { color: var(--muted); text-decoration: none; }
+.footer-grid a:hover { color: var(--black); }
+.footer-h { font-weight: 600; color: var(--black); }
+
+/* Reveal on scroll */
+.reveal { opacity: 0; transform: translateY(20px); filter: blur(8px); transition: opacity .9s var(--ease), transform .9s var(--ease), filter .9s var(--ease); }
+.reveal.in { opacity: 1; transform: none; filter: none; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .reveal { opacity: 1; transform: none; filter: none; transition: none; }
+  * { transition: none !important; }
+}
