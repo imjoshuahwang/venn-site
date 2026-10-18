@@ -1,0 +1,111 @@
+---
+import { Image } from 'astro:assets';
+import Base from '../layouts/Base.astro';
+import ApplyForm from '../components/ApplyForm.astro';
+import LogoWall from '../components/home/LogoWall.astro';
+import logo from '../assets/venn-logo.png';
+
+const url = import.meta.env.PUBLIC_SUPABASE_URL ?? '';
+const key = import.meta.env.PUBLIC_SUPABASE_ANON_KEY ?? '';
+---
+<Base bare title="Apply to Venn" description="Apply to Venn, a free program for high school and college students already building something.">
+  <div class="shell" data-url={url} data-key={key}>
+    <header class="top">
+      <Image class="brand" src={logo} alt="Venn" width={96} densities={[1, 2]} loading="eager" />
+      <button type="button" class="btn btn-ghost btn-sm about-btn" id="about-open" aria-haspopup="dialog"><span aria-hidden="true">?</span> What is Venn?</button>
+    </header>
+
+    <div class="stage">
+      <div class="stage-in">
+        <h1 class="visually-hidden">Apply to Venn</h1>
+        <ApplyForm locked />
+      </div>
+    </div>
+
+    <p class="ref" id="ref" hidden>Referred by <b id="ref-name"></b></p>
+  </div>
+
+  <dialog id="about" aria-labelledby="about-h">
+    <h2 id="about-h">What is Venn?</h2>
+    <p>Venn is a free program for high school and college students already building something: a club, a nonprofit, a project, or a startup. Each season we pick a small batch and connect them with the college clubs, companies, and students in their field. Free for students, always.</p>
+    <LogoWall compact />
+    <button type="button" class="btn" id="about-close">Back to my application</button>
+  </dialog>
+</Base>
+
+<script>
+  import { getRef } from '../scripts/ref';
+
+  // "Referred by Maya": first name from the database. Unknown or missing code shows nothing.
+  const shell = document.querySelector<HTMLElement>('.shell')!;
+  const { url, key } = shell.dataset;
+  const ref = getRef();
+  if (ref && url && key) {
+    fetch(`${url}/rest/v1/rpc/referrer_name`, {
+      method: 'POST',
+      headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: ref }),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((name) => {
+        if (typeof name !== 'string' || !name.trim()) return;
+        document.getElementById('ref-name')!.textContent = name.trim().slice(0, 30);
+        document.getElementById('ref')!.hidden = false;
+      })
+      .catch(() => {});
+  }
+
+  // The sheet is a native <dialog>: it traps focus, Escape closes it, and focus goes back to where they were.
+  const about = document.getElementById('about') as HTMLDialogElement;
+  const open = document.getElementById('about-open')!;
+  // Keep focus (and the keyboard) in the answer box when tapping "?" with a mouse.
+  open.addEventListener('mousedown', (e) => e.preventDefault());
+  open.addEventListener('click', () => about.showModal());
+  document.getElementById('about-close')!.addEventListener('click', () => about.close());
+  about.addEventListener('click', (e) => { if (e.target === about) about.close(); });
+</script>
+
+<style is:global>
+  html, body { height: 100%; overflow: hidden; }
+  body { overscroll-behavior: none; }
+</style>
+
+<style>
+  .shell {
+    position: fixed; inset: 0; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto;
+    background:
+      radial-gradient(60vmax 60vmax at 0% 0%, rgba(159, 191, 154, .28), transparent 70%),
+      radial-gradient(60vmax 60vmax at 100% 100%, rgba(196, 212, 239, .4), transparent 70%),
+      #fff;
+  }
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 16px 0; }
+  .brand { height: 30px; width: auto; filter: saturate(.6); }
+  .about-btn span { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; box-shadow: inset 0 0 0 1px #bbb; font-size: 12px; line-height: 1; }
+  .about-btn { gap: 8px; }
+
+  /* Tall steps scroll inside the stage; the page itself never does. */
+  .stage { overflow-y: auto; overscroll-behavior: contain; display: flex; padding: 0 16px; }
+  .stage-in { width: 100%; max-width: 560px; margin: auto; padding: 24px 0; }
+  .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+  .ref {
+    text-align: center; font-size: 14px; color: var(--muted);
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid rgba(0, 0, 0, .06);
+  }
+  .ref b { font-weight: 600; color: var(--black); }
+
+  dialog {
+    border: 0; padding: 24px 16px calc(24px + env(safe-area-inset-bottom)); color: var(--text); background: #fff;
+    width: 100%; max-width: 560px; max-height: 88dvh; margin: auto auto 0; border-radius: 24px 24px 0 0;
+    box-shadow: 0 -20px 60px -20px rgba(15, 23, 42, .3);
+  }
+  dialog[open] { animation: sheet-in .4s var(--ease); }
+  dialog::backdrop { background: rgba(24, 24, 26, .35); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+  @keyframes sheet-in { from { opacity: 0; transform: translateY(24px); } }
+  @media (min-width: 640px) { dialog { margin: auto; border-radius: 24px; padding: 32px; } }
+  dialog h2 { font-size: 1.5rem; font-weight: 600; letter-spacing: -.03em; }
+  dialog p { color: var(--body); margin-top: 10px; }
+  dialog :global(.logos) { margin-top: 24px; }
+  dialog .btn { width: 100%; margin-top: 24px; }
+  @media (prefers-reduced-motion: reduce) { dialog[open] { animation: none; } }
+</style>

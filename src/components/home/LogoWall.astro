@@ -1,6 +1,9 @@
 ---
 import fs from 'node:fs';
 
+// compact: just the logos (no links out, no reach number), for the "What is Venn?" sheet on /apply.
+const { compact = false } = Astro.props;
+
 const logos = [
   ['microsoft.svg', 'Microsoft', 'https://www.microsoft.com'],
   ['y-combinator.svg', 'Y Combinator', 'https://www.ycombinator.com'], ['harvard.svg', 'Harvard', 'https://www.harvard.edu'],
@@ -23,19 +26,20 @@ const size = (file: string) => {
   return ['width', 'height'].map((a) => Math.round(parseFloat(tag.match(new RegExp(`\\s${a}="([^"]+)"`))![1])));
 };
 ---
-<section id="logos" class="logos">
-  <div class="wrap">
+<section id="logos" class:list={['logos', { compact }]}>
+  <div class:list={{ wrap: !compact }}>
     <p class="logos-h">Partners and companies</p>
     <div class="logo-wall">
       {logos.map(([file, name, url]) => {
         const [w, h] = size(file);
-        return <a href={url} target="_blank" rel="noopener"><img src={`/logos/${file}`} alt={name} title={name} width={w} height={h} loading="lazy" decoding="async" /></a>;
+        const img = <img src={`/logos/${file}`} alt={name} title={name} width={w} height={h} loading="lazy" decoding="async" />;
+        return compact ? <span>{img}</span> : <a href={url} target="_blank" rel="noopener">{img}</a>;
       })}
     </div>
-    <div class="reach-block reveal">
+    {!compact && <div class="reach-block reveal">
       <b class="reach" data-count="500320">500,320</b>
       <p>students reached by the student organizations we've worked with, across 21 countries</p>
-    </div>
+    </div>}
   </div>
 </section>
 
@@ -52,6 +56,11 @@ const size = (file: string) => {
     .logo-wall a { flex-basis: calc((100% - 16px) / 3); height: 48px; }
     .logo-wall img { max-width: 92px; max-height: 28px; }
   }
+  /* compact: three tight columns at any width, no section padding (the sheet supplies its own). */
+  .logos.compact { padding: 0; }
+  .compact .logo-wall { gap: 12px 8px; margin-top: 16px; }
+  .compact .logo-wall span { flex: 0 0 calc((100% - 16px) / 3); height: 48px; display: flex; align-items: center; justify-content: center; }
+  .compact .logo-wall img { width: auto; height: auto; max-width: 92px; max-height: 28px; mix-blend-mode: multiply; filter: saturate(.45); opacity: .8; }
   .reach-block { margin-top: 64px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
   @media (min-width: 768px) { .reach-block { margin-top: 96px; } }
   .reach { font-size: clamp(3.5rem, 11vw, 7.5rem); font-weight: 600; line-height: 1; letter-spacing: -.055em; color: var(--black); font-variant-numeric: tabular-nums; }

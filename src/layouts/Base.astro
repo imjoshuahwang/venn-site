@@ -8,9 +8,10 @@ interface Props {
   description: string;
   type?: 'website' | 'article';
   schema?: Record<string, unknown>;
+  bare?: boolean; // focused pages (/apply): no nav, footer or links out, and kept out of search
 }
 
-const { title, description, type = 'website', schema } = Astro.props;
+const { title, description, type = 'website', schema, bare = false } = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site);
 ---
 <!doctype html>
@@ -23,6 +24,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
   <link rel="canonical" href={canonical}>
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  {bare && <meta name="robots" content="noindex">}
   <link rel="sitemap" href="/sitemap-index.xml">
   <meta property="og:type" content={type}>
   <meta property="og:title" content={title}>
@@ -33,7 +35,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
   {schema && <script type="application/ld+json" set:html={JSON.stringify(schema)} />}
 </head>
 <body>
-  <header class="nav" id="nav">
+  {!bare && <header class="nav" id="nav">
     <div class="nav-inner">
       <a href="/" class="brand"><Image src={logo} alt="Venn" width={132} densities={[1, 2]} loading="eager" /></a>
       <nav>
@@ -43,11 +45,11 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
       </nav>
       <i class="nav-progress"></i>
     </div>
-  </header>
+  </header>}
 
   <main><slot /></main>
 
-  <footer class="footer">
+  {!bare && <footer class="footer">
     <div class="wrap footer-grid">
       <div>
         <p class="muted">The student organization connector. Free, always.</p>
@@ -69,7 +71,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     </div>
     <p class="wrap muted small">© {new Date().getFullYear()} Venn</p>
     <Image class="footer-mark" src={logo} alt="" widths={[480, 860, 1021]} sizes="(min-width: 935px) 860px, 92vw" loading="lazy" />
-  </footer>
+  </footer>}
 
   <script>
     import { onScroll, calm } from '../scripts/scroll';

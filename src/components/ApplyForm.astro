@@ -1,10 +1,12 @@
 ---
-// One question per screen. Submissions go straight into Supabase `applications` (insert-only RLS, see supabase/migrations).
+// One question per screen. Submissions go through the Supabase function `submit_application` (see supabase/migrations),
+// which returns the applicant's own ref_code. `locked` = the focused /apply page: slim top progress bar, no wandering off.
+const { locked = false } = Astro.props;
 const url = import.meta.env.PUBLIC_SUPABASE_URL ?? '';
 const key = import.meta.env.PUBLIC_SUPABASE_ANON_KEY ?? '';
 const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 'Research', 'Other'];
 ---
-<form class="form" id="apply-form" data-url={url} data-key={key} novalidate>
+<form class:list={['form', { locked }]} id="apply-form" data-url={url} data-key={key} novalidate>
   <div class="progress" aria-hidden="true"><div class="progress-bar"><i></i></div><span class="progress-txt">0% done</span></div>
 
   <div class="qs">
@@ -51,9 +53,16 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
 <div class="done" id="apply-done" hidden>
   <h3>Got it. Thank you.</h3>
   <p class="muted" style="margin-top:8px">Every application is read by a person. You'll hear from us at the email you gave.</p>
+  <div class="boost" id="apply-boost" hidden>
+    <a class="btn" id="apply-boost-link" href="/boost">Boost your application -&gt;</a>
+    <p class="muted small">Takes 2 minutes. Applications with people behind them get a closer look.</p>
+  </div>
+  {locked && <a class="done-home" href="/">joinvenn.org</a>}
 </div>
 
 <script>
+  import { getRef } from '../scripts/ref';
+
   const form = document.getElementById('apply-form') as HTMLFormElement;
   const status = document.getElementById('f-status')!;
   const back = form.querySelector<HTMLButtonElement>('.q-back')!;
@@ -64,6 +73,7 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
   const q = (s: string) => form.querySelector<HTMLElement>(`.q[data-step="${s}"]`)!;
   const field = (n: string) => form.elements.namedItem(n) as HTMLInputElement;
   const picked: Record<string, string> = {};
+  const ref = getRef(); // from ?ref=, held for the whole flow (and across a reload)
   const other = () => form.querySelector<HTMLInputElement>('input[name="building"][value="Other"]')!;
 
   // Students answer two extra questions; clubs and companies skip straight to the shared ones.
@@ -176,14 +186,20 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
     try {
       const { url, key } = form.dataset;
       if (!url || !key) throw new Error('Supabase env vars missing');
-      const res = await fetch(`${url}/rest/v1/applications`, {
+      const payload = { ...data, source: location.pathname + location.search, ...(ref && { referred_by: ref }) };
+      const res = await fetch(`${url}/rest/v1/rpc/submit_application`, {
         method: 'POST',
-        headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-        body: JSON.stringify({ ...data, source: location.pathname + location.search }),
+        headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payload }),
       });
       if (!res.ok) throw new Error(await res.text());
+      const code = await res.json().catch(() => null); // the new applicant's own ref_code, e.g. "maya-7k2"
       form.hidden = true;
       document.getElementById('apply-done')!.hidden = false;
+      if (typeof code === 'string' && code) {
+        (document.getElementById('apply-boost-link') as HTMLAnchorElement).href = `/boost?code=${encodeURIComponent(code)}`;
+        document.getElementById('apply-boost')!.hidden = false;
+      }
     } catch (err) {
       console.error(err);
       next.disabled = false;
@@ -240,5 +256,17 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
   .form-status.err { color: #b91c1c; }
   .done { text-align: center; padding: 48px 0; }
   .done h3 { font-size: 28px; letter-spacing: -.03em; }
+  .boost { display: grid; justify-items: center; gap: 12px; margin-top: 28px; }
+  .boost p { max-width: 24rem; }
+  .done-home { display: inline-block; margin-top: 32px; font-size: 13px; color: var(--faint); text-decoration: none; }
+  .done-home:hover { color: var(--black); }
+
+  /* Locked (/apply): the progress bar is a slim line pinned to the top of the screen, no percentage. */
+  .form.locked { margin-top: 0; }
+  .locked .progress { position: fixed; inset: 0 0 auto; z-index: 5; }
+  .locked .progress-bar { height: 3px; border-radius: 0; background: rgba(0, 0, 0, .06); }
+  .locked .progress-bar i { transition: transform .45s var(--ease); }
+  .locked .progress-txt { display: none; }
+  @media (prefers-reduced-motion: reduce) { .locked .progress-bar i { transition: none; } }
   @media (prefers-reduced-motion: reduce) { .q.in, .q.in-back { animation: none; } }
 </style>

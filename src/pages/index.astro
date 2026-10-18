@@ -18,6 +18,8 @@ const schema = {
 };
 ---
 <Base title="Venn: the student organization connector" description="Venn is a free program that connects high school and college students building clubs, nonprofits, projects, and startups with college clubs and companies in their field. Apply for Fall ’26." schema={schema}>
+  <!-- Old shared links (/?ref=maya-7k2) go straight to the focused apply page. -->
+  <script is:inline>{`var r=new URLSearchParams(location.search).get('ref');if(r)location.replace('/apply?ref='+encodeURIComponent(r));`}</script>
   <Hero />
   <LogoWall />
   <Statement />
