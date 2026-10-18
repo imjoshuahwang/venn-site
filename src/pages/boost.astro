@@ -9,7 +9,7 @@ const posts = [
     h: 'Post it on LinkedIn.',
     sub: 'This one matters most. The post is already written, you just fill in one blank.',
     open: 'Open LinkedIn',
-    tip: 'Before you post: type @Venn and pick Venn from the list that pops up. It has to be picked from the list, not just typed, or we won't see it.',
+    tip: 'Before you post: type @Venn and pick Venn from the list that pops up. It has to be picked from the list, not just typed, or we won\'t see it.',
     found: 'On your post, tap the ... menu, then Copy link to post.',
     placeholder: 'https://www.linkedin.com/posts/...',
     next: 'x',
@@ -298,7 +298,7 @@ const posts = [
   const blank = () => building.trim() || '___';
   const texts: Record<string, () => string> = {
     linkedin: () =>
-      `I just applied to Venn's F26 season, a program for high schoolers building things.\n\nI am building ${blank()}.\n\nIf you're building something too, apply here: ${link}`,
+      `I just applied to Venn's F26 season, a program for high schoolers building things.\n\nI'm building ${blank()}.\n\nIf you're building something too, apply here: ${link}`,
     x: () =>
       `I just applied to Venn's F26 season for high schoolers building things. I am building ${blank()}.${X_HANDLE ? ` @${X_HANDLE}` : ''}\n\n${link}`,
   };
@@ -351,7 +351,7 @@ const posts = [
     } catch { return false; }
   };
   const kindMsg: Record<string, string> = {
-    linkedin: 'That doesn't look like a LinkedIn post link. It should start with linkedin.com or lnkd.in.',
+    linkedin: 'That doesn\'t look like a LinkedIn post link. It should start with linkedin.com or lnkd.in.',
     x: 'That needs to be a link to your post on x.com or twitter.com.',
   };
 
