@@ -1,0 +1,116 @@
+---
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+import { seasons, orgOf } from '../../data/seasons';
+
+const files = import.meta.glob<{ default: ImageMetadata }>('../../assets/seasons/*.jpg', { eager: true });
+const photo = (id: string) => files[`../../assets/seasons/${id}.jpg`].default;
+const org = (id: string) => orgOf[id.replace(/_\d+$/, '')];
+// Bento spans in a 12-column grid: one big photo with four small, three mediums, four squares, two wides.
+const spans = [[6, 4], [3, 2], [3, 2], [3, 2], [3, 2], [4, 3], [4, 3], [4, 3], [3, 3], [3, 3], [3, 3], [3, 3], [6, 3], [6, 3]];
+// A three-photo season gets three mediums in one row instead.
+const span = (n: number, i: number) => (n === 3 ? [4, 3] : spans[i % spans.length]);
+const tilt = [-2.2, 1.6, -1.1, 2.4, -1.8, 1.2, -2.6, 1.9, -1.4, 2.1, -.9, 1.5, -2, 1.3];
+---
+<section id="seasons" class="past">
+  <header class="top">
+    <div class="wrap">
+      <h2 class="h2">Every season so far.</h2>
+      <p class="lede">Venn runs in seasons, like Y Combinator batches. Here is who built with us each round, and who they reached.</p>
+    </div>
+  </header>
+
+  <nav class="jump" aria-label="Seasons">
+    {seasons.map((s) => <a href={`#${s.code}`} data-code={s.code}>{s.code}</a>)}
+  </nav>
+
+  <div class="wrap seasons">
+    {seasons.map((s, si) => (
+      <article id={s.code} class:list={['season', s.tone, { mirror: si % 2 && s.photos.length > 3 }]}>
+        <header class="head reveal">
+          <div>
+            <p class="code">{s.code}</p>
+            <p class="name">{s.name}</p>
+          </div>
+          <div class="facts">
+            <p class="reach">{s.reach}<span>students reached</span></p>
+            <p class="line">{s.line}</p>
+          </div>
+        </header>
+        <ul class="orgs reveal">{s.orgs.map((o) => <li>{o}</li>)}</ul>
+        {s.photos.length > 0 && (
+          <div class="grid">
+            {s.photos.map((id, i) => (
+              <figure class="ph reveal" style={`--c:${span(s.photos.length, i)[0]};--r:${span(s.photos.length, i)[1]};--t:${tilt[i % tilt.length]}deg;--dl:${(i % 5) * 70}ms`}>
+                <Image src={photo(id)} alt={`${org(id)} event`} widths={[480, 900]} sizes="(min-width: 900px) 50vw, 100vw" />
+                <figcaption>{org(id)}</figcaption>
+              </figure>
+            ))}
+          </div>
+        )}
+      </article>
+    ))}
+  </div>
+</section>
+
+
+<script>
+  const links = [...document.querySelectorAll<HTMLAnchorElement>('.jump a')];
+  const io = new IntersectionObserver((es) => es.forEach((e) => {
+    if (e.isIntersecting) links.forEach((a) => a.classList.toggle('on', a.dataset.code === e.target.id));
+  }), { rootMargin: '-45% 0px -50% 0px' });
+  document.querySelectorAll('.season').forEach((s) => io.observe(s));
+</script>
+
+<style>
+  .top { padding: 120px 0 0; }
+  .lede { font-size: clamp(1.05rem, 2vw, 1.25rem); color: var(--muted); margin-top: 16px; max-width: 36rem; }
+
+  .jump {
+    position: sticky; top: 84px; z-index: 5; display: flex; gap: 6px; width: max-content; margin: 24px auto 0;
+    padding: 5px; border-radius: 999px; background: rgba(255, 255, 255, .6);
+    -webkit-backdrop-filter: blur(18px) saturate(140%); backdrop-filter: blur(18px) saturate(140%);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .06);
+  }
+  .jump a { padding: 8px 16px; border-radius: 999px; font-size: 14px; font-weight: 500; color: var(--muted); text-decoration: none; transition: background .4s var(--ease), color .4s var(--ease); }
+  .jump a:hover { color: var(--black); }
+  .jump a.on { background: var(--black); color: #fff; }
+
+  .seasons { display: grid; gap: 28px; padding-top: 40px; padding-bottom: 40px; }
+  .season { scroll-margin-top: 150px; border-radius: 32px; padding: clamp(24px, 4vw, 48px); }
+  .sky { background: linear-gradient(180deg, #dbe5f5, #f1f5fc); }
+  .sage { background: linear-gradient(180deg, #d9e6d5, #f2f7f1); }
+  .warm { background: linear-gradient(180deg, #ebe7e1, #f8f6f3); }
+  .mix { background: linear-gradient(135deg, #d9e6d5, #dbe5f5 60%, #eef3fb); }
+
+  .head { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: end; }
+  .code { font-size: clamp(4.5rem, 13vw, 9.5rem); font-weight: 600; letter-spacing: -.055em; line-height: .9; color: var(--black); }
+  .name { margin-top: 10px; font-size: 15px; color: var(--muted); }
+  .reach { font-size: clamp(2.25rem, 5vw, 3.5rem); font-weight: 600; letter-spacing: -.045em; line-height: 1; color: var(--black); }
+  .reach span { display: block; margin-top: 8px; font-size: 14px; font-weight: 400; letter-spacing: 0; color: var(--muted); }
+  .line { margin-top: 18px; font-size: 17px; line-height: 1.5; color: var(--body); max-width: 30rem; }
+
+  .orgs { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; margin: 32px 0 0; padding: 0; }
+  .orgs li { padding: 7px 14px; border-radius: 999px; font-size: 13px; font-weight: 500; color: var(--text); background: rgba(255, 255, 255, .7); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .04); }
+
+  .grid { display: grid; grid-template-columns: repeat(12, 1fr); grid-auto-rows: clamp(56px, 7vw, 92px); grid-auto-flow: dense; gap: 12px; margin-top: 32px; }
+  .mirror .ph:first-child { grid-column: 7 / span 6; }
+  .ph { position: relative; margin: 0; grid-column: span var(--c); grid-row: span var(--r); border-radius: 20px; overflow: hidden; background: rgba(255, 255, 255, .5); transition-delay: var(--dl); }
+  .ph.reveal { transform: translateY(28px) rotate(var(--t)) scale(.96); }
+  .ph.reveal.in { transform: none; }
+  .ph img { width: 100%; height: 100%; object-fit: cover; display: block; filter: saturate(.82) contrast(.92) brightness(.97); transition: transform 1.2s var(--ease); }
+  .ph:hover img { transform: scale(1.04); }
+  figcaption {
+    position: absolute; left: 10px; bottom: 10px; padding: 5px 11px; border-radius: 999px; font-size: 12px; font-weight: 500; color: var(--black);
+    background: rgba(255, 255, 255, .62); -webkit-backdrop-filter: blur(14px) saturate(160%); backdrop-filter: blur(14px) saturate(160%);
+  }
+
+
+  @media (max-width: 760px) {
+    .head { grid-template-columns: 1fr; align-items: start; }
+    .grid { grid-template-columns: 1fr 1fr; grid-auto-rows: auto; gap: 8px; }
+    .ph, .mirror .ph:first-child { grid-column: auto; grid-row: auto; aspect-ratio: 1; border-radius: 16px; }
+    .ph:first-child { grid-column: span 2; aspect-ratio: 4 / 3; }
+    .jump { top: 76px; }
+  }
+</style>
