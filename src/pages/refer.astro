@@ -51,6 +51,7 @@ import Base from '../layouts/Base.astro';
               </label>
               <p class="tip">Before you post: type @Venn and pick Venn from the list that pops up. It has to be picked from the list, not just typed, or we won't see it.</p>
               <div class="row"><a class="btn" id="open-li" target="_blank" rel="noopener" href="https://www.linkedin.com/feed/">Copy post and open LinkedIn</a></div>
+              <p class="hint" id="li-fill" hidden>Fill in the blank above to unlock the post.</p>
               <p class="hint">If the post box is empty when LinkedIn opens, paste what you copied.</p>
 
               <div class="part">
@@ -261,7 +262,8 @@ import Base from '../layouts/Base.astro';
   const merge = (s: Status | null) => { if (s) { st = s; render(); } };
 
   // ---- LinkedIn -----------------------------------------------------------
-  const blank = () => $<HTMLInputElement>('#building').value.trim() || '<what you\'re working on>';
+  const PLACEHOLDER = '<what you\'re working on>';
+  const blank = () => $<HTMLInputElement>('#building').value.trim() || PLACEHOLDER;
   const postText = () =>
     `I just applied to Venn's F26 season, a program for high schoolers building things.\n\nI'm building ${blank()}.\n\nIf you're building something too, apply here: ${link}`;
   const post = () => $<HTMLTextAreaElement>('#post');
@@ -270,6 +272,16 @@ import Base from '../layouts/Base.astro';
     const ta = post();
     if (ta.dataset.edited !== '1') ta.value = postText();
     $<HTMLAnchorElement>('#open-li').href = liHref();
+    gateCopy();
+  };
+  // Never copy the literal placeholder: hold the button until the blank is filled (or the post is edited past it).
+  const gateCopy = () => {
+    const a = $<HTMLAnchorElement>('#open-li');
+    const blocked = post().value.includes(PLACEHOLDER);
+    a.setAttribute('aria-disabled', blocked ? 'true' : 'false');
+    a.style.opacity = blocked ? '0.45' : '';
+    a.style.pointerEvents = blocked ? 'none' : '';
+    $('#li-fill').hidden = !blocked;
   };
 
   const execCopy = (text: string) => {
@@ -386,10 +398,11 @@ import Base from '../layouts/Base.astro';
     const building = $<HTMLInputElement>('#building');
     building.value = draft.get();
     building.addEventListener('input', () => { draft.set(building.value); syncPost(); });
-    post().addEventListener('input', () => { post().dataset.edited = '1'; $<HTMLAnchorElement>('#open-li').href = liHref(); });
+    post().addEventListener('input', () => { post().dataset.edited = '1'; $<HTMLAnchorElement>('#open-li').href = liHref(); gateCopy(); });
 
     // Copy first (started inside the click), then the browser follows the link to LinkedIn.
-    $('#open-li').addEventListener('click', () => {
+    $('#open-li').addEventListener('click', (e) => {
+      if (post().value.includes(PLACEHOLDER)) { e.preventDefault(); return; }
       $<HTMLAnchorElement>('#open-li').href = liHref();
       copy(post().value);
     });
@@ -431,12 +444,12 @@ import Base from '../layouts/Base.astro';
     try { s = (await rpc('referral_status', { code })) as Status | null; } catch { return show('error'); }
     if (!s) return show('missing');
     lastFetch = Date.now();
-    link = `https://joinvenn.org/apply?ref=${s.ref_code}`;
+    st = s;
+    link = `https://joinvenn.org/apply?ref=${encodeURIComponent(s.ref_code)}`;
     $('#mylink').textContent = link.replace('https://', '');
     syncPost();
     $<HTMLAnchorElement>('#email').href = isPhone ? mailto() : gmailWeb();
     $<HTMLAnchorElement>('#email-alt').href = mailto();
-    st = s;
     render();
     setOpen(s.linkedin ? 'friends' : 'linkedin');
     show('main');

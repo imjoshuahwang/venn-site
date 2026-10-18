@@ -41,12 +41,27 @@ const fill = (tpl: string, vals: Record<string, string>, escape: (s: string) => 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
-const unclaim = (id: number | string) =>
-  rest(`applications?id=eq.${id}`, { method: "PATCH", body: JSON.stringify({ confirmed_at: null }) }).catch(() => {});
+const unclaim = async (id: number | string) => {
+  try {
+    const r = await rest(`applications?id=eq.${id}`, { method: "PATCH", body: JSON.stringify({ confirmed_at: null }) });
+    if (!r.ok) console.log(`unclaim failed ${r.status} for application ${id}`);
+  } catch {
+    console.log(`unclaim failed for application ${id}`);
+  }
+};
+
+// Constant-time compare (length is not secret).
+function safeEqual(a: string, b: string): boolean {
+  const x = new TextEncoder().encode(a);
+  const y = new TextEncoder().encode(b);
+  let diff = x.length ^ y.length;
+  for (let i = 0; i < Math.max(x.length, y.length); i++) diff |= (x[i] ?? 0) ^ (y[i] ?? 0);
+  return diff === 0;
+}
 
 Deno.serve(async (req) => {
   const secret = Deno.env.get("WEBHOOK_SECRET");
-  if (!secret || req.headers.get("x-webhook-secret") !== secret) return json({ error: "unauthorized" }, 401);
+  if (!secret || !safeEqual(req.headers.get("x-webhook-secret") ?? "", secret)) return json({ error: "unauthorized" }, 401);
 
   let id: unknown;
   try {
@@ -58,7 +73,7 @@ Deno.serve(async (req) => {
     return json({ error: "no record id" }, 400);
   }
 
-  const got = await rest(`applications?id=eq.${id}&select=id,name,email,ref_code,is_test,confirmed_at`);
+  const got = await rest(`applications?id=eq.${id}&select=id,name,email,email_key,ref_code,is_test,confirmed_at`);
   if (!got.ok) return json({ error: "read failed" }, 502);
   const row = (await got.json())[0];
   if (!row) return json({ skipped: "not_found" });
@@ -67,6 +82,13 @@ Deno.serve(async (req) => {
   if (mode === "test" && !row.is_test) return json({ skipped: "send_mode" });
   const email = (row.email ?? "").trim();
   if (!email || !row.ref_code) return json({ skipped: "no_email_or_ref_code" });
+
+  // Same address applied earlier: that application gets the email, not this one.
+  if (row.email_key) {
+    const dup = await rest(`applications?email_key=eq.${encodeURIComponent(row.email_key)}&id=lt.${id}&select=id&limit=1`);
+    if (!dup.ok) return json({ error: "dedupe read failed" }, 502);
+    if ((await dup.json()).length) return json({ skipped: "duplicate" });
+  }
 
   // Idempotent claim: only the call that flips confirmed_at from null sends.
   const claim = await rest(`applications?id=eq.${id}&confirmed_at=is.null`, {
@@ -88,7 +110,9 @@ Deno.serve(async (req) => {
         Authorization: `Bearer ${Deno.env.get("RESEND_API_KEY")}`,
         "Content-Type": "application/json",
         "User-Agent": "venn",
+        "Idempotency-Key": `confirm-${id}`,
       },
+      signal: AbortSignal.timeout(15000),
       body: JSON.stringify({
         from: FROM,
         to: [email],
