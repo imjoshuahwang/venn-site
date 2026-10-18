@@ -73,7 +73,7 @@ const posts = [
 
           <div class="part" data-part="write">
             <label class="field">
-              <span class="field-l">I'm building</span>
+              <span class="field-l">I am building</span>
               <input type="text" class="building" autocomplete="off" maxlength="80" placeholder="a robotics app for my school" />
             </label>
             <label class="field">
@@ -298,9 +298,9 @@ const posts = [
   const blank = () => building.trim() || '___';
   const texts: Record<string, () => string> = {
     linkedin: () =>
-      `I just applied to Venn's F26 season, a program for high schoolers building things.\n\nI'm building ${blank()}.\n\nIf you're building something too, apply here: ${link}`,
+      `I just applied to Venn's F26 season, a program for high schoolers building things.\n\nI am building ${blank()}.\n\nIf you're building something too, apply here: ${link}`,
     x: () =>
-      `I just applied to Venn's F26 season for high schoolers building things. I'm building ${blank()}.${X_HANDLE ? ` @${X_HANDLE}` : ''}\n\n${link}`,
+      `I just applied to Venn's F26 season for high schoolers building things. I am building ${blank()}.${X_HANDLE ? ` @${X_HANDLE}` : ''}\n\n${link}`,
   };
   const openHref = (kind: string, text: string) =>
     kind === 'linkedin'
