@@ -22,8 +22,8 @@ export const seasons: Season[] = [
   },
   {
     code: 'S26', name: 'Summer 2026', tone: 'warm', reach: '58K+',
-    line: 'Five weeks with Microsoft India. Seven organizations in AI, finance and machine learning.',
-    orgs: ['YouthxAI', 'Synthica', 'ByteByByte', 'EmpowerEd', 'Codify Club', 'The BUILD', 'Quanticle'],
+    line: 'Five weeks with Microsoft India. Nine organizations in AI, finance, public speaking and STEM.',
+    orgs: ['YouthxAI', 'Synthica', 'ByteByByte', 'EmpowerEd', 'Codify Club', 'The BUILD', 'Quanticle', 'Future Speakers Initiative', 'STEMRoots'],
     photos: ['bytebybyte_03', 'future_speakers_initiative_303', 'stemroots_433', 'bytebybyte_02', 'future_speakers_initiative_302'],
     partners: ['microsoft.svg'], clubs: ['mit.svg', 'princeton.svg', 'johns-hopkins.svg'],
   },

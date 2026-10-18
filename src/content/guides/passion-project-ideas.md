@@ -141,4 +141,4 @@ Yes. Small businesses, nonprofits, clubs, and community programs all count. What
 
 ## Get help building it
 
-Already working on a project? Apply to Venn. It is free, it runs seasons and picks a small batch of high school and college students who are building things, and it has worked with companies such as Microsoft and Runway. [Apply here](/#apply).
+Already working on a project? Apply to Venn. It is free, it runs seasons and picks a small batch of high school and college students who are building things, and it has worked with companies such as Microsoft and Y Combinator. [Apply here](/#apply).
