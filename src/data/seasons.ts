@@ -32,7 +32,7 @@ export const seasons: Season[] = [
     line: 'Thirteen organizations in neuroscience, writing, public speaking and STEM.',
     orgs: ['Memory Matters', 'Elqo', 'Future Speakers Initiative', 'Framework4Future', 'STEMRoots', 'Gradlify', 'Noura', 'World Wide Writing', 'Essentialis', 'Pythe', 'PRIME', 'TRI', 'Innovatee Co'],
     photos: ['memory_matters_332', 'future_speakers_initiative_301', 'stemroots_432', 'memory_matters_325', 'future_speakers_initiative_297'],
-    partners: ['runway.svg'], clubs: ['columbia.svg', 'emory.svg', 'northwestern.svg'],
+    partners: ['northwestern.svg'], clubs: ['columbia.svg', 'emory.svg'],
   },
   {
     code: 'W25', name: 'Winter 2025', tone: 'sky', reach: '28K+',
