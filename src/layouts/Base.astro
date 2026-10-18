@@ -9,9 +9,10 @@ interface Props {
   type?: 'website' | 'article';
   schema?: Record<string, unknown>;
   bare?: boolean; // focused pages (/apply): no nav, footer or links out, and kept out of search
+  noindex?: boolean;
 }
 
-const { title, description, type = 'website', schema, bare = false } = Astro.props;
+const { title, description, type = 'website', schema, bare = false, noindex = false } = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site);
 ---
 <!doctype html>
@@ -21,10 +22,10 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{title}</title>
   <meta name="description" content={description}>
+  {(noindex || bare) && <meta name="robots" content="noindex">}
   <link rel="canonical" href={canonical}>
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-  {bare && <meta name="robots" content="noindex">}
   <link rel="sitemap" href="/sitemap-index.xml">
   <meta property="og:type" content={type}>
   <meta property="og:title" content={title}>
