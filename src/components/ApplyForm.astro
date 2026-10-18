@@ -179,7 +179,7 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
       const res = await fetch(`${url}/rest/v1/applications`, {
         method: 'POST',
         headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-        body: JSON.stringify({ ...data, source: location.pathname }),
+        body: JSON.stringify({ ...data, source: location.pathname + location.search }),
       });
       if (!res.ok) throw new Error(await res.text());
       form.hidden = true;
