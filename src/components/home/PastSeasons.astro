@@ -6,10 +6,10 @@ import { seasons, orgOf } from '../../data/seasons';
 const files = import.meta.glob<{ default: ImageMetadata }>('../../assets/seasons/*.jpg', { eager: true });
 const photo = (id: string) => files[`../../assets/seasons/${id}.jpg`].default;
 const org = (id: string) => orgOf[id.replace(/_\d+$/, '')];
-// Bento spans in a 12-column grid: one big photo with four small, three mediums, four squares, two wides.
-const spans = [[6, 4], [3, 2], [3, 2], [3, 2], [3, 2], [4, 3], [4, 3], [4, 3], [3, 3], [3, 3], [3, 3], [3, 3], [6, 3], [6, 3]];
-// A three-photo season gets three mediums in one row instead.
-const span = (n: number, i: number) => (n === 3 ? [4, 3] : spans[i % spans.length]);
+// One bento block per season: a big photo with four small ones beside it.
+const spans = [[6, 4], [3, 2], [3, 2], [3, 2], [3, 2]];
+const logoName = (f: string) => ({ 'y-combinator.svg': 'Y Combinator', 'nepc.png': 'National Education Policy Center', 'cu-boulder.svg': 'CU Boulder', 'uc-berkeley.svg': 'UC Berkeley', 'johns-hopkins.svg': 'Johns Hopkins', 'mit.svg': 'MIT', 'usc.svg': 'USC' } as Record<string, string>)[f]
+  ?? f.replace('.svg', '').replace(/^./, (c) => c.toUpperCase());
 const tilt = [-2.2, 1.6, -1.1, 2.4, -1.8, 1.2, -2.6, 1.9, -1.4, 2.1, -.9, 1.5, -2, 1.3];
 ---
 <section id="seasons" class="past">
@@ -25,8 +25,8 @@ const tilt = [-2.2, 1.6, -1.1, 2.4, -1.8, 1.2, -2.6, 1.9, -1.4, 2.1, -.9, 1.5, -
   </nav>
 
   <div class="wrap seasons">
-    {seasons.map((s, si) => (
-      <article id={s.code} class:list={['season', s.tone, { mirror: si % 2 && s.photos.length > 3 }]}>
+    {seasons.map((s) => (
+      <article id={s.code} class:list={['season', s.tone, ]}>
         <header class="head reveal">
           <div>
             <p class="code">{s.code}</p>
@@ -41,13 +41,21 @@ const tilt = [-2.2, 1.6, -1.1, 2.4, -1.8, 1.2, -2.6, 1.9, -1.4, 2.1, -.9, 1.5, -
         {s.photos.length > 0 && (
           <div class="grid">
             {s.photos.map((id, i) => (
-              <figure class="ph reveal" style={`--c:${span(s.photos.length, i)[0]};--r:${span(s.photos.length, i)[1]};--t:${tilt[i % tilt.length]}deg;--dl:${(i % 5) * 70}ms`}>
+              <figure class="ph reveal" style={`--c:${spans[i][0]};--r:${spans[i][1]};--t:${tilt[i % tilt.length]}deg;--dl:${(i % 5) * 70}ms`}>
                 <Image src={photo(id)} alt={`${org(id)} event`} widths={[480, 900]} sizes="(min-width: 900px) 50vw, 100vw" />
                 <figcaption>{org(id)}</figcaption>
               </figure>
             ))}
           </div>
         )}
+        <div class="logos reveal">
+          {[['Core partners', s.partners], ['Partnered with clubs at', s.clubs]].map(([label, files]) => (
+            <div>
+              <p>{label}</p>
+              <ul>{(files as string[]).map((f) => <li><img src={`/logos/${f}`} alt={logoName(f)} title={logoName(f)} loading="lazy" decoding="async" /></li>)}</ul>
+            </div>
+          ))}
+        </div>
       </article>
     ))}
   </div>
@@ -94,7 +102,6 @@ const tilt = [-2.2, 1.6, -1.1, 2.4, -1.8, 1.2, -2.6, 1.9, -1.4, 2.1, -.9, 1.5, -
   .orgs li { padding: 7px 14px; border-radius: 999px; font-size: 13px; font-weight: 500; color: var(--text); background: rgba(255, 255, 255, .7); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .04); }
 
   .grid { display: grid; grid-template-columns: repeat(12, 1fr); grid-auto-rows: clamp(56px, 7vw, 92px); grid-auto-flow: dense; gap: 12px; margin-top: 32px; }
-  .mirror .ph:first-child { grid-column: 7 / span 6; }
   .ph { position: relative; margin: 0; grid-column: span var(--c); grid-row: span var(--r); border-radius: 20px; overflow: hidden; background: rgba(255, 255, 255, .5); transition-delay: var(--dl); }
   .ph.reveal { transform: translateY(28px) rotate(var(--t)) scale(.96); }
   .ph.reveal.in { transform: none; }
@@ -106,10 +113,18 @@ const tilt = [-2.2, 1.6, -1.1, 2.4, -1.8, 1.2, -2.6, 1.9, -1.4, 2.1, -.9, 1.5, -
   }
 
 
+  .logos { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 32px; padding-top: 24px; border-top: 1px solid rgba(0, 0, 0, .07); }
+  .logos p { font-size: 13px; color: var(--muted); }
+  .logos ul { list-style: none; display: flex; flex-wrap: wrap; align-items: center; gap: 14px 32px; margin: 14px 0 0; padding: 0; }
+  .logos img { display: block; height: 30px; width: auto; max-width: 132px; object-fit: contain; mix-blend-mode: multiply; filter: saturate(.45); opacity: .8; }
+
   @media (max-width: 760px) {
-    .head { grid-template-columns: 1fr; align-items: start; }
-    .grid { grid-template-columns: 1fr 1fr; grid-auto-rows: auto; gap: 8px; }
-    .ph, .mirror .ph:first-child { grid-column: auto; grid-row: auto; aspect-ratio: 1; border-radius: 16px; }
+    .logos { grid-template-columns: minmax(0, 1fr); }
+    .logos ul { gap: 12px 24px; }
+    .logos img { height: 24px; max-width: 104px; }
+    .head { grid-template-columns: minmax(0, 1fr); align-items: start; }
+    .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: auto; gap: 8px; }
+    .ph { grid-column: auto; grid-row: auto; aspect-ratio: 1; border-radius: 16px; }
     .ph:first-child { grid-column: span 2; aspect-ratio: 4 / 3; }
     .jump { top: 76px; }
   }
