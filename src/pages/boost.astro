@@ -295,12 +295,12 @@ const posts = [
   };
 
   // ---- Post texts -------------------------------------------------------
-  const blank = () => building.trim() || '___';
+  const blank = () => building.trim() || '<what you\'re working on>';
   const texts: Record<string, () => string> = {
     linkedin: () =>
       `I just applied to Venn's F26 season, a program for high schoolers building things.\n\nI'm building ${blank()}.\n\nIf you're building something too, apply here: ${link}`,
     x: () =>
-      `I just applied to Venn's F26 season for high schoolers building things. I am building ${blank()}.${X_HANDLE ? ` @${X_HANDLE}` : ''}\n\n${link}`,
+      `I just applied to Venn's F26 season for high schoolers building things. I'm building ${blank()}.${X_HANDLE ? ` @${X_HANDLE}` : ''}\n\n${link}`,
   };
   const openHref = (kind: string, text: string) =>
     kind === 'linkedin'
