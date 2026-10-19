@@ -43,6 +43,14 @@ import ApplyForm from '../ApplyForm.astro';
   .apply-sub { color: var(--muted); margin-top: 10px; }
   @media (prefers-reduced-motion: reduce) { .apply-bg i { animation: none; } }
 
+  /* Phones: the card fades in, then stays pinned for ~50svh of scroll before the seasons slide up.
+     No position:fixed (iOS keyboard safe). --top goes negative when the card is taller than the screen,
+     so it pins only once its bottom is on screen and every field stays reachable. */
+  @media (max-width: 640px) and (prefers-reduced-motion: no-preference) {
+    .apply-scene::after { content: ''; display: block; height: 50svh; }
+    .apply-pin { position: sticky; top: var(--top, 16px); opacity: var(--a, 1); transform: translateY(calc((1 - var(--a, 1)) * 24px)); }
+  }
+
   /* Big screens: the card arrives as a circle (--a), opens into the card (--b) and holds while pinned.
      The scene tucks up under the statement so the circle surfaces just below its button. */
   @media (min-width: 900px) and (min-height: 640px) and (prefers-reduced-motion: no-preference) {
@@ -81,6 +89,7 @@ import ApplyForm from '../ApplyForm.astro';
   const pin = scene.querySelector<HTMLElement>('.apply-pin')!;
   const glass = scene.querySelector<HTMLElement>('.glass')!;
   const inner = scene.querySelector<HTMLElement>('.glass-in')!;
+  const phoneMq = matchMedia('(max-width: 640px) and (prefers-reduced-motion: no-preference)');
   const pinMq = matchMedia('(min-width: 900px) and (min-height: 640px) and (prefers-reduced-motion: no-preference)');
 
   // Card height follows its content (capped to the viewport); --H is a registered length, so it eases between questions.
@@ -93,6 +102,12 @@ import ApplyForm from '../ApplyForm.astro';
 
   // Approach: the circle scales in as the scene enters. Morph: it opens over the first 60vh of pinned scroll, then holds.
   onScroll(() => {
+    if (phoneMq.matches) {
+      const vh = innerHeight, r = scene.getBoundingClientRect();
+      pin.style.setProperty('--a', ease(clamp((vh - r.top) / (0.5 * vh))).toFixed(4));
+      pin.style.setProperty('--top', `${Math.min(16, vh - pin.offsetHeight)}px`);
+      return;
+    }
     if (!pinMq.matches) return;
     const vh = innerHeight, r = scene.getBoundingClientRect();
     pin.style.setProperty('--a', ease(clamp((vh - r.top) / vh)).toFixed(4));
