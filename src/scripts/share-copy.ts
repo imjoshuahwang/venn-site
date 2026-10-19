@@ -2,13 +2,7 @@
 // Placeholders: {blank} {link} {friend} {name}. Every LinkedIn version keeps the exact sentence
 // "I'm building {blank}." because the blank-swap code edits that line.
 
-export const LINKEDIN_POSTS: string[] = [
-  "I just applied to @Venn F26, a season for high schoolers who are already building things.\n\nI'm building {blank}.\n\nBuilding something too? Apply with my link: {link}",
-  "Venn picks a small batch of high schoolers building clubs, projects, nonprofits and startups. I just applied to @Venn for the fall season.\n\nI'm building {blank}.\n\nIf you're building something, apply here: {link}",
-  "Putting this out there: I'm building {blank}.\n\nI applied to @Venn F26 to build it alongside other high schoolers doing the same.\n\nKnow someone who belongs in the batch? Send them this: {link}",
-  "@Venn has worked with 141 student organizations that reached 500K+ students. I just applied for its F26 batch.\n\nI'm building {blank}.\n\nApplications are open: {link}",
-  "New step for my project: I applied to @Venn F26.\n\nI'm building {blank}.\n\nHigh schoolers building something can apply here: {link}",
-];
+export { LINKEDIN_POSTS, SMS_TEXTS, VENN_LINKEDIN } from '../data/share-posts.ts';
 
 export const FRIEND_EMAILS: { subject: string; body: string }[] = [
   {
@@ -44,8 +38,9 @@ export function fill(template: string, vars: Record<string, string>): string {
     Object.prototype.hasOwnProperty.call(vars, k) ? vars[k] : m);
 }
 
-// Mirrors the SQL check in submit_share (case-insensitive).
-const POST_URL = /^(https?:\/\/)?(www\.)?linkedin\.com\/(posts|feed\/update)\/\S+$/i;
+// Mirrors the SQL check in submit_share and record_step (20261020120000_post_url_lnkd.sql); keep them equivalent.
+// Accepts lnkd.in short links and the mobile / country-subdomain variants (m., uk., ...).
+const POST_URL = /^(https?:\/\/)?((www|m|[a-z]{2})\.)?(linkedin\.com\/(posts|feed\/update|pulse|embed\/feed\/update|mwlite\/feed\/update)\/|lnkd\.in\/)[^\s]+$/i;
 export const isLinkedInPostUrl = (s: string): boolean => POST_URL.test(s);
 
 export function normalizePostUrl(s: string): string {
@@ -63,3 +58,7 @@ export function timeLeft(dueIso: string, nowMs: number): { ms: number; text: str
   const text = mins < 1 ? 'Under a minute left' : h < 1 ? `${mins}m left` : `${h}h ${mins % 60}m left`;
   return { ms, text, over: false };
 }
+
+// sms: link that opens the phone's Messages app with a prefilled body. iOS wants "&body=", Android and others "?body=".
+export const smsHref = (body: string, ua: string): string =>
+  (/iPhone|iPad|iPod/.test(ua) ? 'sms:&body=' : 'sms:?body=') + encodeURIComponent(body);
