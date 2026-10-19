@@ -28,6 +28,11 @@ test('LinkedIn posts: 25-30, unique, blank sentence, one link, one @Venn', () =>
   }
 });
 
+test('LinkedIn posts: no two share a first line', () => {
+  const first = LINKEDIN_POSTS.map((p) => p.split('\n')[0]);
+  assert.equal(new Set(first).size, first.length);
+});
+
 test('SMS texts: 5, each with a link and no tag or blank', () => {
   assert.equal(SMS_TEXTS.length, 5);
   for (const t of SMS_TEXTS) {
