@@ -2,13 +2,7 @@
 // Placeholders: {blank} {link} {friend} {name}. Every LinkedIn version keeps the exact sentence
 // "I'm building {blank}." because the blank-swap code edits that line.
 
-export const LINKEDIN_POSTS: string[] = [
-  "I just applied to @Venn F26, a season for high schoolers who are already building things.\n\nI'm building {blank}.\n\nBuilding something too? Apply with my link: {link}",
-  "Venn picks a small batch of high schoolers building clubs, projects, nonprofits and startups. I just applied to @Venn for the fall season.\n\nI'm building {blank}.\n\nIf you're building something, apply here: {link}",
-  "Putting this out there: I'm building {blank}.\n\nI applied to @Venn F26 to build it alongside other high schoolers doing the same.\n\nKnow someone who belongs in the batch? Send them this: {link}",
-  "@Venn has worked with 141 student organizations that reached 500K+ students. I just applied for its F26 batch.\n\nI'm building {blank}.\n\nApplications are open: {link}",
-  "New step for my project: I applied to @Venn F26.\n\nI'm building {blank}.\n\nHigh schoolers building something can apply here: {link}",
-];
+export { LINKEDIN_POSTS, SMS_TEXTS, VENN_LINKEDIN } from '../data/share-posts.ts';
 
 export const FRIEND_EMAILS: { subject: string; body: string }[] = [
   {
