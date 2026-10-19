@@ -3,6 +3,7 @@
 // in the venn repo (confirm.py is the single source of truth), then copy it here.
 import template from "./template.json" with { type: "json" };
 import { mailable } from "./mailable.ts";
+import { formatDeadline } from "./deadline.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -39,7 +40,8 @@ function firstName(name: string | null): string {
 const headline = (first: string): string => first === "there" ? "You're almost done" : `You're almost done, ${first}`;
 
 const fill = (tpl: string, vals: Record<string, string>, escape: (s: string) => string) =>
-  tpl.split("{{headline}}").join(escape(vals.headline)).split("{{refer_link}}").join(escape(vals.refer_link));
+  tpl.split("{{headline}}").join(escape(vals.headline)).split("{{refer_link}}").join(escape(vals.refer_link))
+    .split("{{deadline}}").join(escape(vals.deadline));
 
 // Same list as TYPO_DOMAINS in the venn repo's confirm.py.
 const TYPO_DOMAINS = new Set(
@@ -92,7 +94,7 @@ Deno.serve(async (req) => {
     return json({ error: "no record id" }, 400);
   }
 
-  const got = await rest(`applications?id=eq.${id}&select=id,role,name,email,email_key,ref_code,is_test,confirmed_at,email_status`);
+  const got = await rest(`applications?id=eq.${id}&select=id,role,name,email,email_key,ref_code,is_test,confirmed_at,email_status,share_due`);
   if (!got.ok) return json({ error: "read failed" }, 502);
   const row = (await got.json())[0];
   if (!row) return json({ skipped: "not_found" });
@@ -144,6 +146,7 @@ Deno.serve(async (req) => {
     const vals = {
       headline: headline(firstName(row.name)),
       refer_link: `${SITE}/refer?code=${encodeURIComponent(row.ref_code)}`,
+      deadline: formatDeadline(row.share_due),
     };
     const post = () =>
       fetch("https://api.resend.com/emails", {
