@@ -75,6 +75,20 @@ const key = import.meta.env.PUBLIC_SUPABASE_ANON_KEY ?? '';
   }
 
   // The sheet is a native <dialog>: it traps focus, Escape closes it, and focus goes back to where they were.
+  // The on-screen keyboard shrinks the visual viewport but not the layout one on iOS: size the page to what is visible,
+  // so Back/Next stay above the keyboard. Where dvh already tracks it (Android) this just agrees.
+  const vv = window.visualViewport;
+  if (vv) {
+    const fit = () => { shell.style.setProperty('--vvh', `${Math.round(vv.height)}px`); if (vv.offsetTop) scrollTo(0, 0); };
+    vv.addEventListener('resize', fit);
+    vv.addEventListener('scroll', fit);
+  }
+  // Keep the focused field in view when the keyboard opens.
+  document.addEventListener('focusin', (e) => {
+    const t = e.target as HTMLElement;
+    if (t.matches('input:not([type=checkbox]), textarea')) setTimeout(() => t.scrollIntoView({ block: 'center', behavior: 'smooth' }), 300);
+  });
+
   const about = document.getElementById('about') as HTMLDialogElement;
   const open = document.getElementById('about-open')!;
   // Keep focus (and the keyboard) in the answer box when tapping "?" with a mouse.
@@ -91,19 +105,19 @@ const key = import.meta.env.PUBLIC_SUPABASE_ANON_KEY ?? '';
 
 <style>
   .shell {
-    position: fixed; inset: 0; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto;
+    position: fixed; inset: 0 0 auto 0; height: 100vh; height: var(--vvh, 100dvh); display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto;
     background:
       radial-gradient(60vmax 60vmax at 0% 0%, rgba(159, 191, 154, .28), transparent 70%),
       radial-gradient(60vmax 60vmax at 100% 100%, rgba(196, 212, 239, .4), transparent 70%),
       #fff;
   }
-  .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 16px 0; }
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: calc(16px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) 0 calc(16px + env(safe-area-inset-left)); }
   .brand { height: 30px; width: auto; filter: saturate(.6); }
   .about-btn span { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; box-shadow: inset 0 0 0 1px #bbb; font-size: 12px; line-height: 1; }
-  .about-btn { gap: 8px; }
+  .about-btn { gap: 8px; min-height: 44px; }
 
   /* Tall steps scroll inside the stage; the page itself never does. */
-  .stage { overflow-y: auto; overscroll-behavior: contain; display: flex; padding: 0 16px; }
+  .stage { overflow-y: auto; overscroll-behavior: contain; display: flex; padding: 0 calc(16px + env(safe-area-inset-right)) 0 calc(16px + env(safe-area-inset-left)); scroll-padding-bottom: 96px; }
   .stage-in { width: 100%; max-width: 560px; margin: auto; padding: 24px 0; }
   .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
@@ -133,6 +147,6 @@ const key = import.meta.env.PUBLIC_SUPABASE_ANON_KEY ?? '';
   dialog h2 { font-size: 1.5rem; font-weight: 600; letter-spacing: -.03em; }
   dialog p { color: var(--body); margin-top: 10px; }
   dialog :global(.logos) { margin-top: 24px; }
-  dialog .btn { width: 100%; margin-top: 24px; }
+  dialog .btn { width: 100%; min-height: 52px; margin-top: 24px; }
   @media (prefers-reduced-motion: reduce) { dialog[open] { animation: none; } }
 </style>
