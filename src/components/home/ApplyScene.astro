@@ -82,9 +82,15 @@ import ApplyForm from '../ApplyForm.astro';
      (opacity follows --b) dims and blurs everything behind it so it is obvious you are held here.
      No position:fixed (iOS keyboard safe). The circle starts --G below the statement button. */
   @media (max-width: 640px) and (prefers-reduced-motion: no-preference) {
-    .apply-scene { --D: min(46svh, 76vw, 380px); --G: 96px; --W: calc(100vw - 32px); height: 350svh; margin-top: calc(var(--G) + var(--D) / 2 - 50svh); }
-    .apply-stop { top: calc(60svh + 88px); }
-    .apply-pin { height: 100svh; }
+    /* vh first for old iOS (no svh); browsers that know svh get the same rules again below. */
+    .apply-scene { --D: min(46vh, 76vw, 380px); --G: 96px; --W: calc(100vw - 32px); height: 350vh; margin-top: calc(var(--G) + var(--D) / 2 - 50vh); }
+    .apply-stop { top: calc(60vh + 88px); }
+    .apply-pin { height: 100vh; }
+    @supports (height: 1svh) {
+      .apply-scene { --D: min(46svh, 76vw, 380px); height: 350svh; margin-top: calc(var(--G) + var(--D) / 2 - 50svh); }
+      .apply-stop { top: calc(60svh + 88px); }
+      .apply-pin { height: 100svh; }
+    }
     .apply-pin::after {
       content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none; opacity: var(--b, 0);
       background: rgba(52, 66, 58, .42);
