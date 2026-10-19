@@ -24,15 +24,14 @@ const rest = (path: string, init: RequestInit = {}) =>
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#x27;");
 
-// Port of confirm.first_name()
+// Port of confirm.first_name(): first whitespace token, only if it looks like a plain name
+// (letters, apostrophe, hyphen, max 20); anything else gets no name at all. Capitalize the first letter.
+const NAME_RE = /^[\p{L}][\p{L}'-]{0,19}$/u;
 function firstName(name: string | null): string {
-  const word = (name ?? "").trim().split(" ")[0];
-  const lower = word !== word.toUpperCase() && word === word.toLowerCase();
-  if (lower) {
-    const chars = Array.from(word);
-    return chars[0].toUpperCase() + chars.slice(1).join("");
-  }
-  return word || "there";
+  const word = (name ?? "").trim().split(/\s+/)[0] ?? "";
+  if (!NAME_RE.test(word)) return "there";
+  const chars = Array.from(word);
+  return chars[0].toUpperCase() + chars.slice(1).join("");
 }
 
 // Port of confirm.headline()
@@ -91,7 +90,10 @@ Deno.serve(async (req) => {
 
   // Same address applied earlier: that application gets the email, not this one.
   if (row.email_key) {
-    const dup = await rest(`applications?email_key=eq.${encodeURIComponent(row.email_key)}&id=lt.${id}&select=id&limit=1`);
+    // Only an earlier non-test student row counts: a test row or a club/company row never got the email.
+    const dup = await rest(
+      `applications?email_key=eq.${encodeURIComponent(row.email_key)}&id=lt.${id}&role=eq.student&is_test=eq.false&select=id&limit=1`,
+    );
     if (!dup.ok) return json({ error: "dedupe read failed" }, 502);
     if ((await dup.json()).length) {
       // Mark the repeat as handled so the `venn confirm` sweeper never picks it up (it skips repeats too).
@@ -137,6 +139,7 @@ Deno.serve(async (req) => {
       }),
     });
     if (!res.ok) {
+      // Resend answered with an error, so nothing was sent: release the claim so a retry can send.
       console.log(`resend ${res.status} for application ${id}`);
       await unclaim(id as number);
       return json({ error: "resend failed" }, 502);
@@ -145,8 +148,9 @@ Deno.serve(async (req) => {
     console.log(`sent application ${id} resend ${sent.id}`);
     return json({ id: sent.id });
   } catch {
-    console.log(`send error for application ${id}`);
-    await unclaim(id as number);
-    return json({ error: "send failed" }, 502);
+    // Timeout or network error after calling Resend: the outcome is unknown, and Resend may have sent it.
+    // KEEP the claim so nothing resends (a missed email is cheaper than a double one).
+    console.log(`send outcome unknown for application ${id}, claim kept`);
+    return json({ error: "send outcome unknown" }, 502);
   }
 });

@@ -25,7 +25,7 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
         <button type="button" class="choice" data-set="level" data-value="college"><b>College</b></button>
         <button type="button" class="choice" data-set="level" data-value="other"><b>Other</b></button>
       </div>
-      <input name="level_other" placeholder="Tell us a bit more" aria-label="Where are you in school?" hidden>
+      <input name="level_other" maxlength="200" placeholder="Tell us a bit more" aria-label="Where are you in school?" hidden>
     </div>
     <div class="q" data-step="building" hidden>
       <p class="q-h">What are you building?</p>
@@ -33,14 +33,14 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
       <div class="chips">
         {building.map((b) => <label class="chip" data-college-only={b === 'Research' ? '' : undefined} hidden={b === 'Research'}><input type="checkbox" name="building" value={b}><span>{b}</span></label>)}
       </div>
-      <input name="building_other" placeholder="What is it?" aria-label="What else are you building?" hidden>
+      <input name="building_other" maxlength="100" placeholder="What is it?" aria-label="What else are you building?" hidden>
     </div>
-    <div class="q" data-step="name" hidden><label class="q-h" for="f-name">What's your name?</label><input id="f-name" name="name" required autocomplete="name"></div>
-    <div class="q" data-step="email" hidden><label class="q-h" for="f-email">Where can we reach you?</label><input id="f-email" name="email" type="email" required autocomplete="email" placeholder="you@email.com"></div>
-    <div class="q" data-step="org" hidden><label class="q-h" for="f-org" id="l-org">What school do you go to?</label><input id="f-org" name="org" required autocomplete="organization"></div>
-    <div class="q" data-step="link" hidden><label class="q-h" for="f-link">Anywhere we can see it?</label><p class="q-hint">Optional. Website, Instagram, LinkedIn.</p><input id="f-link" name="link" inputmode="url" autocapitalize="off" spellcheck="false" placeholder="Link or @handle"></div>
-    <div class="q" data-step="working_on" hidden><label class="q-h" for="f-work" id="l-work">What are you working on?</label><textarea id="f-work" name="working_on" required placeholder="What it is, who it's for, how far along it is"></textarea></div>
-    <div class="q" data-step="need" hidden><label class="q-h" for="f-need" id="l-need">What would help most right now?</label><p class="q-hint">Optional.</p><textarea id="f-need" name="need" placeholder="A mentor, a partner club, a first event, funding..."></textarea></div>
+    <div class="q" data-step="name" hidden><label class="q-h" for="f-name">What's your name?</label><input id="f-name" name="name" required maxlength="200" autocomplete="name"></div>
+    <div class="q" data-step="email" hidden><label class="q-h" for="f-email">Where can we reach you?</label><input id="f-email" name="email" type="email" required maxlength="320" autocomplete="email" placeholder="you@email.com"></div>
+    <div class="q" data-step="org" hidden><label class="q-h" for="f-org" id="l-org">What school do you go to?</label><input id="f-org" name="org" required maxlength="300" autocomplete="organization"></div>
+    <div class="q" data-step="link" hidden><label class="q-h" for="f-link">Anywhere we can see it?</label><p class="q-hint">Optional. Website, Instagram, LinkedIn.</p><input id="f-link" name="link" maxlength="500" inputmode="url" autocapitalize="off" spellcheck="false" placeholder="Link or @handle"></div>
+    <div class="q" data-step="working_on" hidden><label class="q-h" for="f-work" id="l-work">What are you working on?</label><textarea id="f-work" name="working_on" required maxlength="5000" placeholder="What it is, who it's for, how far along it is"></textarea></div>
+    <div class="q" data-step="need" hidden><label class="q-h" for="f-need" id="l-need">What would help most right now?</label><p class="q-hint">Optional.</p><textarea id="f-need" name="need" maxlength="5000" placeholder="A mentor, a partner club, a first event, funding..."></textarea></div>
   </div>
   <input class="hp" name="company_website" tabindex="-1" autocomplete="off" aria-hidden="true">
 
@@ -201,7 +201,9 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
   });
   paint();
 
+  let sending = false;
   async function send() {
+    if (sending) return; // Cmd+Enter twice, or Enter while the first is in flight
     const fd = new FormData(form);
     if (fd.get('company_website')) return; // bot
     const data: Record<string, string> = { role: picked.role };
@@ -213,6 +215,7 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
       const v = String(fd.get(n) ?? '').trim();
       if (v) data[n] = v;
     }
+    sending = true;
     next.disabled = true;
     status.className = 'form-status';
     status.textContent = 'Sending...';
@@ -238,6 +241,7 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
     } catch (err) {
       console.error(err);
       log('error', `send_${(err as { status?: number }).status ?? 'network'}`);
+      sending = false;
       next.disabled = false;
       status.className = 'form-status err';
       status.textContent = 'Something went wrong. Email contact@joinvenn.org and we will sort it out.';
