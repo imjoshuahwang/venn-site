@@ -3,6 +3,11 @@
 -- page_token. ref_code stays public and only drives ?ref= sharing and referrer_name.
 -- The RPC parameter is still named `code` so the client and the ?code= URL keep working; the value is now the token.
 -- Old ?code=<ref_code> email links stop opening /refer on purpose. Deploy order: db push, site, send-confirmation.
+-- Also here: one post, one inbox, enforced by the database (applications.post_key + a partial unique index).
+-- Function bodies are based on the LATEST versions on s2s-pass: applications_before_insert from 20261019150000
+-- (student-only share clock, referred_by check), the post-URL regex from the lnkd.in hotfix 20261020120000
+-- (mirrors isLinkedInPostUrl in src/scripts/share-copy.ts), referral_ledger credit (20261020072000) is a view and
+-- is untouched. Must stay later than 20261020120000. Safe to re-run.
 
 alter table public.applications add column if not exists page_token text;
 update public.applications set page_token = replace(gen_random_uuid()::text, '-', '') where page_token is null;
@@ -11,11 +16,62 @@ do $$ begin
   alter table public.applications add constraint applications_page_token_key unique (page_token);
 exception when duplicate_table or duplicate_object then null; end $$;
 
--- Copied from 20261019070000_share_status.sql; the page_token line is new. Always a fresh token, never the client's.
+-- post_key(url): the one normalization of a LinkedIn post link. Lowercase; drop scheme, query, fragment, trailing
+-- slashes; drop a leading www./m./two-letter host prefix on linkedin.com and lnkd.in; mwlite/ and embed/ feed paths
+-- fold onto feed/update/. lnkd.in short codes are case-sensitive, so their path keeps its case.
+-- Not callable by clients; it runs inside security definer functions and the trigger below.
+create or replace function public.post_key(u text) returns text language sql immutable set search_path = '' as $$
+  with a as (
+    select rtrim(regexp_replace(regexp_replace(btrim(coalesce(u, '')), '^[a-zA-Z][a-zA-Z0-9+.-]*://', ''), '[?#].*$', ''), '/') as s
+  ), b as (
+    select s, lower(split_part(s, '/', 1)) as host, substr(s, length(split_part(s, '/', 1)) + 1) as path from a
+  )
+  select case
+    when s = '' then null
+    when host ~ '^((www|m|[a-z]{2})\.)?(linkedin\.com|lnkd\.in)$' then
+      regexp_replace(host, '^(www|m|[a-z]{2})\.', '') ||
+      case when host ~ 'lnkd\.in$' then path
+           else regexp_replace(lower(path), '^/(mwlite|embed)/feed/update/', '/feed/update/') end
+    else lower(s)
+  end
+  from b
+$$;
+revoke execute on function public.post_key(text) from public, anon, authenticated;
+
+alter table public.applications add column if not exists post_key text;
+
+-- Keeps post_key in step with post_url. A second row of the SAME inbox (same email_key) holding an already-keyed post
+-- gets no key, so a re-applied inbox is not blocked by itself (the old app rule); another inbox hits the index.
+create or replace function public.applications_set_post_key() returns trigger language plpgsql set search_path = public as $$
+begin
+  new.post_key := public.post_key(new.post_url);
+  if new.post_key is not null and exists (
+    select 1 from public.applications o where o.id <> new.id and o.post_key = new.post_key and o.email_key = new.email_key) then
+    new.post_key := null;
+  end if;
+  return new;
+end $$;
+revoke execute on function public.applications_set_post_key() from public, anon, authenticated;
+drop trigger if exists applications_post_key on public.applications;
+create trigger applications_post_key before update of post_url on public.applications
+  for each row execute function public.applications_set_post_key();
+
+-- Push safety: prod may already hold the same post on two rows, which would make a plain unique index fail the push.
+-- Backfill the key for the EARLIEST row per post only; later duplicates stay null (their post_url is kept).
+update public.applications a set post_key = public.post_key(a.post_url)
+from (select id, row_number() over (partition by public.post_key(post_url) order by id) as rn
+      from public.applications where post_url is not null) d
+where d.id = a.id and d.rn = 1 and a.post_key is null;
+create unique index if not exists applications_post_key_key on public.applications (post_key) where post_key is not null;
+
+-- Copied from 20261019150000_referral_keys.sql; the page_token line is new. Always a fresh token, never the client's.
 create or replace function public.applications_before_insert() returns trigger language plpgsql as $$
 begin
   new.email_key := public.email_key(new.email);
   new.referred_by := nullif(lower(trim(new.referred_by)), '');
+  if new.referred_by is not null and not exists (select 1 from public.applications where ref_code = new.referred_by) then
+    new.referred_by := null;
+  end if;
   if new.ref_code is null then new.ref_code := public.new_ref_code(new.name); end if;
   new.page_token := replace(gen_random_uuid()::text, '-', '');
   new.confirmed_at := null;
@@ -23,8 +79,13 @@ begin
   new.is_test := coalesce(new.source = 'test', false)
     or coalesce(split_part(lower(new.email), '@', 1) like '%+test%', false)
     or coalesce(new.ref_code = 'minji-wzmf', false);
-  new.share_status := 'pending_share';
-  new.share_due := now() + interval '24 hours';
+  if new.role = 'student' then
+    new.share_status := 'pending_share';
+    new.share_due := now() + interval '24 hours';
+  else
+    new.share_status := null;
+    new.share_due := null;
+  end if;
   new.post_url := null;
   new.share_submitted_at := null;
   return new;
@@ -66,7 +127,7 @@ begin
   if a.share_status = 'void' or (a.share_status = 'pending_share' and now() > a.share_due) then
     raise exception 'void';
   end if;
-  if clean is not null and clean !~* '^(https?://)?(www\.)?linkedin\.com/(posts|feed/update)/\S+$' then
+  if clean is not null and clean !~* '^(https?://)?((www|m|[a-z]{2})\.)?(linkedin\.com/(posts|feed/update|pulse|embed/feed/update|mwlite/feed/update)/|lnkd\.in/)[^\s]+$' then
     clean := null;
     if (referral_status(code)->>'friends_submitted')::int < 2 then raise exception 'need a linkedin post link'; end if;
   end if;
@@ -78,11 +139,14 @@ begin
   if clean is not null and exists (
     select 1 from applications o
     where o.id <> a.id and o.email_key is distinct from a.email_key and o.post_url is not null
-      and rtrim(regexp_replace(lower(trim(o.post_url)), '^(https?://)?(www\.)?', ''), '/')
-        = rtrim(regexp_replace(lower(clean), '^(https?://)?(www\.)?', ''), '/')) then
+      and public.post_key(o.post_url) = public.post_key(clean)) then
     raise exception 'post already used';
   end if;
-  update applications set share_status = 'submitted', share_submitted_at = now(), post_url = clean where id = a.id;
+  begin
+    update applications set share_status = 'submitted', share_submitted_at = now(), post_url = clean where id = a.id;
+  exception when unique_violation then
+    raise exception 'post already used';  -- a raced second inbox lost at the unique index
+  end;
   insert into share_events (ref_code, step) values (a.ref_code, 'submitted');
   return referral_status(code);
 end $$;
@@ -103,7 +167,7 @@ begin
   end if;
   if kind = 'linkedin' then
     if clean is not null then
-      if clean !~* '^(https?://)?(www\.)?(linkedin\.com/(posts|feed/update)/|lnkd\.in/)[^\s]+$' then
+      if clean !~* '^(https?://)?((www|m|[a-z]{2})\.)?(linkedin\.com/(posts|feed/update|pulse|embed/feed/update|mwlite/feed/update)/|lnkd\.in/)[^\s]+$' then
         raise exception 'need a linkedin post link';
       end if;
       if clean !~* '^https?://' then clean := 'https://' || clean; end if;
