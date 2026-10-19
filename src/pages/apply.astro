@@ -17,11 +17,11 @@ const key = import.meta.env.PUBLIC_SUPABASE_ANON_KEY ?? '';
 
     <div class="stage">
       <div class="stage-in">
-        <div class="invite" id="invite" hidden>
+        <div class="invite" id="invite" aria-hidden="true" hidden>
           <span class="avatar" id="invite-av" aria-hidden="true"></span>
           <div class="invite-txt">
             <p class="invite-h"><b id="invite-name"></b> invited you to Venn</p>
-            <p class="invite-sub">Apply in 2 minutes. You'll both hear back.</p>
+            <p class="invite-sub">Apply in about 2 minutes. It's free.</p>
           </div>
         </div>
         <h1 class="visually-hidden">Apply to Venn</h1>
@@ -46,21 +46,32 @@ const key = import.meta.env.PUBLIC_SUPABASE_ANON_KEY ?? '';
   const shell = document.querySelector<HTMLElement>('.shell')!;
   const { url, key } = shell.dataset;
   const ref = getRef();
-  if (ref && url && key) {
-    fetch(`${url}/rest/v1/rpc/referrer_name`, {
-      method: 'POST',
-      headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code: ref }),
-    })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((name) => {
-        if (typeof name !== 'string' || !name.trim()) return;
-        const first = name.trim().slice(0, 30);
-        document.getElementById('invite-name')!.textContent = first;
-        document.getElementById('invite-av')!.textContent = Array.from(first)[0].toUpperCase();
-        document.getElementById('invite')!.hidden = false;
+  const invite = document.getElementById('invite')!;
+  // Give up on the banner. If they are already typing, keep the space so nothing moves under them.
+  const collapse = () => {
+    const t = document.activeElement?.tagName;
+    if (t !== 'INPUT' && t !== 'TEXTAREA') invite.hidden = true;
+  };
+  if (ref) {
+    // getRef() is synchronous: reserve the space now (invisible), fill and fade in when the name arrives.
+    invite.hidden = false;
+    if (url && key) {
+      fetch(`${url}/rest/v1/rpc/referrer_name`, {
+        method: 'POST',
+        headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: ref }),
       })
-      .catch(() => {});
+        .then((r) => (r.ok ? r.json() : null))
+        .then((name) => {
+          if (typeof name !== 'string' || !name.trim()) return collapse();
+          const first = name.trim().slice(0, 30);
+          document.getElementById('invite-name')!.textContent = first;
+          document.getElementById('invite-av')!.textContent = Array.from(first)[0].toUpperCase();
+          invite.removeAttribute('aria-hidden');
+          invite.classList.add('in');
+        })
+        .catch(collapse);
+    } else collapse();
   }
 
   // The sheet is a native <dialog>: it traps focus, Escape closes it, and focus goes back to where they were.
@@ -96,7 +107,8 @@ const key = import.meta.env.PUBLIC_SUPABASE_ANON_KEY ?? '';
   .stage-in { width: 100%; max-width: 560px; margin: auto; padding: 24px 0; }
   .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
-  .invite { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; animation: invite-in .5s var(--ease) both; }
+  .invite { display: flex; align-items: center; gap: 14px; min-height: 52px; margin-bottom: 20px; opacity: 0; transform: translateY(-6px); transition: opacity .5s var(--ease), transform .5s var(--ease); }
+  .invite.in { opacity: 1; transform: none; }
   .invite[hidden] { display: none; }
   .avatar {
     flex: none; display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%;
@@ -107,8 +119,7 @@ const key = import.meta.env.PUBLIC_SUPABASE_ANON_KEY ?? '';
   .invite-h { font-size: 21px; line-height: 1.2; font-weight: 400; letter-spacing: -.02em; color: var(--black); overflow-wrap: anywhere; }
   .invite-h b { font-weight: 600; }
   .invite-sub { margin-top: 3px; font-size: 14px; color: var(--muted); }
-  @keyframes invite-in { from { opacity: 0; transform: translateY(-6px); } }
-  @media (prefers-reduced-motion: reduce) { .invite { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .invite { transition: none; transform: none; } }
 
   dialog {
     border: 0; padding: 24px 16px calc(24px + env(safe-area-inset-bottom)); color: var(--text); background: #fff;
