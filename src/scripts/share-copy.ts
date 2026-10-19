@@ -44,8 +44,9 @@ export function fill(template: string, vars: Record<string, string>): string {
     Object.prototype.hasOwnProperty.call(vars, k) ? vars[k] : m);
 }
 
-// Mirrors the SQL check in submit_share (case-insensitive).
-const POST_URL = /^(https?:\/\/)?(www\.)?linkedin\.com\/(posts|feed\/update)\/\S+$/i;
+// Mirrors the SQL check in submit_share and record_step (20261020120000_post_url_lnkd.sql); keep them equivalent.
+// Accepts lnkd.in short links and the mobile / country-subdomain variants (m., uk., ...).
+const POST_URL = /^(https?:\/\/)?((www|m|[a-z]{2})\.)?(linkedin\.com\/(posts|feed\/update|pulse|embed\/feed\/update|mwlite\/feed\/update)\/|lnkd\.in\/)[^\s]+$/i;
 export const isLinkedInPostUrl = (s: string): boolean => POST_URL.test(s);
 
 export function normalizePostUrl(s: string): string {
