@@ -19,7 +19,8 @@ function readStored(): string {
   return '';
 }
 
-export function getRef(): string {
+// Safe on every page load: stores a first-touch ?ref= and returns the ref in effect.
+export function captureRef(): string {
   let url = '';
   try { url = clean(new URLSearchParams(location.search).get('ref') ?? ''); } catch {}
   const stored = readStored();
@@ -32,4 +33,11 @@ export function getRef(): string {
     else return clean(sessionStorage.getItem(KEY) ?? '');
   } catch {}
   return ref;
+}
+
+export const getRef = captureRef;
+
+export function clearRef(): void {
+  try { localStorage.removeItem(KEY); } catch {}
+  try { sessionStorage.removeItem(KEY); } catch {}
 }

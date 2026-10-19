@@ -82,6 +82,9 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
 
   <script>
     import { onScroll, calm } from '../scripts/scroll';
+    import { captureRef } from '../scripts/ref';
+
+    captureRef(); // keep a ?ref= from any page until /apply
 
     // Scroll line in the nav chases the real position, so even a fast fling reads as a smooth glide.
     // The loop only runs while it is catching up.
