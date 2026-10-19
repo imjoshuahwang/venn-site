@@ -1,6 +1,7 @@
 -- Security check for 20261019050000_security.sql. Run against a LOCAL database with all migrations applied
 -- (never prod: it inserts rows, which fires the confirmation webhook). Everything rolls back.
 --   psql -v ON_ERROR_STOP=1 -f supabase/tests/security_check.sql   -> ends with 'security_check ok'
+-- Local run (throwaway Postgres, no Docker): bash supabase/tests/run_local.sh
 begin;
 
 -- Act like PostgREST serving the public anon key.
