@@ -1,6 +1,6 @@
 ---
 // One question per screen. Submissions go through the Supabase function `submit_application` (see supabase/migrations),
-// which returns the applicant's own ref_code. `locked` = the focused /apply page: slim top progress bar, no wandering off.
+// which returns the applicant's private page token (not the public ref_code). `locked` = the focused /apply page: slim top progress bar, no wandering off.
 const { locked = false } = Astro.props;
 const url = import.meta.env.PUBLIC_SUPABASE_URL ?? '';
 const key = import.meta.env.PUBLIC_SUPABASE_ANON_KEY ?? '';
@@ -289,7 +289,7 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
         }).finally(() => clearTimeout(timer));
         if (!res.ok) throw Object.assign(new Error(await res.text()), { status: res.status });
         clearRef(); // submitted: the credit is in the row, drop the stored ref
-        return res.json().catch(() => null); // the new applicant's own ref_code, e.g. "maya-7k2"
+        return res.json().catch(() => null); // the applicant's page token (32 hex), not the public ref_code
       })(), calm ? 400 : 1200);
       finish(code);
     } catch (err) {
