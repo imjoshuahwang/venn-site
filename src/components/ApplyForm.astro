@@ -40,7 +40,9 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
     <div class="q" data-step="org" hidden><label class="q-h" for="f-org" id="l-org">What school do you go to?</label><input id="f-org" name="org" required maxlength="300" autocomplete="organization"></div>
     <div class="q" data-step="link" hidden><label class="q-h" for="f-link">Anywhere we can see it?</label><p class="q-hint">Optional. Website, Instagram, LinkedIn.</p><input id="f-link" name="link" maxlength="500" inputmode="url" autocapitalize="off" spellcheck="false" placeholder="Link or @handle"></div>
     <div class="q" data-step="working_on" hidden><label class="q-h" for="f-work" id="l-work">What are you working on?</label><textarea id="f-work" name="working_on" required maxlength="5000" placeholder="What it is, who it's for, how far along it is"></textarea></div>
-    <div class="q" data-step="need" hidden><label class="q-h" for="f-need" id="l-need">What would help most right now?</label><p class="q-hint">Optional.</p><textarea id="f-need" name="need" maxlength="5000" placeholder="A mentor, a partner club, a first event, funding..."></textarea></div>
+    <div class="q" data-step="need" hidden><label class="q-h" for="f-need" id="l-need">What would help most right now?</label><p class="q-hint">Optional.</p><textarea id="f-need" name="need" maxlength="5000" placeholder="A mentor, a partner club, a first event, funding..."></textarea>
+      <label class="promise" id="promise-box" hidden><input type="checkbox" id="f-promise"><span>I'll post about my application on LinkedIn within 24 hours.</span></label>
+    </div>
   </div>
   <input class="hp" name="hp_field" tabindex="-1" autocomplete="off" aria-hidden="true">
 
@@ -51,11 +53,10 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
   <p class="form-status" id="f-status" role="status"></p>
 </form>
 <div class="done" id="apply-done" hidden>
-  <h3>Got it. Thank you.</h3>
-  <p class="muted" style="margin-top:8px">Every application is read by a person. You'll hear from us at the email you gave.</p>
+  <h3 id="apply-done-h">Got it. Thank you.</h3>
+  <p class="muted" id="apply-done-p" style="margin-top:8px">Every application is read by a person. You'll hear from us at the email you gave.</p>
   <div class="refer-box" id="apply-refer" hidden>
-    <a class="btn" id="apply-refer-link" href="/refer">Refer friends →</a>
-    <p class="muted small">Step 1 of 3 is done. The other two take about 2 minutes. Applications with people behind them get a closer look.</p>
+    <a class="btn" id="apply-refer-link" href="/refer">Finish on LinkedIn →</a>
   </div>
   {locked && <a class="done-home" href="/">joinvenn.org</a>}
 </div>
@@ -74,6 +75,7 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
   const field = (n: string) => form.elements.namedItem(n) as HTMLInputElement;
   const picked: Record<string, string> = {};
   const ref = getRef(); // from ?ref=, held for the whole flow (and across a reload)
+  const promise = () => document.getElementById('f-promise') as HTMLInputElement;
   const other = () => form.querySelector<HTMLInputElement>('input[name="building"][value="Other"]')!;
 
   // Students answer two extra questions; clubs and companies skip straight to the shared ones.
@@ -132,6 +134,7 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
   const ok = (s: string) => {
     if (s === 'email') return field('email').checkValidity() && emailOk(field('email').value.trim());
     if (s === 'role') return !!picked.role;
+    if (s === 'need' && picked.role === 'student' && !promise().checked) return false;
     if (s === 'level') return !!picked.level && (picked.level !== 'other' || !!field('level_other').value.trim());
     if (s === 'building') return !!form.querySelector('input[name="building"]:checked') && (!other().checked || !!field('building_other').value.trim());
     const el = field(s) as HTMLInputElement | undefined;
@@ -139,13 +142,14 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
   };
   const hint = (s: string) => ({
     level: 'Tell us a bit more first.', building: 'Pick at least one.', name: 'Add your name to keep going.',
-    email: 'That email looks off. Try you@email.com.', org: 'Fill this in to keep going.', working_on: 'A sentence or two is plenty.',
+    need: 'Tick the box to send.', email: 'That email looks off. Try you@email.com.', org: 'Fill this in to keep going.', working_on: 'A sentence or two is plenty.',
   } as Record<string, string>)[s] ?? 'Answer this one to keep going.';
   // Why a step is blocked, as a code.
   const why = (s: string) => {
     if (s === 'role') return 'none_picked';
     if (s === 'level') return picked.level ? 'other_blank' : 'none_picked';
     if (s === 'building') return form.querySelector('input[name="building"]:checked') ? 'other_blank' : 'none_picked';
+    if (s === 'need') return 'promise';
     return (field(s) as HTMLInputElement).value.trim() ? 'invalid' : 'empty';
   };
   const paint = () => {
@@ -157,6 +161,7 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
     nav.hidden = !i;
     next.hidden = at === 'role' || (at === 'level' && picked.level !== 'other');
     next.textContent = last ? 'Send application' : (at === 'link' || at === 'need') && !field(at).value.trim() ? 'Skip' : 'Next';
+    document.getElementById('promise-box')!.hidden = picked.role !== 'student';
     next.classList.toggle('off', !ok(at));
   };
   let moved = 0; // when the last step change happened
@@ -299,6 +304,9 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
     form.hidden = true;
     document.getElementById('apply-done')!.hidden = false;
     if (typeof code === 'string' && code) {
+      const first = String(field('name').value).trim().split(/\s+/)[0];
+      document.getElementById('apply-done-h')!.textContent = `Your application is saved${first ? `, ${first}` : ''}. It's submitted once you share it.`;
+      document.getElementById('apply-done-p')!.textContent = 'Post on LinkedIn within 24 hours to submit it.';
       (document.getElementById('apply-refer-link') as HTMLAnchorElement).href = `/refer?code=${encodeURIComponent(code)}`;
       document.getElementById('apply-refer')!.hidden = false;
     }
@@ -346,6 +354,8 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
   .choice:focus-visible, .chip input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
   .q-nav { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
   .q-next:disabled, .q-next.off { opacity: .3; cursor: default; transform: none; }
+  .promise { display: flex; gap: 10px; align-items: flex-start; margin-top: 8px; font-size: 15px; cursor: pointer; }
+  .promise input { width: 20px; height: 20px; margin: 2px 0 0; flex: none; accent-color: #000; }
   .hp { position: absolute; left: -9999px; }
   .form-status .fix { font: inherit; color: inherit; text-decoration: underline; background: none; border: 0; padding: 0; cursor: pointer; overflow-wrap: anywhere; }
   .form-status { font-size: 15px; }
