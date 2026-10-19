@@ -98,7 +98,7 @@ export async function handle(req: Request, env: Env): Promise<Response> {
     return json({ error: "no record id" }, 400);
   }
 
-  const got = await rest(`applications?id=eq.${id}&select=id,role,name,email,email_key,ref_code,is_test,confirmed_at,email_status,share_due`);
+  const got = await rest(`applications?id=eq.${id}&select=id,role,name,email,email_key,ref_code,page_token,is_test,confirmed_at,email_status,share_due`);
   if (!got.ok) return json({ error: "read failed" }, 502);
   const row = (await got.json())[0];
   if (!row) return json({ skipped: "not_found" });
@@ -109,7 +109,7 @@ export async function handle(req: Request, env: Env): Promise<Response> {
   const mode = env("SEND_MODE") === "all" ? "all" : "test";
   if (mode === "test" && !row.is_test) return json({ skipped: "send_mode" });
   const email = (row.email ?? "").trim();
-  if (!email || !row.ref_code) return json({ skipped: "no_email_or_ref_code" });
+  if (!email || !row.page_token) return json({ skipped: "no_email_or_page_token" });
   if (!validEmail(email)) return json({ skipped: "invalid_email" });
 
   // A known bounce/complaint (synced from Resend by `venn confirm`) is never mailed again.
@@ -149,7 +149,7 @@ export async function handle(req: Request, env: Env): Promise<Response> {
   try {
     const vals = {
       headline: headline(firstName(row.name)),
-      refer_link: `${SITE}/refer?code=${encodeURIComponent(row.ref_code)}`,
+      refer_link: `${SITE}/refer?code=${encodeURIComponent(row.page_token)}`,
       deadline: formatDeadline(row.share_due),
     };
     const post = () =>

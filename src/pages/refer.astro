@@ -447,7 +447,7 @@ import { VENN_LINKEDIN } from '../data/share-posts';
   // ---- Friends: every composer opens inside the click, nothing awaited first ----
   // One of 3 emails, picked by the ref code like the posts. {friend} defaults to "there"; the student edits freely.
   const mailParts = () => {
-    const e = FRIEND_EMAILS[variantIndex(code, FRIEND_EMAILS.length)];
+    const e = FRIEND_EMAILS[variantIndex(st?.ref_code ?? code, FRIEND_EMAILS.length)];
     const body = fill(e.body, { friend: 'there', name: st ? cap(st.first_name) : '', link, blank: $<HTMLInputElement>('#building').value.trim() || 'my project' });
     return { subject: e.subject, body: body.charAt(0).toLocaleUpperCase() + body.slice(1) };
   };
