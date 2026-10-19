@@ -64,6 +64,7 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
 <script>
   import { getRef, clearRef } from '../scripts/ref';
   import { capMessage } from '../scripts/apply-errors';
+  import { minWait } from '../scripts/wait';
 
   const form = document.getElementById('apply-form') as HTMLFormElement;
   const status = document.getElementById('f-status')!;
@@ -269,8 +270,8 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
     }
     sending = true;
     next.disabled = true;
-    status.className = 'form-status';
-    status.textContent = 'Sending...';
+    status.className = 'form-status working';
+    status.textContent = 'Saving your application...';
     try {
       const { url, key } = form.dataset;
       if (!url || !key) throw new Error('Supabase env vars missing');
@@ -279,14 +280,18 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
       // the same session_id returns the first row's code instead of inserting again.
       const ctl = new AbortController();
       const timer = setTimeout(() => ctl.abort(), 20000);
-      const res = await fetch(`${url}/rest/v1/rpc/submit_application`, {
-        method: 'POST', signal: ctl.signal,
-        headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ payload }),
-      }).finally(() => clearTimeout(timer));
-      if (!res.ok) throw Object.assign(new Error(await res.text()), { status: res.status });
-      clearRef(); // submitted: the credit is in the row, drop the stored ref
-      finish(await res.json().catch(() => null)); // the new applicant's own ref_code, e.g. "maya-7k2"
+      const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const code = await minWait((async () => {
+        const res = await fetch(`${url}/rest/v1/rpc/submit_application`, {
+          method: 'POST', signal: ctl.signal,
+          headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ payload }),
+        }).finally(() => clearTimeout(timer));
+        if (!res.ok) throw Object.assign(new Error(await res.text()), { status: res.status });
+        clearRef(); // submitted: the credit is in the row, drop the stored ref
+        return res.json().catch(() => null); // the new applicant's own ref_code, e.g. "maya-7k2"
+      })(), calm ? 400 : 1200);
+      finish(code);
     } catch (err) {
       console.error(err);
       const code = (err as { status?: number }).status;
@@ -356,6 +361,9 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
   .promise { display: flex; gap: 10px; align-items: flex-start; margin-top: 8px; font-size: 15px; cursor: pointer; }
   .promise input { width: 20px; height: 20px; margin: 2px 0 0; flex: none; accent-color: #000; }
   .hp { position: absolute; left: -9999px; }
+  .form-status.working { animation: working 1.1s ease-in-out infinite; }
+  @keyframes working { 50% { opacity: .45; } }
+  @media (prefers-reduced-motion: reduce) { .form-status.working { animation: none; } }
   .form-status .fix { font: inherit; color: inherit; text-decoration: underline; background: none; border: 0; padding: 0; cursor: pointer; overflow-wrap: anywhere; }
   .form-status { font-size: 15px; }
   .form-status:empty { display: none; }
