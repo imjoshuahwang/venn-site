@@ -36,7 +36,12 @@ select pg_temp.ok((select share_status = 'pending_share' and share_due > now() a
 
 -- URL path.
 select pg_temp.fails($$select submit_share((select ref_code from c where who='una'), 'https://example.com/posts/1')$$, 'need a linkedin post link');
-select pg_temp.fails($$select submit_share((select ref_code from c where who='una'), 'https://lnkd.in/abc')$$, 'need a linkedin post link');
+select pg_temp.fails($$select submit_share((select ref_code from c where who='una'), 'https://lnkd.in/')$$, 'need a linkedin post link');
+select pg_temp.fails($$select submit_share((select ref_code from c where who='una'), 'https://lnkd.in.evil.com/x')$$, 'need a linkedin post link');
+select pg_temp.fails($$select submit_share((select ref_code from c where who='una'), 'https://evil.com/lnkd.in/x')$$, 'need a linkedin post link');
+select pg_temp.fails($$select submit_share((select ref_code from c where who='una'), 'https://linkedin.com/in/jane')$$, 'need a linkedin post link');
+select pg_temp.fails($$select submit_share((select ref_code from c where who='una'), 'https://linkedin.com/feed/')$$, 'need a linkedin post link');
+select pg_temp.fails($$select record_step((select ref_code from c where who='una'), 'linkedin', 'https://lnkd.in.evil.com/x')$$, 'need a linkedin post link');
 select pg_temp.fails($$select submit_share((select ref_code from c where who='una'))$$, 'need a linkedin post link');
 select pg_temp.fails($$select submit_share('nope-zzzzzz', 'linkedin.com/posts/a')$$, 'unknown code');
 select pg_temp.ok((select share_status = 'pending_share' from applications where email = 'una@example.com'), 'failed submits change nothing');
@@ -44,6 +49,14 @@ select pg_temp.ok((select submit_share(ref_code, 'www.linkedin.com/feed/update/u
 select pg_temp.ok((select post_url = 'https://www.linkedin.com/feed/update/urn:li:activity:1' and share_submitted_at is not null
                    from applications where email = 'una@example.com'), 'normalized https url stored');
 select pg_temp.ok((select (referral_status(ref_code)->>'post_url_saved')::boolean from c where who = 'una'), 'post_url_saved');
+-- Accept list (lnkd.in short links, mobile and country variants) on both submit_share and record_step.
+insert into applications (role, name, email, working_on) values ('student', 'Lnk Test', 'lnk@example.com', 'x');
+select pg_temp.ok((select bool_and(record_step((select ref_code from applications where email = 'lnk@example.com'), 'linkedin', u) is not null) from unnest(array[
+  'https://lnkd.in/gAbC12xY', 'LNKD.IN/abc?x=1', 'https://m.linkedin.com/posts/x', 'https://uk.linkedin.com/pulse/a-b',
+  'linkedin.com/mwlite/feed/update/urn:li:activity:1', 'linkedin.com/embed/feed/update/urn:li:share:1',
+  'https://www.linkedin.com/feed/update/urn:li:activity:123?utm_source=share&utm_medium=member_ios']) as u), 'record_step accepts lnkd.in and mobile links');
+select pg_temp.ok((select submit_share(ref_code, 'https://lnkd.in/gAbC12xY') ->> 'share_status' = 'submitted' from applications where email = 'lnk@example.com'), 'submit_share accepts lnkd.in');
+select pg_temp.ok((select post_url = 'https://lnkd.in/gAbC12xY' from applications where email = 'lnk@example.com'), 'lnkd.in url stored');
 -- Idempotent; first URL wins.
 select submit_share(ref_code, 'https://linkedin.com/posts/second') from c where who = 'una';
 select pg_temp.ok((select post_url like '%feed/update%' from applications where email = 'una@example.com'), 'first url wins');
