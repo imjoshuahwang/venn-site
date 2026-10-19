@@ -1,6 +1,7 @@
 -- Security check for 20261019050000_security.sql. Run against a LOCAL database with all migrations applied
 -- (never prod: it inserts rows, which fires the confirmation webhook). Everything rolls back.
 --   psql -v ON_ERROR_STOP=1 -f supabase/tests/security_check.sql   -> ends with 'security_check ok'
+-- Local run (throwaway Postgres, no Docker): bash supabase/tests/run_local.sh
 begin;
 
 -- Act like PostgREST serving the public anon key.
@@ -24,7 +25,7 @@ begin
   if n <> 0 then raise exception 'anon can use % sequences', n; end if;
   select count(*) into n from pg_proc p join pg_namespace s on s.oid = p.pronamespace
     where s.nspname = 'public' and has_function_privilege('anon', p.oid, 'EXECUTE')
-      and p.proname not in ('submit_application', 'log_apply_event', 'referrer_name', 'referral_status', 'record_step');
+      and p.proname not in ('submit_application', 'log_apply_event', 'referrer_name', 'referral_status', 'record_step', 'submit_share');
   if n <> 0 then raise exception 'anon can execute % internal functions', n; end if;
   select count(*) into n from pg_class c join pg_namespace s on s.oid = c.relnamespace
     where s.nspname = 'public' and c.relkind = 'r' and not c.relrowsecurity;

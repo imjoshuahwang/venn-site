@@ -24,13 +24,14 @@ import Base from '../layouts/Base.astro';
 
       <div class="screen" data-screen="main" hidden>
         <div>
-          <p class="label" id="steps-label">Step 1 of 3 done</p>
+          <p class="label" id="steps-label">Step 2 of 2: share</p>
           <div class="bar" aria-hidden="true"><i id="bar"></i></div>
         </div>
         <h1 class="h" tabindex="-1" id="headline"></h1>
         <p class="sub" id="subline"></p>
+        <p class="count" id="countdown" aria-live="off" hidden></p>
 
-        <ol class="steps">
+        <ol class="steps" id="steps">
           <li class="step done" data-step="applied">
             <div class="step-head static"><span class="tick"></span><span class="step-t">Applied</span></div>
           </li>
@@ -57,7 +58,8 @@ import Base from '../layouts/Base.astro';
                 <span class="field-l">Your post (edit it if you like)</span>
                 <textarea id="post" rows="6"></textarea>
               </label>
-              <p class="tip">Last step: LinkedIn only tags us when you pick us from its list. In the post box, delete the last letter of @Venn, retype it, and tap <strong>Venn, the student org connector</strong> (the one with the Venn logo).</p>
+              <button class="link" type="button" id="another">Try another version</button>
+              <p class="tip"><strong>After you paste:</strong> 1) Tap right after @Venn and delete the last n. 2) Type the n again. 3) Tap <strong>Venn, the student org connector</strong> (Venn logo) in the list. If @Venn stays plain text, LinkedIn won't tag us.</p>
               <div class="row"><a class="btn" id="open-li" target="_blank" rel="noopener" href="https://www.linkedin.com/feed/">Copy post and open LinkedIn</a></div>
               <div class="row"><button class="btn btn-ghost" type="button" id="copy-post">Just copy the post</button></div>
               <a class="link" id="share-li" target="_blank" rel="noopener" href="https://www.linkedin.com/feed/">Or share only your link on LinkedIn</a>
@@ -66,18 +68,24 @@ import Base from '../layouts/Base.astro';
               <p class="hint">Post box empty? Paste what you copied.</p>
 
               <div class="part">
+                <label class="field" for="post-url">
+                  <span class="field-l">Paste your post link</span>
+                  <input type="url" id="post-url" autocomplete="off" inputmode="url" placeholder="https://www.linkedin.com/posts/..." />
+                </label>
+                <p class="hint" id="submit-hint">Paste your post link to submit.</p>
                 <p class="err" id="li-err" role="alert"></p>
-                <div class="row"><button class="btn" type="button" id="li-save">I posted it</button></div>
+                <div class="row"><button class="btn" type="button" id="li-save" disabled>Submit application</button></div>
+                <button class="link" type="button" id="no-li">I don't have LinkedIn</button>
               </div>
             </div>
           </li>
 
-          <li class="step" data-step="friends">
+          <li class="step" data-step="friends" hidden>
             <button class="step-head" type="button" aria-expanded="false" aria-controls="p-friends" data-toggle="friends">
               <span class="tick"></span><span class="step-t">Refer friends</span><span class="step-s" id="s-friends">About 1 minute</span>
             </button>
             <div class="panel" id="p-friends" hidden>
-              <p class="sub">Send your link to a friend who builds things. Up to 10 count. Optional, but it's what serious applicants do.</p>
+              <p class="sub" id="fr-sub"></p>
               <p class="count" id="count" aria-live="polite"></p>
               <p class="hint" id="pending" hidden></p>
               <div class="row stack">
@@ -91,10 +99,10 @@ import Base from '../layouts/Base.astro';
                 <textarea id="manual-link" rows="2" readonly></textarea>
               </div>
               <p class="hint">Your link: <code id="mylink"></code></p>
-              <div class="part" id="done-part" hidden>
-                <p class="hint" id="done-note">Sent it? Tap Done. You can come back to this page anytime, with the same link, to email more friends. Up to 10 count.</p>
-                <p class="err" id="done-err" role="alert"></p>
-                <div class="row"><button class="btn" type="button" id="done">Done</button></div>
+              <div class="part" id="fr-submit" hidden>
+                <p class="hint" id="fr-hint">Get 2 friends to apply with your link to submit.</p>
+                <p class="err" id="fr-err" role="alert"></p>
+                <div class="row"><button class="btn" type="button" id="fr-save" disabled>Submit application</button></div>
               </div>
             </div>
           </li>
@@ -198,11 +206,11 @@ import Base from '../layouts/Base.astro';
 </style>
 
 <script>
+  import { LINKEDIN_POSTS, FRIEND_EMAILS, variantIndex, nextVariant, fill, isLinkedInPostUrl, normalizePostUrl, timeLeft } from '../scripts/share-copy';
   const SB_URL = import.meta.env.PUBLIC_SUPABASE_URL ?? '';
   const SB_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY ?? '';
 
-  // email = the student tapped Done on the friends step (older servers omit it; the local mark covers that).
-  type Status = { first_name: string; ref_code: string; linkedin: boolean; email?: boolean; referrals: number; pending: number };
+  type Status = { first_name: string; ref_code: string; linkedin: boolean; referrals: number; friends_submitted?: number; pending: number; share_status?: 'pending_share' | 'submitted' | 'void' | null; share_due?: string | null };
 
   const $ = <T extends Element = HTMLElement>(s: string, r: ParentNode = document) => r.querySelector<T>(s)!;
   const $$ = <T extends Element = HTMLElement>(s: string, r: ParentNode = document) => [...r.querySelectorAll<T>(s)];
@@ -233,14 +241,13 @@ import Base from '../layouts/Base.astro';
     get: () => { try { return localStorage.getItem('venn-refer-building:' + code) ?? ''; } catch { return ''; } },
     set: (v: string) => { try { localStorage.setItem('venn-refer-building:' + code, v); } catch { /* private mode */ } },
   };
-  // Per-device marks that survive the trip to Gmail and back (iOS often reloads the tab on return).
-  const mark = (k: string) => ({
-    get: () => { try { return localStorage.getItem(`venn-refer-${k}:` + code) === '1'; } catch { return false; } },
-    set: () => { try { localStorage.setItem(`venn-refer-${k}:` + code, '1'); } catch { /* private mode */ } },
-  });
-  const sentMark = mark('sent');
-  const doneMark = mark('done');
-  let sent = false;
+  // Per-device mark that survives the trip to Gmail and back (iOS often reloads the tab on return).
+  const noLiMark = {
+    get: () => { try { return localStorage.getItem('venn-refer-noli:' + code) === '1'; } catch { return false; } },
+    set: () => { try { localStorage.setItem('venn-refer-noli:' + code, '1'); } catch { /* private mode */ } },
+  };
+  let noLi = false;
+  let inFlight = false;
 
   const ua = navigator.userAgent;
   const isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -248,6 +255,7 @@ import Base from '../layouts/Base.astro';
   const isPhone = isIOS || isAndroid;
 
   const MAX_FRIENDS = 10; // the SQL view counts at most 10 verified referrals
+  const NEED = 2; // friends needed for the no-LinkedIn path
   const cap = (s: string) => s.charAt(0).toLocaleUpperCase() + s.slice(1);
   let st: Status | null = null;
   let link = '';
@@ -269,46 +277,67 @@ import Base from '../layouts/Base.astro';
     });
   };
 
+  // Fire-and-forget step events; never block the UI and never touch the status.
+  const step = (kind: string) => { rpc('record_step', { code, kind, url: null }).catch(() => { /* ignore */ }); };
+  const tick = () => {
+    if (!st?.share_due) return;
+    const t = timeLeft(st.share_due, Date.now());
+    if (t.over && st.share_status === 'pending_share') { st.share_status = 'void'; render(); return; }
+    $('#countdown').textContent = t.text ? `${t.text} to submit. After that your application is void.` : '';
+  };
+  setInterval(tick, 30000);
+
   const render = () => {
     if (!st) return;
     const friends = st.referrals;
     const shown = Math.min(friends, MAX_FRIENDS);
     const maxed = friends >= MAX_FRIENDS;
     const nm = cap(st.first_name);
-    const done = friends > 0 || !!st.email || doneMark.get();
-    const n = 1 + +st.linkedin + +done;
-    $('#steps-label').textContent = `Step ${n} of 3 done`;
-    $('#bar').style.transform = `scaleX(${n / 3})`;
-    $('#headline').textContent =
-      n === 3 ? `All 3 steps done, ${nm}.` : n === 1 ? `Your application is in, ${nm}.` : `Nice, ${nm}. ${n} of 3 done.`;
-    $('#subline').textContent =
-      n === 3 ? 'Every friend who applies with your link counts, up to 10.'
-      : n === 1 ? 'Two quick steps left. Applications with people behind them get a closer look.'
-      : 'One step left.';
+    const ss = st.share_status ?? null;
+    const submitted = ss === 'submitted';
+    const voided = ss === 'void';
+    const fs = Math.min(st.friends_submitted ?? 0, NEED);
+    const fallback = noLi && !submitted && !voided;
+    $('#steps-label').textContent = submitted ? 'Step 2 of 2 done' : 'Step 2 of 2: share';
+    $('#bar').style.transform = `scaleX(${submitted ? 1 : 0.5})`;
+    $('#headline').textContent = submitted ? `Submitted, ${nm}. You're in the running for F26.`
+      : voided ? "This application wasn't submitted in time, so it's void."
+      : `Your application is saved, ${nm}. It's submitted once you share it.`;
+    $('#subline').textContent = submitted ? 'Know someone building something? Send them your link below. Up to 10 friends count.'
+      : voided ? 'You can apply for the next Venn season.'
+      : 'Post on LinkedIn, then paste the link to your post. You have 24 hours.';
+    $('#steps').hidden = voided;
+    $('#countdown').hidden = submitted || voided || !st.share_due;
+    if (!voided && !submitted) tick();
+    $('#p-linkedin .part').hidden = submitted;
+    $('#s-linkedin').textContent = submitted ? 'Submitted' : '1 min';
+    $('#steps-label').hidden = voided;
+    const liOk = isLinkedInPostUrl($<HTMLInputElement>('#post-url').value.trim());
+    $<HTMLButtonElement>('#li-save').disabled = inFlight || submitted || !liOk;
+    $('#submit-hint').hidden = liOk || submitted;
+    $('#no-li').hidden = noLi || submitted;
+    $('.step[data-step="friends"]').hidden = voided || !(fallback || submitted);
+    $('#fr-submit').hidden = !fallback;
+    $<HTMLButtonElement>('#fr-save').disabled = inFlight || fs < NEED;
+    $('#fr-hint').hidden = fs >= NEED;
+    $('#fr-sub').textContent = submitted
+      ? 'Know someone building something? Send them your link. Up to 10 count. Optional.'
+      : "No LinkedIn? That's fine. Get 2 friends to apply with your link within the 24 hours, then submit.";
 
-    $('.step[data-step="linkedin"]').classList.toggle('done', st.linkedin);
-    $('.step[data-step="friends"]').classList.toggle('done', done);
-    $('#s-linkedin').textContent = st.linkedin ? 'Done' : '1 min';
-    $('#s-friends').textContent = maxed ? `${MAX_FRIENDS} of ${MAX_FRIENDS}` : friends > 0 ? `${shown} applied` : done ? 'Done' : '1 min';
-    $('#li-save').textContent = st.linkedin ? 'Posted' : 'I posted it';
-    $<HTMLButtonElement>('#li-save').disabled = st.linkedin;
+    $('.step[data-step="linkedin"]').classList.toggle('done', submitted);
+    $('.step[data-step="friends"]').classList.toggle('done', fallback ? fs >= NEED : friends > 0);
+    $('#s-friends').textContent = fallback ? `${fs} of ${NEED}` : maxed ? `${MAX_FRIENDS} of ${MAX_FRIENDS}` : friends > 0 ? `${shown} applied` : 'Optional';
 
-    $('#count').textContent =
-      maxed ? `${MAX_FRIENDS} of ${MAX_FRIENDS} friends counted. That's the max, thank you.`
+    $('#count').textContent = fallback
+      ? (fs >= NEED ? `${NEED} of ${NEED} friends applied. You can submit now.`
+        : fs === 1 ? `1 of ${NEED} friends applied. One more and you're submitted.` : `0 of ${NEED} friends applied.`)
+      : maxed ? `${MAX_FRIENDS} of ${MAX_FRIENDS} friends counted. That's the max, thank you.`
       : friends > 0 ? `${shown} ${shown === 1 ? 'friend' : 'friends'} applied with your link.` : 'No friends yet.';
     const pend = $('#pending');
     // Only the room left under the cap can still count.
     const more = Math.min(st.pending, Math.max(0, MAX_FRIENDS - friends));
     pend.hidden = more < 1;
     pend.textContent = more < 1 ? '' : `${more} more ${more === 1 ? 'counts' : 'count'} once their confirmation email goes out.`;
-
-    // Done shows once they have sent their link at least once (or already finished).
-    const finished = !!st.email || doneMark.get();
-    $('#done-part').hidden = !(sent || sentMark.get() || finished);
-    $<HTMLButtonElement>('#done').disabled = finished;
-    $('#done-note').textContent = finished
-      ? (maxed ? 'All set. Thanks for bringing your friends.' : 'All set. Come back to this page anytime, with the same link, to email more friends. Up to 10 count.')
-      : 'Sent it? Tap Done. You can come back to this page anytime, with the same link, to email more friends. Up to 10 count.';
   };
 
   const merge = (s: Status | null) => { if (s) { st = s; render(); } };
@@ -318,8 +347,8 @@ import Base from '../layouts/Base.astro';
   // ---- LinkedIn -----------------------------------------------------------
   const PLACEHOLDER = '<what you\'re working on>';
   const blank = () => $<HTMLInputElement>('#building').value.trim() || PLACEHOLDER;
-  const postText = () =>
-    `I just applied to @Venn for its F26 season, a program for high schoolers building things.\n\nI'm building ${blank()}.\n\nIf you're building something too, apply here: ${link}`;
+  let vi = 0;
+  const postText = () => fill(LINKEDIN_POSTS[vi], { blank: blank(), link });
   const post = () => $<HTMLTextAreaElement>('#post');
   const liHref = () => `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(post().value)}`;
   // The blank text currently inside the post. When the post was hand-edited, swap only that sentence so
@@ -401,20 +430,22 @@ import Base from '../layouts/Base.astro';
   };
 
   // ---- Friends: every composer opens inside the click, nothing awaited first ----
-  const mailParts = () => ({
-    subject: 'Apply to Venn with me',
-    body:
-      `Hey,\n\nI just applied to Venn's F26 season, a free program for high schoolers building things. ` +
-      `I thought of you because you're building something too.\n\n` +
-      `It's a short form. Apply with my link:\n${link}\n\n${st ? cap(st.first_name) : ''}`,
-  });
+  // One of 3 emails, picked by the ref code like the posts. {friend} defaults to "there"; the student edits freely.
+  const mailParts = () => {
+    const e = FRIEND_EMAILS[variantIndex(code, FRIEND_EMAILS.length)];
+    const body = fill(e.body, { friend: 'there', name: st ? cap(st.first_name) : '', link, blank: $<HTMLInputElement>('#building').value.trim() || 'my project' });
+    return { subject: e.subject, body: body.charAt(0).toLocaleUpperCase() + body.slice(1) };
+  };
   const q = encodeURIComponent;
   const mailto = () => { const m = mailParts(); return `mailto:?subject=${q(m.subject)}&body=${q(m.body)}`; };
   const gmailWeb = () => { const m = mailParts(); return `https://mail.google.com/mail/?view=cm&fs=1&su=${q(m.subject)}&body=${q(m.body)}`; };
   const gmailApp = () => { const m = mailParts(); return `googlegmail://co?to=&subject=${q(m.subject)}&body=${q(m.body)}`; };
 
-  // Sending the link only unlocks Done (kept on this device); Done is what records the step.
-  const logEmail = () => { sent = true; sentMark.set(); render(); };
+  const setMail = () => {
+    if (!link) return;
+    $<HTMLAnchorElement>('#email').href = isPhone ? mailto() : gmailWeb();
+    $<HTMLAnchorElement>('#email-alt').href = mailto();
+  };
 
   const showManual = () => {
     $('#manual').hidden = false;
@@ -449,9 +480,7 @@ import Base from '../layouts/Base.astro';
         document.addEventListener('visibilitychange', gone);
         location.href = gmailApp();
       }
-      logEmail();
     });
-    alt.addEventListener('click', logEmail);
 
     $('#copylink').addEventListener('click', (e) => {
       const btn = e.currentTarget as HTMLElement;
@@ -459,7 +488,6 @@ import Base from '../layouts/Base.astro';
         if (ok) flash(btn, 'Link copied');
         else showManual();
       });
-      logEmail();
     });
 
     if (isPhone && typeof navigator.share === 'function') {
@@ -467,7 +495,7 @@ import Base from '../layouts/Base.astro';
       b.hidden = false;
       b.addEventListener('click', () => {
         const p = navigator.share({ text: "I just applied to Venn's F26 season. If you're building something, apply with my link:", url: link });
-        p.then(logEmail, () => { /* cancelled */ });
+        p.catch(() => { /* cancelled */ });
       });
     }
   };
@@ -481,9 +509,16 @@ import Base from '../layouts/Base.astro';
 
     const building = $<HTMLInputElement>('#building');
     building.value = draft.get();
-    building.addEventListener('input', () => { draft.set(building.value); syncPost(true); });
+    building.addEventListener('input', () => { draft.set(building.value); syncPost(true); setMail(); });
     post().addEventListener('input', () => {
       if (post().value.trim()) post().dataset.edited = '1'; else delete post().dataset.edited;
+      $('#li-fill').dataset.manual = '';
+      syncPost();
+    });
+
+    $('#another').addEventListener('click', () => {
+      vi = nextVariant(vi, LINKEDIN_POSTS.length);
+      delete post().dataset.edited;
       $('#li-fill').dataset.manual = '';
       syncPost();
     });
@@ -498,50 +533,57 @@ import Base from '../layouts/Base.astro';
     $('#open-li').addEventListener('click', (e) => {
       if (post().value.includes(PLACEHOLDER)) { e.preventDefault(); return; }
       $<HTMLAnchorElement>('#open-li').href = liHref();
+      step('li_opened');
       copy(post().value).then((ok) => { if (!ok) showPostManual(); });
     });
 
     $('#copy-post').addEventListener('click', (e) => {
       const btn = e.currentTarget as HTMLElement;
+      step('post_copied');
       copy(post().value).then((ok) => { if (ok) flash(btn, 'Post copied'); else showPostManual(); });
     });
 
     const err = $('#li-err');
     const save = $<HTMLButtonElement>('#li-save');
-    save.addEventListener('click', async () => {
+    const urlIn = $<HTMLInputElement>('#post-url');
+    let pasted = false;
+    urlIn.addEventListener('input', () => {
       err.textContent = '';
-      save.disabled = true;
+      const ok = isLinkedInPostUrl(urlIn.value.trim());
+      save.disabled = !ok;
+      $('#submit-hint').hidden = ok;
+      if (ok && !pasted) { pasted = true; step('url_pasted'); }
+    });
+    // One submit path for both buttons. inFlight stops a double tap and keeps render() from re-enabling mid-request.
+    const submit = async (postUrl: string | null, errEl: HTMLElement) => {
+      if (inFlight) return;
+      errEl.textContent = '';
+      inFlight = true; render();
       try {
         gen++;
-        const r = (await rpc('record_step', { code, kind: 'linkedin', url: null })) as Status | null;
-        if (!r) { err.textContent = 'Could not save that. Try again in a moment.'; save.disabled = false; return; }
+        const r = (await rpc('submit_share', { code, post_url: postUrl })) as Status | null;
+        if (!r) { errEl.textContent = 'Could not submit that. Try again in a moment.'; return; }
+        inFlight = false;
         merge(r);
         setOpen('friends');
         $('#headline').focus({ preventScroll: true });
         scrollTo({ top: 0, behavior: calm ? 'auto' : 'smooth' });
-      } catch {
-        err.textContent = 'Could not save that. Try again in a moment.';
-        save.disabled = false;
-      }
-    });
+      } catch (ex) {
+        const m = String((ex as Error).message);
+        errEl.textContent = /void/i.test(m) ? "This application wasn't submitted in time, so it's void."
+          : /linkedin post link/i.test(m) ? 'That does not look like a LinkedIn post link. Open your post, tap the three dots, and copy the link.'
+          : 'Could not submit that. Try again in a moment.';
+        if (/void/i.test(m) && st) st.share_status = 'void';
+      } finally { inFlight = false; render(); }
+    };
+    save.addEventListener('click', () => submit(normalizePostUrl(urlIn.value), err));
+    $('#fr-save').addEventListener('click', () => submit(null, $('#fr-err')));
 
-    const derr = $('#done-err');
-    const doneBtn = $<HTMLButtonElement>('#done');
-    doneBtn.addEventListener('click', async () => {
-      derr.textContent = '';
-      doneBtn.disabled = true;
-      try {
-        gen++;
-        const r = (await rpc('record_step', { code, kind: 'email', url: null })) as Status | null;
-        if (!r) { derr.textContent = 'Could not save that. Try again in a moment.'; doneBtn.disabled = false; return; }
-        doneMark.set();
-        merge(r);
-        $('#headline').focus({ preventScroll: true });
-        scrollTo({ top: 0, behavior: calm ? 'auto' : 'smooth' });
-      } catch {
-        derr.textContent = 'Could not save that. Try again in a moment.';
-        doneBtn.disabled = false;
-      }
+    $('#no-li').addEventListener('click', () => {
+      if (!noLi) step('no_linkedin');
+      noLi = true; noLiMark.set();
+      render();
+      setOpen('friends');
     });
 
     wireFriends();
@@ -572,14 +614,16 @@ import Base from '../layouts/Base.astro';
     if (!s) return show('missing');
     lastFetch = Date.now();
     st = s;
+    noLi = noLiMark.get();
     link = `https://joinvenn.org/apply?ref=${encodeURIComponent(s.ref_code)}`;
     $('#mylink').textContent = link.replace('https://', '');
+    vi = variantIndex(s.ref_code, LINKEDIN_POSTS.length);
     syncPost();
-    $<HTMLAnchorElement>('#email').href = isPhone ? mailto() : gmailWeb();
-    $<HTMLAnchorElement>('#email-alt').href = mailto();
+    setMail();
     render();
-    setOpen(s.linkedin ? 'friends' : 'linkedin');
+    setOpen(s.share_status === 'submitted' || noLi ? 'friends' : 'linkedin');
     show('main');
+    step('opened');
     $('#headline').focus({ preventScroll: true });
   }
 
