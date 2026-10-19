@@ -74,6 +74,7 @@ import { VENN_LINKEDIN } from '../data/share-posts';
                   <input type="url" id="post-url" autocomplete="off" inputmode="url" placeholder="https://www.linkedin.com/posts/..." />
                 </label>
                 <p class="hint" id="submit-hint">Paste your post link to submit.</p>
+                <p class="err working" id="li-status" role="status" aria-live="polite"></p>
                 <p class="err" id="li-err" role="alert"></p>
                 <div class="row"><button class="btn" type="button" id="li-save" disabled>Submit application</button></div>
                 <button class="link" type="button" id="no-li">I don't have LinkedIn</button>
@@ -106,6 +107,7 @@ import { VENN_LINKEDIN } from '../data/share-posts';
                   <summary>How do I get friends to apply?</summary>
                   <p class="hint">Ask people in your school clubs, your classmates, anyone who would be into building something. Send it to friends who are really building something.</p>
                 </details>
+                <p class="err working" id="fr-status" role="status" aria-live="polite"></p>
                 <p class="err" id="fr-err" role="alert"></p>
                 <div class="row"><button class="btn" type="button" id="fr-save" disabled>Submit application</button></div>
               </div>
@@ -583,24 +585,23 @@ import { VENN_LINKEDIN } from '../data/share-posts';
       if (ok && !pasted) { pasted = true; step('url_pasted'); }
     });
     // One submit path for both buttons. inFlight stops a double tap and keeps render() from re-enabling mid-request.
-    const submit = async (postUrl: string | null, errEl: HTMLElement) => {
+    const submit = async (postUrl: string | null, errEl: HTMLElement, statusEl: HTMLElement) => {
       if (inFlight) return;
       errEl.textContent = '';
       inFlight = true; render();
       try {
         gen++;
-        errEl.className = 'err working';
-        errEl.textContent = postUrl ? 'Checking your post...' : 'Saving your application...';
+        statusEl.textContent = postUrl ? 'Checking your post...' : 'Saving your application...';
         const r = (await minWait(rpc('submit_share', { code, post_url: postUrl }), calm ? 400 : 1200)) as Status | null;
-        errEl.className = 'err'; errEl.textContent = '';
-        if (!r) { errEl.className = 'err'; errEl.textContent = 'Could not submit that. Try again in a moment.'; return; }
+        statusEl.textContent = '';
+        if (!r) { errEl.textContent = 'Could not submit that. Try again in a moment.'; return; }
         inFlight = false;
         merge(r);
         setOpen('friends');
         $('#headline').focus({ preventScroll: true });
         scrollTo({ top: 0, behavior: calm ? 'auto' : 'smooth' });
       } catch (ex) {
-        errEl.className = 'err';
+        statusEl.textContent = '';
         const m = String((ex as Error).message);
         errEl.textContent = /void/i.test(m) ? "This application wasn't submitted in time, so it's void."
           : /linkedin post link/i.test(m) ? 'That does not look like a LinkedIn post link. Open your post, tap the three dots, and copy the link.'
@@ -608,8 +609,8 @@ import { VENN_LINKEDIN } from '../data/share-posts';
         if (/void/i.test(m) && st) st.share_status = 'void';
       } finally { inFlight = false; render(); }
     };
-    save.addEventListener('click', () => submit(normalizePostUrl(urlIn.value), err));
-    $('#fr-save').addEventListener('click', () => submit(null, $('#fr-err')));
+    save.addEventListener('click', () => submit(normalizePostUrl(urlIn.value), err, $('#li-status')));
+    $('#fr-save').addEventListener('click', () => submit(null, $('#fr-err'), $('#fr-status')));
 
     $('#no-li').addEventListener('click', () => {
       if (!noLi) step('no_linkedin');
