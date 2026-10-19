@@ -2,6 +2,7 @@
 // template.json is generated, not hand-edited: regenerate it with `python -m venn confirm --emit-template <path>`
 // in the venn repo (confirm.py is the single source of truth), then copy it here.
 import template from "./template.json" with { type: "json" };
+import { mailable } from "./mailable.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -55,23 +56,6 @@ const EMAIL_RE = /^[A-Za-z0-9._%+'-]+@(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z
 const validEmail = (e: string) => e.length <= 254 && !e.includes("..") && EMAIL_RE.test(e);
 // Same set as ROLE_LOCALS in the venn repo's mail.py: not a student, never mailed.
 const ROLE_LOCALS = new Set(["noreply", "no-reply", "donotreply", "do-not-reply", "postmaster", "mailer-daemon"]);
-
-// Can this domain receive mail? MX, else its A record (RFC 5321 5.1); a null MX ("." exchange) means no mail.
-// Fails open: only a definite "no such records" answer blocks; a DNS timeout or missing Deno.resolveDns sends as before.
-async function mailable(domain: string): Promise<boolean> {
-  if (typeof Deno.resolveDns !== "function") return true;
-  try {
-    const mx = await Deno.resolveDns(domain, "MX");
-    if (mx.length) return mx.some((r) => r.exchange.replace(/\.$/, "") !== "");
-  } catch (e) {
-    if (!(e instanceof Deno.errors.NotFound)) return true;
-  }
-  try {
-    return (await Deno.resolveDns(domain, "A")).length > 0;
-  } catch (e) {
-    return !(e instanceof Deno.errors.NotFound);
-  }
-}
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
