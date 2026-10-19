@@ -64,5 +64,11 @@ select pg_temp.ok(not has_table_privilege('anon', 'public.v_shares', 'select')
                   and has_table_privilege('service_role', 'public.v_shares', 'select')
                   and not has_table_privilege('anon', 'public.referral_stats', 'select'), 'v_shares/referral_stats grants');
 
+-- referral_status returns role (org/club /refer state, venn#329)
+do $$ declare r jsonb; begin
+  select public.referral_status(page_token) into r from applications where page_token is not null limit 1;
+  if r is null or not (r ? 'role') then raise exception 'referral_status missing role'; end if;
+end $$;
+
 rollback;
 select 'audit_check ok';
