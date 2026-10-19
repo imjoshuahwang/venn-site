@@ -1,4 +1,5 @@
 -- Referral ledger checks. Run against a LOCAL database with all migrations applied (never production:
+-- Local run (throwaway Postgres, no Docker): bash supabase/tests/run_local.sh
 -- inserting into applications fires the confirmation webhook). Raises on the first failure; rolls back.
 --   psql -v ON_ERROR_STOP=1 -f supabase/tests/referrals_check.sql
 -- Fake people only (example.com / example.org).
