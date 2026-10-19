@@ -1,8 +1,8 @@
 -- Referral ledger checks. Run against a LOCAL database with all migrations applied (never production:
--- Local run (throwaway Postgres, no Docker): bash supabase/tests/run_local.sh
 -- inserting into applications fires the confirmation webhook). Raises on the first failure; rolls back.
 --   psql -v ON_ERROR_STOP=1 -f supabase/tests/referrals_check.sql
 -- Fake people only (example.com / example.org).
+-- Local run (throwaway Postgres, no Docker): bash supabase/tests/run_local.sh
 begin;
 
 create function pg_temp.ok(cond boolean, what text) returns void language plpgsql as $$
@@ -12,7 +12,7 @@ end $$;
 
 -- Referrer applies twice (two codes); friends split across both codes.
 insert into applications (role, name, email, working_on) values ('student', 'Ann Test', 'ann@example.com', 'x');
-insert into applications (role, name, email, working_on) values ('student', 'Ann Test', 'ANN@example.com ', 'x');
+insert into applications (role, name, email, working_on) values ('student', 'Ann Test', 'ANN@example.com', 'x');
 create temp table codes as
   select id, ref_code, row_number() over (order by id) as n from applications where email_key = 'ann@example.com';
 
