@@ -42,7 +42,7 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
     <div class="q" data-step="working_on" hidden><label class="q-h" for="f-work" id="l-work">What are you working on?</label><textarea id="f-work" name="working_on" required maxlength="5000" placeholder="What it is, who it's for, how far along it is"></textarea></div>
     <div class="q" data-step="need" hidden><label class="q-h" for="f-need" id="l-need">What would help most right now?</label><p class="q-hint">Optional.</p><textarea id="f-need" name="need" maxlength="5000" placeholder="A mentor, a partner club, a first event, funding..."></textarea></div>
   </div>
-  <input class="hp" name="company_website" tabindex="-1" autocomplete="off" aria-hidden="true">
+  <input class="hp" name="hp_field" tabindex="-1" autocomplete="off" aria-hidden="true">
 
   <div class="q-nav">
     <button class="btn btn-ghost btn-sm q-back" type="button">Back</button>
@@ -90,7 +90,10 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
 
   // Funnel log: step ids and error codes only, never anything the applicant typed. Fire and forget; it must never break the form.
   let sid = '';
-  try { sid = sessionStorage.getItem('apply_sid') || (sessionStorage.setItem('apply_sid', crypto.randomUUID()), sessionStorage.getItem('apply_sid')!); } catch { try { sid = crypto.randomUUID(); } catch {} }
+  // crypto.randomUUID is missing before iOS 15.4; without a session id a resend could not be deduped.
+  const uuid = () => crypto.randomUUID?.() ?? '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, (c) =>
+    (+c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (+c / 4)))).toString(16));
+  try { sid = sessionStorage.getItem('apply_sid') || (sessionStorage.setItem('apply_sid', uuid()), sessionStorage.getItem('apply_sid')!); } catch { try { sid = uuid(); } catch {} }
   let live = false, done = false, gone = false;
   const logged = new Set<string>();
   const log = (event: string, detail?: string) => {
@@ -111,7 +114,23 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
   addEventListener('pagehide', leave);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') leave(); });
 
+  // Free-mail typos (same list as venn confirm, which never mails them): a typo here means the student never hears back.
+  const TYPOS: Record<string, string[]> = {
+    'gmail.com': ['gmial.com', 'gmai.com', 'gamil.com', 'gmal.com', 'gmil.com', 'gmail.co', 'gmail.con', 'gmail.cm', 'gmaill.com', 'gmail.om', 'gmail.vom', 'gmsil.com', 'gnail.com', 'gmaul.com', 'gemail.com'],
+    'hotmail.com': ['hotmial.com', 'hotmai.com', 'hotmal.com', 'hotmail.con', 'hotmail.co', 'hotnail.com', 'homail.com'],
+    'yahoo.com': ['yaho.com', 'yahooo.com', 'yahoo.con', 'yahoo.co', 'yhoo.com', 'yahho.com'],
+    'outlook.com': ['outlok.com', 'outloo.com', 'outlook.con'],
+    'icloud.com': ['iclod.com', 'icoud.com', 'iclould.com', 'icloud.con', 'icloud.co'],
+  };
+  const fixEmail = (v: string) => {
+    const i = v.lastIndexOf('@'), d = v.slice(i + 1).toLowerCase();
+    const good = Object.keys(TYPOS).find((k) => TYPOS[k].includes(d));
+    return good ? v.slice(0, i + 1) + good : '';
+  };
+  // type=email alone accepts "me@gmail" (no dot), which the database rejects.
+  const emailOk = (v: string) => /^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$/.test(v) && !fixEmail(v);
   const ok = (s: string) => {
+    if (s === 'email') return field('email').checkValidity() && emailOk(field('email').value.trim());
     if (s === 'role') return !!picked.role;
     if (s === 'level') return !!picked.level && (picked.level !== 'other' || !!field('level_other').value.trim());
     if (s === 'building') return !!form.querySelector('input[name="building"]:checked') && (!other().checked || !!field('building_other').value.trim());
@@ -140,7 +159,9 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
     next.textContent = last ? 'Send application' : (at === 'link' || at === 'need') && !field(at).value.trim() ? 'Skip' : 'Next';
     next.classList.toggle('off', !ok(at));
   };
+  let moved = 0; // when the last step change happened
   const go = (to: string, dir: 1 | -1) => {
+    moved = Date.now();
     q(at).hidden = true;
     const el = q(to);
     el.hidden = false;
@@ -148,6 +169,8 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
     void el.offsetWidth;
     el.classList.add(dir > 0 ? 'in' : 'in-back');
     if (dir < 0) log('back');
+    // One history entry for the whole form, so the phone's back swipe goes to the previous question (see popstate).
+    if (dir > 0 && !history.state?.apply) try { history.pushState({ apply: 1 }, ''); } catch {}
     at = to;
     log('view');
     status.textContent = '';
@@ -155,9 +178,25 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
     // Text steps focus the field; choice steps focus the picked (or first) button so keyboard users stay in the form.
     (el.querySelector<HTMLElement>('input:not([type=checkbox]), textarea') ?? el.querySelector<HTMLElement>('.choice.on, .choice, .chip input'))?.focus({ preventScroll: true });
   };
-  const step = (dir: 1 | -1) => {
+  const step = (dir: 1 | -1, choice = false) => {
     const steps = flow(), i = steps.indexOf(at);
-    if (dir > 0 && !ok(at)) { status.textContent = hint(at); log('error', why(at)); return; }
+    // A double tap (or a choice's delayed advance plus a tap) must not skip the screen that just appeared,
+    // or a second tap on an optional step sends the application early.
+    if (dir > 0 && !choice && Date.now() - moved < 400) return;
+    if (dir > 0 && !ok(at)) {
+      const fix = at === 'email' && fixEmail(field('email').value.trim());
+      if (fix) {
+        // "Did you mean you@gmail.com?" as a tap-to-fix button. textContent only: the address is user input.
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'fix';
+        b.textContent = fix;
+        b.addEventListener('click', () => { field('email').value = fix; status.textContent = ''; paint(); field('email').focus(); });
+        status.replaceChildren('Did you mean ', b, '?');
+      } else status.textContent = hint(at);
+      log('error', fix ? 'typo' : why(at));
+      return;
+    }
     if (dir > 0) log('answer', at === 'role' ? picked.role : (at === 'link' || at === 'need') && !field(at).value.trim() ? 'skipped' : undefined);
     if (dir > 0 && i === steps.length - 1) return send();
     go(steps[i + dir], dir);
@@ -165,7 +204,7 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
 
   form.addEventListener('click', (e) => {
     const c = (e.target as HTMLElement).closest<HTMLButtonElement>('.choice');
-    if (!c) return;
+    if (!c || Date.now() - moved < 300) return; // the second tap of a double tap lands on the next screen's choices
     const { set, value } = c.dataset as { set: string; value: string };
     picked[set] = value;
     q(set).querySelectorAll('.choice').forEach((b) => b.classList.toggle('on', b === c));
@@ -181,9 +220,16 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
       t.hidden = value !== 'other';
       if (value === 'other') { paint(); return t.focus(); }
     }
-    setTimeout(() => step(1), 180);
+    const from = at; // a double-tapped choice advances once, from the screen it was tapped on
+    setTimeout(() => { if (at === from && !done) step(1, true); }, 180);
   });
   back.addEventListener('click', () => step(-1));
+  // Back swipe / browser Back: a question back instead of leaving /apply and losing every answer.
+  addEventListener('popstate', () => {
+    if (done || sending || at === flow()[0]) return;
+    step(-1);
+    if (at !== flow()[0]) try { history.pushState({ apply: 1 }, ''); } catch {}
+  });
   form.addEventListener('input', () => { status.textContent = ''; paint(); });
   form.addEventListener('change', (e) => {
     if (e.target === other()) {
@@ -205,7 +251,7 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
   async function send() {
     if (sending) return; // Cmd+Enter twice, or Enter while the first is in flight
     const fd = new FormData(form);
-    if (fd.get('company_website')) return; // bot
+    if (fd.get('hp_field')) return finish(null); // bot: looks like success, nothing is stored
     const data: Record<string, string> = { role: picked.role };
     if (picked.role === 'student') {
       data.level = picked.level === 'other' ? `other: ${String(fd.get('level_other')).trim()}` : picked.level;
@@ -223,28 +269,38 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
       const { url, key } = form.dataset;
       if (!url || !key) throw new Error('Supabase env vars missing');
       const payload = { ...data, source: location.pathname + location.search, ...(ref && { referred_by: ref }), ...(sid && { session_id: sid }) };
+      // A hung request on a flaky phone network would leave "Sending..." forever. Retrying is safe:
+      // the same session_id returns the first row's code instead of inserting again.
+      const ctl = new AbortController();
+      const timer = setTimeout(() => ctl.abort(), 20000);
       const res = await fetch(`${url}/rest/v1/rpc/submit_application`, {
-        method: 'POST',
+        method: 'POST', signal: ctl.signal,
         headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ payload }),
-      });
+      }).finally(() => clearTimeout(timer));
       if (!res.ok) throw Object.assign(new Error(await res.text()), { status: res.status });
-      const code = await res.json().catch(() => null); // the new applicant's own ref_code, e.g. "maya-7k2"
-      done = true;
-      try { sessionStorage.removeItem('apply_sid'); } catch {}
-      form.hidden = true;
-      document.getElementById('apply-done')!.hidden = false;
-      if (typeof code === 'string' && code) {
-        (document.getElementById('apply-refer-link') as HTMLAnchorElement).href = `/refer?code=${encodeURIComponent(code)}`;
-        document.getElementById('apply-refer')!.hidden = false;
-      }
+      finish(await res.json().catch(() => null)); // the new applicant's own ref_code, e.g. "maya-7k2"
     } catch (err) {
       console.error(err);
-      log('error', `send_${(err as { status?: number }).status ?? 'network'}`);
+      const code = (err as { status?: number }).status;
+      log('error', `send_${code ?? ((err as Error).name === 'AbortError' ? 'timeout' : 'network')}`);
       sending = false;
       next.disabled = false;
       status.className = 'form-status err';
-      status.textContent = 'Something went wrong. Email contact@joinvenn.org and we will sort it out.';
+      // No answer (offline, timeout) or a server hiccup: the answers are still here, so say "try again".
+      status.textContent = !code || code >= 500
+        ? "Couldn't reach Venn. Check your connection and tap Send again. Your answers are still here."
+        : 'Something went wrong. Email contact@joinvenn.org and we will sort it out.';
+    }
+  }
+  function finish(code: unknown) {
+    done = true;
+    try { sessionStorage.removeItem('apply_sid'); } catch {}
+    form.hidden = true;
+    document.getElementById('apply-done')!.hidden = false;
+    if (typeof code === 'string' && code) {
+      (document.getElementById('apply-refer-link') as HTMLAnchorElement).href = `/refer?code=${encodeURIComponent(code)}`;
+      document.getElementById('apply-refer')!.hidden = false;
     }
   }
 </script>
@@ -291,6 +347,7 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
   .q-nav { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
   .q-next:disabled, .q-next.off { opacity: .3; cursor: default; transform: none; }
   .hp { position: absolute; left: -9999px; }
+  .form-status .fix { font: inherit; color: inherit; text-decoration: underline; background: none; border: 0; padding: 0; cursor: pointer; overflow-wrap: anywhere; }
   .form-status { font-size: 15px; }
   .form-status:empty { display: none; }
   .form-status.err { color: #b91c1c; }
