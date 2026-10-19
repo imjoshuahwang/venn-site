@@ -24,13 +24,14 @@ import Base from '../layouts/Base.astro';
 
       <div class="screen" data-screen="main" hidden>
         <div>
-          <p class="label" id="steps-label">Step 1 of 3 done</p>
+          <p class="label" id="steps-label">Step 2 of 2: share</p>
           <div class="bar" aria-hidden="true"><i id="bar"></i></div>
         </div>
         <h1 class="h" tabindex="-1" id="headline"></h1>
         <p class="sub" id="subline"></p>
+        <p class="count" id="countdown" aria-live="off" hidden></p>
 
-        <ol class="steps">
+        <ol class="steps" id="steps">
           <li class="step done" data-step="applied">
             <div class="step-head static"><span class="tick"></span><span class="step-t">Applied</span></div>
           </li>
@@ -57,6 +58,7 @@ import Base from '../layouts/Base.astro';
                 <span class="field-l">Your post (edit it if you like)</span>
                 <textarea id="post" rows="6"></textarea>
               </label>
+              <button class="link" type="button" id="another">Try another version</button>
               <p class="tip"><strong>After you paste:</strong> 1) Tap right after @Venn and delete the last n. 2) Type the n again. 3) Tap <strong>Venn, the student org connector</strong> (Venn logo) in the list. If @Venn stays plain text, LinkedIn won't tag us.</p>
               <div class="row"><a class="btn" id="open-li" target="_blank" rel="noopener" href="https://www.linkedin.com/feed/">Copy post and open LinkedIn</a></div>
               <div class="row"><button class="btn btn-ghost" type="button" id="copy-post">Just copy the post</button></div>
@@ -66,8 +68,13 @@ import Base from '../layouts/Base.astro';
               <p class="hint">Post box empty? Paste what you copied.</p>
 
               <div class="part">
+                <label class="field" for="post-url">
+                  <span class="field-l">Paste your post link</span>
+                  <input type="url" id="post-url" autocomplete="off" inputmode="url" placeholder="https://www.linkedin.com/posts/..." />
+                </label>
+                <p class="hint" id="submit-hint">Paste your post link to submit.</p>
                 <p class="err" id="li-err" role="alert"></p>
-                <div class="row"><button class="btn" type="button" id="li-save">I posted it</button></div>
+                <div class="row"><button class="btn" type="button" id="li-save" disabled>Submit application</button></div>
               </div>
             </div>
           </li>
@@ -198,11 +205,12 @@ import Base from '../layouts/Base.astro';
 </style>
 
 <script>
+  import { LINKEDIN_POSTS, variantIndex, nextVariant, fill, isLinkedInPostUrl, normalizePostUrl, timeLeft } from '../scripts/share-copy';
   const SB_URL = import.meta.env.PUBLIC_SUPABASE_URL ?? '';
   const SB_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY ?? '';
 
   // email = the student tapped Done on the friends step (older servers omit it; the local mark covers that).
-  type Status = { first_name: string; ref_code: string; linkedin: boolean; email?: boolean; referrals: number; pending: number };
+  type Status = { first_name: string; ref_code: string; linkedin: boolean; email?: boolean; referrals: number; pending: number; share_status?: 'pending_share' | 'submitted' | 'void' | null; share_due?: string | null };
 
   const $ = <T extends Element = HTMLElement>(s: string, r: ParentNode = document) => r.querySelector<T>(s)!;
   const $$ = <T extends Element = HTMLElement>(s: string, r: ParentNode = document) => [...r.querySelectorAll<T>(s)];
@@ -269,6 +277,16 @@ import Base from '../layouts/Base.astro';
     });
   };
 
+  // Fire-and-forget step events; never block the UI and never touch the status.
+  const step = (kind: string) => { rpc('record_step', { code, kind, url: null }).catch(() => { /* ignore */ }); };
+  const tick = () => {
+    if (!st?.share_due) return;
+    const t = timeLeft(st.share_due, Date.now());
+    if (t.over && st.share_status === 'pending_share') { st.share_status = 'void'; render(); return; }
+    $('#countdown').textContent = t.text ? `${t.text} to submit. After that your application is void.` : '';
+  };
+  setInterval(tick, 30000);
+
   const render = () => {
     if (!st) return;
     const friends = st.referrals;
@@ -276,22 +294,29 @@ import Base from '../layouts/Base.astro';
     const maxed = friends >= MAX_FRIENDS;
     const nm = cap(st.first_name);
     const done = friends > 0 || !!st.email || doneMark.get();
-    const n = 1 + +st.linkedin + +done;
-    $('#steps-label').textContent = `Step ${n} of 3 done`;
-    $('#bar').style.transform = `scaleX(${n / 3})`;
-    $('#headline').textContent =
-      n === 3 ? `All 3 steps done, ${nm}.` : n === 1 ? `Your application is in, ${nm}.` : `Nice, ${nm}. ${n} of 3 done.`;
-    $('#subline').textContent =
-      n === 3 ? 'Every friend who applies with your link counts, up to 10.'
-      : n === 1 ? 'Two quick steps left. Applications with people behind them get a closer look.'
-      : 'One step left.';
+    const ss = st.share_status ?? null;
+    const submitted = ss === 'submitted';
+    const voided = ss === 'void';
+    $('#steps-label').textContent = submitted ? 'Step 2 of 2 done' : 'Step 2 of 2: share';
+    $('#bar').style.transform = `scaleX(${submitted ? 1 : 0.5})`;
+    $('#headline').textContent = submitted ? `Submitted, ${nm}. You're in the running for F26.`
+      : voided ? "This application wasn't submitted in time, so it's void."
+      : `Your application is saved, ${nm}. It's submitted once you share it.`;
+    $('#subline').textContent = submitted ? 'Know someone building something? Send them your link below. Up to 10 friends count.'
+      : voided ? 'You can apply for the next Venn season.'
+      : 'Post on LinkedIn, then paste the link to your post. You have 24 hours.';
+    $('#steps').hidden = voided;
+    $('#countdown').hidden = submitted || voided || !st.share_due;
+    if (!voided && !submitted) tick();
+    $('#p-linkedin .part').hidden = submitted;
+    $('#s-linkedin').textContent = submitted ? 'Submitted' : '1 min';
+    $('#steps-label').hidden = voided;
+    $<HTMLButtonElement>('#li-save').disabled = submitted || !isLinkedInPostUrl($<HTMLInputElement>('#post-url').value.trim());
+    $('#submit-hint').hidden = !$<HTMLButtonElement>('#li-save').disabled || submitted;
 
-    $('.step[data-step="linkedin"]').classList.toggle('done', st.linkedin);
+    $('.step[data-step="linkedin"]').classList.toggle('done', submitted);
     $('.step[data-step="friends"]').classList.toggle('done', done);
-    $('#s-linkedin').textContent = st.linkedin ? 'Done' : '1 min';
     $('#s-friends').textContent = maxed ? `${MAX_FRIENDS} of ${MAX_FRIENDS}` : friends > 0 ? `${shown} applied` : done ? 'Done' : '1 min';
-    $('#li-save').textContent = st.linkedin ? 'Posted' : 'I posted it';
-    $<HTMLButtonElement>('#li-save').disabled = st.linkedin;
 
     $('#count').textContent =
       maxed ? `${MAX_FRIENDS} of ${MAX_FRIENDS} friends counted. That's the max, thank you.`
@@ -318,8 +343,8 @@ import Base from '../layouts/Base.astro';
   // ---- LinkedIn -----------------------------------------------------------
   const PLACEHOLDER = '<what you\'re working on>';
   const blank = () => $<HTMLInputElement>('#building').value.trim() || PLACEHOLDER;
-  const postText = () =>
-    `I just applied to @Venn for its F26 season, a program for high schoolers building things.\n\nI'm building ${blank()}.\n\nIf you're building something too, apply here: ${link}`;
+  let vi = 0;
+  const postText = () => fill(LINKEDIN_POSTS[vi], { blank: blank(), link });
   const post = () => $<HTMLTextAreaElement>('#post');
   const liHref = () => `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(post().value)}`;
   // The blank text currently inside the post. When the post was hand-edited, swap only that sentence so
@@ -488,6 +513,13 @@ import Base from '../layouts/Base.astro';
       syncPost();
     });
 
+    $('#another').addEventListener('click', () => {
+      vi = nextVariant(vi, LINKEDIN_POSTS.length);
+      delete post().dataset.edited;
+      $('#li-fill').dataset.manual = '';
+      syncPost();
+    });
+
     $('#reset-post').addEventListener('click', () => {
       delete post().dataset.edited;
       $('#li-fill').dataset.manual = '';
@@ -498,29 +530,44 @@ import Base from '../layouts/Base.astro';
     $('#open-li').addEventListener('click', (e) => {
       if (post().value.includes(PLACEHOLDER)) { e.preventDefault(); return; }
       $<HTMLAnchorElement>('#open-li').href = liHref();
+      step('li_opened');
       copy(post().value).then((ok) => { if (!ok) showPostManual(); });
     });
 
     $('#copy-post').addEventListener('click', (e) => {
       const btn = e.currentTarget as HTMLElement;
+      step('post_copied');
       copy(post().value).then((ok) => { if (ok) flash(btn, 'Post copied'); else showPostManual(); });
     });
 
     const err = $('#li-err');
     const save = $<HTMLButtonElement>('#li-save');
+    const urlIn = $<HTMLInputElement>('#post-url');
+    let pasted = false;
+    urlIn.addEventListener('input', () => {
+      err.textContent = '';
+      const ok = isLinkedInPostUrl(urlIn.value.trim());
+      save.disabled = !ok;
+      $('#submit-hint').hidden = ok;
+      if (ok && !pasted) { pasted = true; step('url_pasted'); }
+    });
     save.addEventListener('click', async () => {
       err.textContent = '';
       save.disabled = true;
       try {
         gen++;
-        const r = (await rpc('record_step', { code, kind: 'linkedin', url: null })) as Status | null;
-        if (!r) { err.textContent = 'Could not save that. Try again in a moment.'; save.disabled = false; return; }
+        const r = (await rpc('submit_share', { code, post_url: normalizePostUrl(urlIn.value) })) as Status | null;
+        if (!r) { err.textContent = 'Could not submit that. Try again in a moment.'; save.disabled = false; return; }
         merge(r);
         setOpen('friends');
         $('#headline').focus({ preventScroll: true });
         scrollTo({ top: 0, behavior: calm ? 'auto' : 'smooth' });
-      } catch {
-        err.textContent = 'Could not save that. Try again in a moment.';
+      } catch (ex) {
+        const m = String((ex as Error).message);
+        err.textContent = /void/i.test(m) ? "This application wasn't submitted in time, so it's void."
+          : /linkedin post link/i.test(m) ? 'That does not look like a LinkedIn post link. Open your post, tap the three dots, and copy the link.'
+          : 'Could not submit that. Try again in a moment.';
+        if (/void/i.test(m) && st) { st.share_status = 'void'; render(); }
         save.disabled = false;
       }
     });
@@ -574,12 +621,14 @@ import Base from '../layouts/Base.astro';
     st = s;
     link = `https://joinvenn.org/apply?ref=${encodeURIComponent(s.ref_code)}`;
     $('#mylink').textContent = link.replace('https://', '');
+    vi = variantIndex(s.ref_code, LINKEDIN_POSTS.length);
     syncPost();
     $<HTMLAnchorElement>('#email').href = isPhone ? mailto() : gmailWeb();
     $<HTMLAnchorElement>('#email-alt').href = mailto();
     render();
-    setOpen(s.linkedin ? 'friends' : 'linkedin');
+    setOpen(s.share_status === 'submitted' ? 'friends' : 'linkedin');
     show('main');
+    step('opened');
     $('#headline').focus({ preventScroll: true });
   }
 
