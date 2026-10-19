@@ -18,6 +18,11 @@ create temp table codes as
 
 select pg_temp.ok((select bool_and(ref_code ~ '^ann-[a-hj-km-np-z2-9]{6}$') from codes), 'new codes are name + 6 chars');
 
+-- Accented Latin names transliterate; non-Latin falls back to venn.
+select pg_temp.ok(split_part(new_ref_code(n), '-', 1) = e, 'ref code prefix for ' || n)
+from (values ('José Test','jose'),('Zoë Test','zoe'),('Łukasz Test','lukasz'),('Søren Test','soren'),
+             ('Ægir Test','aegir'),('Straße Test','strasse'),('小明 Test','venn'),('Иван Test','venn')) v(n, e);
+
 -- 12 confirmed friends: 6 per code. Plus one bounced, one unconfirmed, one self (dot/plus variant).
 insert into applications (role, name, email, working_on, referred_by)
   select 'student', 'Friend', 'f' || g || '@example.org', 'x',
