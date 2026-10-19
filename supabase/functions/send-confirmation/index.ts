@@ -40,6 +40,31 @@ const headline = (first: string): string => first === "there" ? "You're almost d
 const fill = (tpl: string, vals: Record<string, string>, escape: (s: string) => string) =>
   tpl.split("{{headline}}").join(escape(vals.headline)).split("{{refer_link}}").join(escape(vals.refer_link));
 
+// Same list as TYPO_DOMAINS in the venn repo's confirm.py.
+const TYPO_DOMAINS = new Set(
+  `gmial.com gmai.com gamil.com gmal.com gmil.com gmail.co gmail.con gmail.cm gmaill.com gmail.om gmail.vom gmsil.com
+gnail.com gmaul.com gemail.com hotmial.com hotmai.com hotmal.com hotmail.con hotmail.co hotnail.com homail.com yaho.com
+yahooo.com yahoo.con yahoo.co yhoo.com yahho.com outlok.com outloo.com outlook.con iclod.com icoud.com iclould.com
+icloud.con icloud.co`.split(/\s+/),
+);
+
+// Can this domain receive mail? MX, else its A record (RFC 5321 5.1); a null MX ("." exchange) means no mail.
+// Fails open: only a definite "no such records" answer blocks; a DNS timeout or missing Deno.resolveDns sends as before.
+async function mailable(domain: string): Promise<boolean> {
+  if (typeof Deno.resolveDns !== "function") return true;
+  try {
+    const mx = await Deno.resolveDns(domain, "MX");
+    if (mx.length) return mx.some((r) => r.exchange.replace(/\.$/, "") !== "");
+  } catch (e) {
+    if (!(e instanceof Deno.errors.NotFound)) return true;
+  }
+  try {
+    return (await Deno.resolveDns(domain, "A")).length > 0;
+  } catch (e) {
+    return !(e instanceof Deno.errors.NotFound);
+  }
+}
+
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
@@ -75,7 +100,7 @@ Deno.serve(async (req) => {
     return json({ error: "no record id" }, 400);
   }
 
-  const got = await rest(`applications?id=eq.${id}&select=id,role,name,email,email_key,ref_code,is_test,confirmed_at`);
+  const got = await rest(`applications?id=eq.${id}&select=id,role,name,email,email_key,ref_code,is_test,confirmed_at,email_status`);
   if (!got.ok) return json({ error: "read failed" }, 502);
   const row = (await got.json())[0];
   if (!row) return json({ skipped: "not_found" });
@@ -87,6 +112,12 @@ Deno.serve(async (req) => {
   if (mode === "test" && !row.is_test) return json({ skipped: "send_mode" });
   const email = (row.email ?? "").trim();
   if (!email || !row.ref_code) return json({ skipped: "no_email_or_ref_code" });
+
+  // A known bounce/complaint (synced from Resend by `venn confirm`) is never mailed again.
+  if (row.email_status) return json({ skipped: "email_status" });
+  const domain = email.slice(email.lastIndexOf("@") + 1).toLowerCase();
+  if (TYPO_DOMAINS.has(domain)) return json({ skipped: "typo_domain" });
+  if (!(await mailable(domain))) return json({ skipped: "no_mx" });
 
   // Same address applied earlier: that application gets the email, not this one.
   if (row.email_key) {
