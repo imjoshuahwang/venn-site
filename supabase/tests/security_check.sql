@@ -95,5 +95,26 @@ begin
 end $$;
 reset role;
 
+-- 5. Default privileges: a NEW function in public is not executable by anon, authenticated or PUBLIC
+-- (20261020140000_default_fn_privs.sql), while the intentional anon RPCs still are.
+do $$
+declare r text; fn regprocedure;
+begin
+  create function public.zz_default_priv_probe() returns int language sql as 'select 1';
+  foreach r in array array['anon', 'authenticated', 'public'] loop
+    if has_function_privilege(r, 'public.zz_default_priv_probe()'::regprocedure, 'EXECUTE') then
+      raise exception 'new function is executable by %', r;
+    end if;
+  end loop;
+  drop function public.zz_default_priv_probe();
+  foreach fn in array array['public.submit_application(jsonb)', 'public.referral_status(text)',
+      'public.referrer_name(text)', 'public.record_step(text,text,text)', 'public.submit_share(text,text)',
+      'public.log_apply_event(uuid,text,text,text)']::regprocedure[] loop
+    if not has_function_privilege('anon', fn, 'EXECUTE') then
+      raise exception 'anon lost execute on %', fn;
+    end if;
+  end loop;
+end $$;
+
 select 'security_check ok';
 rollback;
