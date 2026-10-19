@@ -21,7 +21,7 @@ export const FRIEND_EMAILS: { subject: string; body: string }[] = [
   },
   {
     subject: 'Thought of you for this',
-    body: "{friend}, quick one:\n\nVenn picks a small batch of high schoolers building things each season. I applied for F26 and thought of you right away. Here's my link: {link}\n\n{name}",
+    body: "Hey {friend}, quick one:\n\nVenn picks a small batch of high schoolers building things each season. I applied for F26 and thought of you right away. Here's my link: {link}\n\n{name}",
   },
 ];
 
