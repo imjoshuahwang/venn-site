@@ -451,6 +451,8 @@ import { VENN_LINKEDIN } from '../data/share-posts';
     $<HTMLAnchorElement>('#email').href = isPhone ? mailto() : gmailWeb();
     $<HTMLAnchorElement>('#email-alt').href = mailto();
     $<HTMLAnchorElement>('#share-sms').href = smsHref(smsBody(), ua);
+    $('#share-sms').hidden = !isPhone;
+    $('#share-native').hidden = typeof navigator.share !== 'function';
   };
 
   const showManual = () => {
@@ -496,12 +498,10 @@ import { VENN_LINKEDIN } from '../data/share-posts';
       });
     });
 
-    if (isPhone) $('#share-sms').hidden = false;
     if (typeof navigator.share === 'function') {
       const n = $('#share-native');
-      n.hidden = false;
       n.addEventListener('click', () => {
-        navigator.share({ text: smsBody(), url: link }).catch(() => { /* cancelled */ });
+        navigator.share({ text: smsBody() }).catch(() => { /* cancelled */ });
       });
     }
 
