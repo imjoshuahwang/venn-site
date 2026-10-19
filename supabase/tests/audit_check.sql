@@ -48,5 +48,21 @@ insert into applications (role, name, email, working_on, referred_by)
 select pg_temp.ok((select b.referred_by = a.ref_code from applications a, applications b
                    where a.email = 'ana@example.org' and b.email = 'bo@example.org'), 'ref with tab/newline still credits');
 
+-- Proof of a post is a saved post_url; the legacy self-reported referral_steps 'linkedin' row proves nothing.
+insert into referral_steps (application_id, kind) select id, 'linkedin' from applications where email = 'cy@example.org';
+select pg_temp.ok((select not linkedin_posted and not share_submitted from referral_stats r join applications a on a.id = r.referrer_id
+                   where a.email = 'cy@example.org'), 'self-reported click is not posted');
+select pg_temp.ok((select linkedin_posted and share_submitted from referral_stats r join applications a on a.id = r.referrer_id
+                   where a.email = 'ana@example.org'), 'saved post url is posted and submitted');
+select pg_temp.ok((select not linkedin and score = 0 from application_score s join applications a on a.id = s.application_id
+                   where a.email = 'cy@example.org'), 'no +5 for the unproven flag');
+select pg_temp.ok((select linkedin and score = 5 from application_score s join applications a on a.id = s.application_id
+                   where a.email = 'ana@example.org'), '+5 for a saved post url');
+select pg_temp.ok((select count(*) = 3 and bool_and(id <> (select id from applications where email = 'club@example.edu'))
+                   from v_shares), 'v_shares: students only');
+select pg_temp.ok(not has_table_privilege('anon', 'public.v_shares', 'select')
+                  and has_table_privilege('service_role', 'public.v_shares', 'select')
+                  and not has_table_privilege('anon', 'public.referral_stats', 'select'), 'v_shares/referral_stats grants');
+
 rollback;
 select 'audit_check ok';
