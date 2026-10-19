@@ -35,8 +35,11 @@ function firstName(name: string | null): string {
   return word || "there";
 }
 
+// Port of confirm.headline()
+const headline = (first: string): string => first === "there" ? "You're almost done" : `You're almost done, ${first}`;
+
 const fill = (tpl: string, vals: Record<string, string>, escape: (s: string) => string) =>
-  tpl.split("{{first_name}}").join(escape(vals.first_name)).split("{{refer_link}}").join(escape(vals.refer_link));
+  tpl.split("{{headline}}").join(escape(vals.headline)).split("{{refer_link}}").join(escape(vals.refer_link));
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
@@ -112,7 +115,7 @@ Deno.serve(async (req) => {
 
   try {
     const vals = {
-      first_name: firstName(row.name),
+      headline: headline(firstName(row.name)),
       refer_link: `${SITE}/refer?code=${encodeURIComponent(row.ref_code)}`,
     };
     const res = await fetch("https://api.resend.com/emails", {
