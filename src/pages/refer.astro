@@ -294,9 +294,25 @@ import Base from '../layouts/Base.astro';
     `I just applied to @Venn for its F26 season, a program for high schoolers building things.\n\nI'm building ${blank()}.\n\nIf you're building something too, apply here: ${link}`;
   const post = () => $<HTMLTextAreaElement>('#post');
   const liHref = () => `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(post().value)}`;
+  // The blank text currently inside the post. When the post was hand-edited, swap only that sentence so
+  // edits survive; if the sentence was rewritten away, leave the post alone.
+  let shownBlank = PLACEHOLDER;
+  const sentence = (b: string) => `I'm building ${b}.`;
   const syncPost = () => {
     const ta = post();
-    if (ta.dataset.edited !== '1') ta.value = postText();
+    const nb = blank();
+    if (ta.dataset.edited === '1' && ta.value.trim()) {
+      const at = ta.value.indexOf(sentence(shownBlank));
+      if (at >= 0 && nb !== shownBlank) {
+        ta.value = ta.value.slice(0, at) + sentence(nb) + ta.value.slice(at + sentence(shownBlank).length);
+        shownBlank = nb;
+      }
+    } else {
+      delete ta.dataset.edited;
+      const t = postText();
+      if (ta.value !== t) ta.value = t;
+      shownBlank = nb;
+    }
     $<HTMLAnchorElement>('#open-li').href = liHref();
     $<HTMLAnchorElement>('#share-li').href = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(link)}`;
     gateCopy();
@@ -308,26 +324,38 @@ import Base from '../layouts/Base.astro';
     a.setAttribute('aria-disabled', blocked ? 'true' : 'false');
     a.style.opacity = blocked ? '0.45' : '';
     a.style.pointerEvents = blocked ? 'none' : '';
-    $('#li-fill').hidden = !blocked;
+    const fill = $('#li-fill');
+    if (blocked) { fill.textContent = 'Fill in the blank above to unlock the post.'; fill.hidden = false; } else if (fill.dataset.manual !== '1') fill.hidden = true;
     const cp = $<HTMLButtonElement>('#copy-post');
     cp.disabled = blocked;
   };
 
+  // execCommand copy works only inside the tap, so it goes first; the async Clipboard API is the second try.
   const execCopy = (text: string) => {
     const t = document.createElement('textarea');
-    t.value = text; t.style.position = 'fixed'; t.style.opacity = '0';
-    document.body.appendChild(t); t.select();
+    t.value = text; t.readOnly = true;
+    t.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;font-size:16px';
+    document.body.appendChild(t);
+    t.focus({ preventScroll: true }); t.select(); t.setSelectionRange(0, text.length);
     let ok = false;
     try { ok = document.execCommand('copy'); } catch { /* nothing */ }
     t.remove();
     return ok;
   };
-  // Starts the copy synchronously (inside the click). Resolves true when the text reached the clipboard.
+  // Starts inside the click. Resolves true when the text reached the clipboard.
   const copy = (text: string): Promise<boolean> => {
+    if (execCopy(text)) return Promise.resolve(true);
     if (navigator.clipboard?.writeText) {
-      try { return navigator.clipboard.writeText(text).then(() => true, () => execCopy(text)); } catch { /* fall through */ }
+      try { return navigator.clipboard.writeText(text).then(() => true, () => false); } catch { /* fall through */ }
     }
-    return Promise.resolve(execCopy(text));
+    return Promise.resolve(false);
+  };
+  // Copy failed: leave the post selected so one long-press copies it by hand.
+  const showPostManual = () => {
+    const ta = post();
+    ta.focus({ preventScroll: true }); ta.select(); ta.setSelectionRange(0, ta.value.length);
+    $('#li-fill').dataset.manual = '1'; $('#li-fill').hidden = false;
+    $('#li-fill').textContent = 'Could not copy automatically. The post is selected above: tap Copy, then paste it in LinkedIn.';
   };
   const flash = (btn: HTMLElement, msg: string) => {
     const old = btn.dataset.label ?? btn.textContent ?? '';
@@ -417,18 +445,22 @@ import Base from '../layouts/Base.astro';
     const building = $<HTMLInputElement>('#building');
     building.value = draft.get();
     building.addEventListener('input', () => { draft.set(building.value); syncPost(); });
-    post().addEventListener('input', () => { post().dataset.edited = '1'; $<HTMLAnchorElement>('#open-li').href = liHref(); gateCopy(); });
+    post().addEventListener('input', () => {
+      if (post().value.trim()) post().dataset.edited = '1'; else delete post().dataset.edited;
+      $('#li-fill').dataset.manual = '';
+      syncPost();
+    });
 
     // Copy first (started inside the click), then the browser follows the link to LinkedIn.
     $('#open-li').addEventListener('click', (e) => {
       if (post().value.includes(PLACEHOLDER)) { e.preventDefault(); return; }
       $<HTMLAnchorElement>('#open-li').href = liHref();
-      copy(post().value);
+      copy(post().value).then((ok) => { if (!ok) showPostManual(); });
     });
 
     $('#copy-post').addEventListener('click', (e) => {
       const btn = e.currentTarget as HTMLElement;
-      copy(post().value).then((ok) => { if (ok) flash(btn, 'Post copied'); else { post().focus(); post().select(); } });
+      copy(post().value).then((ok) => { if (ok) flash(btn, 'Post copied'); else showPostManual(); });
     });
 
     const err = $('#li-err');
@@ -437,7 +469,9 @@ import Base from '../layouts/Base.astro';
       err.textContent = '';
       save.disabled = true;
       try {
-        merge((await rpc('record_step', { code, kind: 'linkedin', url: null })) as Status | null);
+        const r = (await rpc('record_step', { code, kind: 'linkedin', url: null })) as Status | null;
+        if (!r) { err.textContent = 'Could not save that. Try again in a moment.'; save.disabled = false; return; }
+        merge(r);
         setOpen('friends');
         $('#headline').focus({ preventScroll: true });
         scrollTo({ top: 0, behavior: calm ? 'auto' : 'smooth' });
