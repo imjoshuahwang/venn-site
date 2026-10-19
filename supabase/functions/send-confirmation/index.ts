@@ -131,7 +131,7 @@ Deno.serve(async (req) => {
         from: FROM,
         to: [email],
         reply_to: REPLY_TO,
-        subject: template.subject,
+        subject: fill(template.subject, vals, (s) => s),
         html: fill(template.html, vals, esc),
         text: fill(template.text, vals, (s) => s),
       }),
