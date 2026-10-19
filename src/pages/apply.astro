@@ -8,7 +8,7 @@ import logo from '../assets/venn-logo.png';
 const url = import.meta.env.PUBLIC_SUPABASE_URL ?? '';
 const key = import.meta.env.PUBLIC_SUPABASE_ANON_KEY ?? '';
 ---
-<Base bare title="Apply to Venn" description="Apply to Venn, a free program for high school and college students already building something.">
+<Base bare shareUrl={false} ogTitle="A friend invited you to Venn" title="Apply to Venn" description="Apply to Venn, a free program for high school and college students already building something.">
   <div class="shell" data-url={url} data-key={key}>
     <header class="top">
       <Image class="brand" src={logo} alt="Venn" width={96} densities={[1, 2]} loading="eager" />
