@@ -62,6 +62,7 @@ import Base from '../layouts/Base.astro';
               <div class="row"><button class="btn btn-ghost" type="button" id="copy-post">Just copy the post</button></div>
               <a class="link" id="share-li" target="_blank" rel="noopener" href="https://www.linkedin.com/feed/">Or share only your link on LinkedIn</a>
               <p class="hint" id="li-fill" hidden>Fill in the blank above to unlock the post.</p>
+              <button class="link" type="button" id="reset-post" hidden>Start the post over from the blank</button>
               <p class="hint">Post box empty? Paste what you copied.</p>
 
               <div class="part">
@@ -90,6 +91,11 @@ import Base from '../layouts/Base.astro';
                 <textarea id="manual-link" rows="2" readonly></textarea>
               </div>
               <p class="hint">Your link: <code id="mylink"></code></p>
+              <div class="part" id="done-part" hidden>
+                <p class="hint" id="done-note">Sent it? Tap Done. You can come back to this page anytime, with the same link, to email more friends. Up to 10 count.</p>
+                <p class="err" id="done-err" role="alert"></p>
+                <div class="row"><button class="btn" type="button" id="done">Done</button></div>
+              </div>
             </div>
           </li>
         </ol>
@@ -195,7 +201,8 @@ import Base from '../layouts/Base.astro';
   const SB_URL = import.meta.env.PUBLIC_SUPABASE_URL ?? '';
   const SB_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY ?? '';
 
-  type Status = { first_name: string; ref_code: string; linkedin: boolean; referrals: number; pending: number };
+  // email = the student tapped Done on the friends step (older servers omit it; the local mark covers that).
+  type Status = { first_name: string; ref_code: string; linkedin: boolean; email?: boolean; referrals: number; pending: number };
 
   const $ = <T extends Element = HTMLElement>(s: string, r: ParentNode = document) => r.querySelector<T>(s)!;
   const $$ = <T extends Element = HTMLElement>(s: string, r: ParentNode = document) => [...r.querySelectorAll<T>(s)];
@@ -226,6 +233,14 @@ import Base from '../layouts/Base.astro';
     get: () => { try { return localStorage.getItem('venn-refer-building:' + code) ?? ''; } catch { return ''; } },
     set: (v: string) => { try { localStorage.setItem('venn-refer-building:' + code, v); } catch { /* private mode */ } },
   };
+  // Per-device marks that survive the trip to Gmail and back (iOS often reloads the tab on return).
+  const mark = (k: string) => ({
+    get: () => { try { return localStorage.getItem(`venn-refer-${k}:` + code) === '1'; } catch { return false; } },
+    set: () => { try { localStorage.setItem(`venn-refer-${k}:` + code, '1'); } catch { /* private mode */ } },
+  });
+  const sentMark = mark('sent');
+  const doneMark = mark('done');
+  let sent = false;
 
   const ua = navigator.userAgent;
   const isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -260,7 +275,8 @@ import Base from '../layouts/Base.astro';
     const shown = Math.min(friends, MAX_FRIENDS);
     const maxed = friends >= MAX_FRIENDS;
     const nm = cap(st.first_name);
-    const n = 1 + +st.linkedin + +(friends > 0);
+    const done = friends > 0 || !!st.email || doneMark.get();
+    const n = 1 + +st.linkedin + +done;
     $('#steps-label').textContent = `Step ${n} of 3 done`;
     $('#bar').style.transform = `scaleX(${n / 3})`;
     $('#headline').textContent =
@@ -271,9 +287,9 @@ import Base from '../layouts/Base.astro';
       : 'One step left.';
 
     $('.step[data-step="linkedin"]').classList.toggle('done', st.linkedin);
-    $('.step[data-step="friends"]').classList.toggle('done', friends > 0);
+    $('.step[data-step="friends"]').classList.toggle('done', done);
     $('#s-linkedin').textContent = st.linkedin ? 'Done' : '1 min';
-    $('#s-friends').textContent = maxed ? `${MAX_FRIENDS} of ${MAX_FRIENDS}` : friends > 0 ? `${shown} applied` : '1 min';
+    $('#s-friends').textContent = maxed ? `${MAX_FRIENDS} of ${MAX_FRIENDS}` : friends > 0 ? `${shown} applied` : done ? 'Done' : '1 min';
     $('#li-save').textContent = st.linkedin ? 'Posted' : 'I posted it';
     $<HTMLButtonElement>('#li-save').disabled = st.linkedin;
 
@@ -281,11 +297,23 @@ import Base from '../layouts/Base.astro';
       maxed ? `${MAX_FRIENDS} of ${MAX_FRIENDS} friends counted. That's the max, thank you.`
       : friends > 0 ? `${shown} ${shown === 1 ? 'friend' : 'friends'} applied with your link.` : 'No friends yet.';
     const pend = $('#pending');
-    pend.hidden = st.pending < 1;
-    pend.textContent = st.pending < 1 ? '' : `${st.pending} more ${st.pending === 1 ? 'counts' : 'count'} once their confirmation email goes out.`;
+    // Only the room left under the cap can still count.
+    const more = Math.min(st.pending, Math.max(0, MAX_FRIENDS - friends));
+    pend.hidden = more < 1;
+    pend.textContent = more < 1 ? '' : `${more} more ${more === 1 ? 'counts' : 'count'} once their confirmation email goes out.`;
+
+    // Done shows once they have sent their link at least once (or already finished).
+    const finished = !!st.email || doneMark.get();
+    $('#done-part').hidden = !(sent || sentMark.get() || finished);
+    $<HTMLButtonElement>('#done').disabled = finished;
+    $('#done-note').textContent = finished
+      ? (maxed ? 'All set. Thanks for bringing your friends.' : 'All set. Come back to this page anytime, with the same link, to email more friends. Up to 10 count.')
+      : 'Sent it? Tap Done. You can come back to this page anytime, with the same link, to email more friends. Up to 10 count.';
   };
 
   const merge = (s: Status | null) => { if (s) { st = s; render(); } };
+  // Bumped by every write, so a refresh that started before a write can't put the old status back.
+  let gen = 0;
 
   // ---- LinkedIn -----------------------------------------------------------
   const PLACEHOLDER = '<what you\'re working on>';
@@ -298,14 +326,20 @@ import Base from '../layouts/Base.astro';
   // edits survive; if the sentence was rewritten away, leave the post alone.
   let shownBlank = PLACEHOLDER;
   const sentence = (b: string) => `I'm building ${b}.`;
-  const syncPost = () => {
+  const syncPost = (fromBlank = false) => {
     const ta = post();
     const nb = blank();
+    let lost = false;
     if (ta.dataset.edited === '1' && ta.value.trim()) {
-      const at = ta.value.indexOf(sentence(shownBlank));
-      if (at >= 0 && nb !== shownBlank) {
-        ta.value = ta.value.slice(0, at) + sentence(nb) + ta.value.slice(at + sentence(shownBlank).length);
-        shownBlank = nb;
+      // iOS smart punctuation turns a retyped ' into a curly one, so match either. If the sentence itself was
+      // reworded, the blank still owns its line; only a deleted line leaves the blank with nothing to update.
+      const v = ta.value;
+      const old = [sentence(shownBlank), sentence(shownBlank).replace("'", '\u2019')].find((x) => v.includes(x));
+      const line = old || !fromBlank ? null : /I['\u2019]m building [^\n]*/.exec(v);
+      if (nb !== shownBlank) {
+        if (old) { const at = v.indexOf(old); ta.value = v.slice(0, at) + sentence(nb) + v.slice(at + old.length); shownBlank = nb; }
+        else if (line) { ta.value = v.slice(0, line.index) + sentence(nb) + v.slice(line.index + line[0].length); shownBlank = nb; }
+        else lost = fromBlank;
       }
     } else {
       delete ta.dataset.edited;
@@ -316,6 +350,8 @@ import Base from '../layouts/Base.astro';
     $<HTMLAnchorElement>('#open-li').href = liHref();
     $<HTMLAnchorElement>('#share-li').href = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(link)}`;
     gateCopy();
+    $('#reset-post').hidden = !lost;
+    if (lost) { const f = $('#li-fill'); f.dataset.manual = '1'; f.hidden = false; f.textContent = "The \"I'm building\" line was deleted from the post, so the blank has nothing to update. Edit the post directly, or start it over."; }
   };
   // Never copy the literal placeholder: hold the button until the blank is filled (or the post is edited past it).
   const gateCopy = () => {
@@ -377,7 +413,8 @@ import Base from '../layouts/Base.astro';
   const gmailWeb = () => { const m = mailParts(); return `https://mail.google.com/mail/?view=cm&fs=1&su=${q(m.subject)}&body=${q(m.body)}`; };
   const gmailApp = () => { const m = mailParts(); return `googlegmail://co?to=&subject=${q(m.subject)}&body=${q(m.body)}`; };
 
-  const logEmail = () => { rpc('record_step', { code, kind: 'email', url: null }).catch(() => { /* analytics only */ }); };
+  // Sending the link only unlocks Done (kept on this device); Done is what records the step.
+  const logEmail = () => { sent = true; sentMark.set(); render(); };
 
   const showManual = () => {
     $('#manual').hidden = false;
@@ -444,9 +481,15 @@ import Base from '../layouts/Base.astro';
 
     const building = $<HTMLInputElement>('#building');
     building.value = draft.get();
-    building.addEventListener('input', () => { draft.set(building.value); syncPost(); });
+    building.addEventListener('input', () => { draft.set(building.value); syncPost(true); });
     post().addEventListener('input', () => {
       if (post().value.trim()) post().dataset.edited = '1'; else delete post().dataset.edited;
+      $('#li-fill').dataset.manual = '';
+      syncPost();
+    });
+
+    $('#reset-post').addEventListener('click', () => {
+      delete post().dataset.edited;
       $('#li-fill').dataset.manual = '';
       syncPost();
     });
@@ -469,6 +512,7 @@ import Base from '../layouts/Base.astro';
       err.textContent = '';
       save.disabled = true;
       try {
+        gen++;
         const r = (await rpc('record_step', { code, kind: 'linkedin', url: null })) as Status | null;
         if (!r) { err.textContent = 'Could not save that. Try again in a moment.'; save.disabled = false; return; }
         merge(r);
@@ -481,6 +525,25 @@ import Base from '../layouts/Base.astro';
       }
     });
 
+    const derr = $('#done-err');
+    const doneBtn = $<HTMLButtonElement>('#done');
+    doneBtn.addEventListener('click', async () => {
+      derr.textContent = '';
+      doneBtn.disabled = true;
+      try {
+        gen++;
+        const r = (await rpc('record_step', { code, kind: 'email', url: null })) as Status | null;
+        if (!r) { derr.textContent = 'Could not save that. Try again in a moment.'; doneBtn.disabled = false; return; }
+        doneMark.set();
+        merge(r);
+        $('#headline').focus({ preventScroll: true });
+        scrollTo({ top: 0, behavior: calm ? 'auto' : 'smooth' });
+      } catch {
+        derr.textContent = 'Could not save that. Try again in a moment.';
+        doneBtn.disabled = false;
+      }
+    });
+
     wireFriends();
     $('#retry').addEventListener('click', boot);
   };
@@ -489,7 +552,11 @@ import Base from '../layouts/Base.astro';
   const refresh = async () => {
     if (!st || Date.now() - lastFetch < 4000) return;
     lastFetch = Date.now();
-    try { merge((await rpc('referral_status', { code })) as Status | null); } catch { /* keep showing what we have */ }
+    const g = gen;
+    try {
+      const s = (await rpc('referral_status', { code })) as Status | null;
+      if (g === gen) merge(s);
+    } catch { /* keep showing what we have */ }
   };
 
   async function boot() {
