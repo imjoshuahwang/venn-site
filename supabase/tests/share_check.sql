@@ -97,5 +97,43 @@ select pg_temp.ok((select relrowsecurity from pg_class where oid = 'public.share
 select pg_temp.ok(not has_table_privilege('anon', 'public.share_events', 'select,insert'), 'share_events closed to anon');
 select pg_temp.ok(has_function_privilege('anon', 'public.submit_share(text,text)', 'execute'), 'anon can submit_share');
 
+-- Steps: record_step share kinds dedupe per (ref_code, step); old kinds unchanged.
+select pg_temp.ok((select (record_step(ref_code, 'opened') ->> 'ref_code') = ref_code from c where who = 'vic'), 'record_step opened');
+select record_step(ref_code, 'opened'), record_step(ref_code, 'post_copied'), record_step(ref_code, 'li_opened'),
+       record_step(ref_code, 'url_pasted'), record_step(ref_code, 'no_linkedin'), record_step(ref_code, 'post_copied')
+  from c where who = 'vic';
+select pg_temp.ok((select count(*) = 5 from share_events where ref_code = (select ref_code from c where who = 'vic')), 'one row per step');
+select pg_temp.fails($$select record_step((select ref_code from c where who='vic'), 'bogus')$$, 'unknown kind');
+select pg_temp.fails($$select record_step('nope-zzzzzz', 'opened')$$, 'unknown code');
+select pg_temp.ok((select (record_step(ref_code, 'email') ->> 'email')::boolean from c where who = 'vic'), 'email kind unchanged');
+select pg_temp.ok((select count(*) = 5 from share_events where ref_code = (select ref_code from c where who = 'vic')), 'email kind writes no share event');
+
+-- friend_applied: written for the referrer's code per valid referral, not deduped; self and test excluded.
+select pg_temp.ok((select count(*) = 4 from share_events where step = 'friend_applied' and ref_code = (select ref_code from c where who = 'sam')),
+  'friend_applied per real friend (alt address of self excluded)');
+select pg_temp.ok((select count(*) = 0 from share_events where step = 'friend_applied' and ref_code <> (select ref_code from c where who = 'sam')
+  and ref_code <> (select ref_code from applications where email = 'dee@example.com')), 'friend_applied only for referrers');
+
+-- Sweeper: flips only overdue pending; legacy and submitted untouched.
+update applications set share_status = null, share_due = null where email = 'lee@example.com';
+select pg_temp.ok((select void_overdue_shares() = 1), 'sweeper voids one (Vic)');
+select pg_temp.ok((select share_status = 'void' from applications where email = 'vic@example.com'), 'Vic voided');
+select pg_temp.ok((select share_status is null from applications where email = 'lee@example.com'), 'legacy untouched');
+select pg_temp.ok((select share_status = 'submitted' from applications where email = 'una@example.com'), 'submitted untouched');
+select pg_temp.ok((select count(*) = 1 from share_events where step = 'void'), 'one void event');
+select pg_temp.ok((select void_overdue_shares() = 0), 'sweeper idempotent');
+select pg_temp.fails($$select submit_share((select ref_code from c where who='vic'), 'https://linkedin.com/posts/late')$$, 'void');
+
+-- Views: furthest step and funnel; closed to anon.
+select pg_temp.ok((select furthest_step = 'void' from v_share_progress where name = 'Vic Test'), 'progress furthest void');
+select pg_temp.ok((select furthest_step = 'submitted' from v_share_progress where name = 'Una Test'), 'progress furthest submitted');
+select pg_temp.ok((select reached = 1 from v_share_funnel where step = 'li_opened'), 'funnel li_opened');
+select pg_temp.ok((select array_agg(step order by ord) = array['opened','post_copied','li_opened','url_pasted','no_linkedin','friend_applied','submitted','void']
+                   from v_share_funnel), 'funnel in step order');
+select pg_temp.ok(not has_table_privilege('anon', 'public.v_share_progress', 'select') and not has_table_privilege('authenticated', 'public.v_share_funnel', 'select'), 'views closed');
+select pg_temp.ok(not has_function_privilege('anon', 'public.void_overdue_shares()', 'execute')
+              and not has_function_privilege('authenticated', 'public.void_overdue_shares()', 'execute')
+              and has_function_privilege('service_role', 'public.void_overdue_shares()', 'execute'), 'sweeper service_role only');
+
 select 'share_check ok' as result;
 rollback;
