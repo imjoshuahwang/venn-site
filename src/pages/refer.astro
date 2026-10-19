@@ -40,7 +40,15 @@ import Base from '../layouts/Base.astro';
               <span class="tick"></span><span class="step-t">Post on LinkedIn</span><span class="step-s" id="s-linkedin">About 1 minute</span>
             </button>
             <div class="panel" id="p-linkedin" hidden>
-              <p class="sub">Fill in the blank, then copy the post to LinkedIn.</p>
+              <div class="why">
+                <p class="why-t">Why post it</p>
+                <ul>
+                  <li>A public post shows you build things, to anyone who looks you up.</li>
+                  <li>Tagging @Venn lets the builders in our network find your project.</li>
+                  <li>Friends who apply with your link join the same network, so you build alongside people you know.</li>
+                </ul>
+              </div>
+              <p class="sub">Takes 30 seconds. Fill in the blank, tap the button, post.</p>
               <label class="field">
                 <span class="field-l">I am building</span>
                 <input type="text" id="building" autocomplete="off" maxlength="80" placeholder="a robotics app for my school" />
@@ -49,8 +57,10 @@ import Base from '../layouts/Base.astro';
                 <span class="field-l">Your post (edit it if you like)</span>
                 <textarea id="post" rows="6"></textarea>
               </label>
-              <p class="tip">Before you post, type @Venn and pick <strong>Venn, the student org connector</strong> from the list (tap the one with the Venn logo). Plain "@Venn" text doesn't count.</p>
+              <p class="tip">Last step: LinkedIn only tags us when you pick us from its list. In the post box, delete the last letter of @Venn, retype it, and tap <strong>Venn, the student org connector</strong> (the one with the Venn logo).</p>
               <div class="row"><a class="btn" id="open-li" target="_blank" rel="noopener" href="https://www.linkedin.com/feed/">Copy post and open LinkedIn</a></div>
+              <div class="row"><button class="btn btn-ghost" type="button" id="copy-post">Just copy the post</button></div>
+              <a class="link" id="share-li" target="_blank" rel="noopener" href="https://www.linkedin.com/feed/">Or share only your link on LinkedIn</a>
               <p class="hint" id="li-fill" hidden>Fill in the blank above to unlock the post.</p>
               <p class="hint">Post box empty? Paste what you copied.</p>
 
@@ -149,9 +159,15 @@ import Base from '../layouts/Base.astro';
   }
   textarea { resize: vertical; min-height: 120px; }
   @media (min-width: 641px) { #post { min-height: 260px; } }
+  .btn:disabled { opacity: .45; cursor: default; }
   textarea[readonly] { min-height: 64px; font-size: 15px; }
   input:focus, textarea:focus { outline: none; box-shadow: inset 0 0 0 2px #000; }
   input::placeholder { color: #a5a5a8; }
+  .why { background: rgba(255, 255, 255, .7); border-radius: 14px; padding: 14px 16px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05); display: grid; gap: 8px; }
+  .why-t { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+  .why ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .why li { position: relative; padding-left: 18px; font-size: 15px; line-height: 1.45; color: var(--text); }
+  .why li::before { content: ''; position: absolute; left: 2px; top: .6em; width: 6px; height: 6px; border-radius: 50%; background: var(--black); }
   .tip { font-size: 14px; line-height: 1.5; color: var(--text); background: rgba(255, 255, 255, .7); border-radius: 14px; padding: 12px 16px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05); }
   .hint { font-size: 14px; color: var(--muted); line-height: 1.5; overflow-wrap: anywhere; }
   .hint code { font: 13px/1.4 var(--mono); color: var(--text); }
@@ -275,13 +291,14 @@ import Base from '../layouts/Base.astro';
   const PLACEHOLDER = '<what you\'re working on>';
   const blank = () => $<HTMLInputElement>('#building').value.trim() || PLACEHOLDER;
   const postText = () =>
-    `I just applied to Venn's F26 season, a program for high schoolers building things.\n\nI'm building ${blank()}.\n\nIf you're building something too, apply here: ${link}`;
+    `I just applied to @Venn for its F26 season, a program for high schoolers building things.\n\nI'm building ${blank()}.\n\nIf you're building something too, apply here: ${link}`;
   const post = () => $<HTMLTextAreaElement>('#post');
   const liHref = () => `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(post().value)}`;
   const syncPost = () => {
     const ta = post();
     if (ta.dataset.edited !== '1') ta.value = postText();
     $<HTMLAnchorElement>('#open-li').href = liHref();
+    $<HTMLAnchorElement>('#share-li').href = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(link)}`;
     gateCopy();
   };
   // Never copy the literal placeholder: hold the button until the blank is filled (or the post is edited past it).
@@ -292,6 +309,8 @@ import Base from '../layouts/Base.astro';
     a.style.opacity = blocked ? '0.45' : '';
     a.style.pointerEvents = blocked ? 'none' : '';
     $('#li-fill').hidden = !blocked;
+    const cp = $<HTMLButtonElement>('#copy-post');
+    cp.disabled = blocked;
   };
 
   const execCopy = (text: string) => {
@@ -405,6 +424,11 @@ import Base from '../layouts/Base.astro';
       if (post().value.includes(PLACEHOLDER)) { e.preventDefault(); return; }
       $<HTMLAnchorElement>('#open-li').href = liHref();
       copy(post().value);
+    });
+
+    $('#copy-post').addEventListener('click', (e) => {
+      const btn = e.currentTarget as HTMLElement;
+      copy(post().value).then((ok) => { if (ok) flash(btn, 'Post copied'); else { post().focus(); post().select(); } });
     });
 
     const err = $('#li-err');
