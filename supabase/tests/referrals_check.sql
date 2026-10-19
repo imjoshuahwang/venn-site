@@ -32,7 +32,7 @@ insert into applications (role, name, email, working_on, referred_by)
   values ('student', 'Bouncy', 'bounce@example.org', 'x', (select upper(ref_code) || ' ' from codes where n = 1)),
          ('student', 'Slow', 'slow@example.org', 'x', (select ref_code from codes where n = 2)),
          ('student', 'Ann Again', 'ann+alt@example.com', 'x', (select ref_code from codes where n = 2));
-update applications set confirmed_at = now() where email like 'f%@example.org' or email = 'bounce@example.org';
+update applications set confirmed_at = now(), share_status = 'submitted' where email like 'f%@example.org' or email = 'bounce@example.org';  -- credit needs a submitted share (venn#302)
 update applications set email_status = 'bounced' where email = 'bounce@example.org';
 
 select pg_temp.ok((select count(distinct referrer_id) = 1 and count(*) = 15 from referral_ledger),
@@ -73,7 +73,7 @@ end $$;
 -- Old 4-char codes (already emailed) still resolve.
 insert into applications (role, name, email, working_on, ref_code) values ('student', 'Bob Old', 'bob@example.com', 'x', 'bob-abcd');
 insert into applications (role, name, email, working_on, referred_by) values ('student', 'Cy', 'cy@example.org', 'x', 'bob-abcd');
-update applications set confirmed_at = now() where email = 'cy@example.org';
+update applications set confirmed_at = now(), share_status = 'submitted' where email = 'cy@example.org';
 select pg_temp.ok((referral_status('bob-abcd')->>'referrals')::int = 1, 'legacy 4-char code works');
 select pg_temp.ok(referrer_name(' BOB-ABCD ') = 'Bob', 'referrer_name trims and lowercases');
 
