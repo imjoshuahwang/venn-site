@@ -90,9 +90,15 @@ test('isLinkedInPostUrl', () => {
     'linkedin.com/feed/update/urn:li:activity:123',
     'WWW.LinkedIn.com/Posts/x',
     'https://linkedin.com/feed/update/urn:li:share:1/?utm=a',
+    'https://lnkd.in/gAbC12xY', 'lnkd.in/gAbC12xY', 'LNKD.IN/abc', 'http://www.lnkd.in/abc?x=1#y',
+    'https://www.linkedin.com/pulse/some-article-jane', 'https://linkedin.com/embed/feed/update/urn:li:share:1',
+    'https://m.linkedin.com/posts/x', 'https://uk.linkedin.com/posts/x', 'https://linkedin.com/mwlite/feed/update/urn:li:activity:1',
+    'https://www.linkedin.com/feed/update/urn:li:activity:123?utm_source=share&utm_medium=member_ios',
   ];
   const bad = [
-    '', 'https://lnkd.in/abc', 'https://www.linkedin.com/in/jane',
+    '', 'https://lnkd.in/', 'https://lnkd.in/a b', 'https://evil.com/lnkd.in/x', 'https://lnkd.in.evil.com/x',
+    'https://linkedin.com/in/jane', 'https://linkedin.com/feed/', 'https://linkedin.com/feed', 'https://abc.linkedin.com/posts/x',
+    'https://evil.com/m.linkedin.com/posts/x', 'https://www.linkedin.com/in/jane',
     'https://linkedin.com/posts/', 'https://linkedin.com/feed/update/',
     'https://linkedin.com/posts/a b', ' https://linkedin.com/posts/x',
     'https://linkedin.com/posts/x\n', 'https://evil.com/linkedin.com/posts/x',
