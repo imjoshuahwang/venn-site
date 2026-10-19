@@ -57,3 +57,7 @@ export function timeLeft(dueIso: string, nowMs: number): { ms: number; text: str
   const text = mins < 1 ? 'Under a minute left' : h < 1 ? `${mins}m left` : `${h}h ${mins % 60}m left`;
   return { ms, text, over: false };
 }
+
+// sms: link that opens the phone's Messages app with a prefilled body. iOS wants "&body=", Android and others "?body=".
+export const smsHref = (body: string, ua: string): string =>
+  (/iPhone|iPad|iPod/.test(ua) ? 'sms:&body=' : 'sms:?body=') + encodeURIComponent(body);

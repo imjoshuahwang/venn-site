@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   LINKEDIN_POSTS, SMS_TEXTS, VENN_LINKEDIN, FRIEND_EMAILS, variantIndex, nextVariant, fill,
-  isLinkedInPostUrl, normalizePostUrl, timeLeft,
+  isLinkedInPostUrl, normalizePostUrl, timeLeft, smsHref,
 } from './share-copy.ts';
 
 const BANNED = ['delve', 'utilize', 'facilitate', 'robust', 'enhance', 'crucial', 'vital', 'streamline', 'empower',
@@ -123,4 +123,20 @@ test('timeLeft', () => {
   assert.equal(timeLeft(due(-5 * H), now).ms, -5 * H);
   const bad = timeLeft('nope', now);
   assert.equal(bad.over, false);
+});
+
+test('smsHref: iOS uses &body, others use ?body', () => {
+  const b = 'hi';
+  assert.equal(smsHref(b, 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)'), 'sms:&body=hi');
+  assert.equal(smsHref(b, 'Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X)'), 'sms:&body=hi');
+  assert.equal(smsHref(b, 'Mozilla/5.0 (Linux; Android 14; Pixel 8)'), 'sms:?body=hi');
+  assert.equal(smsHref(b, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'), 'sms:?body=hi');
+});
+
+test('smsHref: encodes newline, &, ?, # and unicode', () => {
+  const h = smsHref('a\nb & c? d# José', 'Android');
+  assert.equal(h, 'sms:?body=' + encodeURIComponent('a\nb & c? d# José'));
+  assert.match(h, /%0A/);
+  assert.ok(!/[&#]/.test(h.slice('sms:?body='.length)));
+  assert.match(h, /Jos%C3%A9/);
 });
