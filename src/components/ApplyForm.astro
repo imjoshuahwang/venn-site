@@ -63,6 +63,7 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
 
 <script>
   import { getRef, clearRef } from '../scripts/ref';
+  import { capMessage } from '../scripts/apply-errors';
 
   const form = document.getElementById('apply-form') as HTMLFormElement;
   const status = document.getElementById('f-status')!;
@@ -293,10 +294,7 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
       sending = false;
       next.disabled = false;
       status.className = 'form-status err';
-      // No answer (offline, timeout) or a server hiccup: the answers are still here, so say "try again".
-      status.textContent = !code || code >= 500
-        ? "Couldn't reach Venn. Check your connection and tap Send again. Your answers are still here."
-        : 'Something went wrong. Email contact@joinvenn.org and we will sort it out.';
+      status.textContent = capMessage(code, (err as Error).message);
     }
   }
   function finish(code: unknown) {
