@@ -146,3 +146,34 @@ test('smsHref: encodes newline, &, ?, # and unicode', () => {
   assert.ok(!/[&#]/.test(h.slice('sms:?body='.length)));
   assert.match(h, /Jos%C3%A9/);
 });
+
+import { OPENERS, openerIndex, composePost, extractPostUrl, LINKEDIN_POSTS as POSTS } from './share-copy.ts';
+
+test('openers: 10-12 lines, calm, no claims-bearing punctuation', () => {
+  assert.ok(OPENERS.length >= 10 && OPENERS.length <= 12);
+  assert.equal(new Set(OPENERS).size, OPENERS.length);
+  for (const o of OPENERS) assert.ok(!/[!—;@]|Venn/.test(o), o);
+});
+
+test('openerIndex: stable per student, in range, uses the whole pool', () => {
+  assert.equal(openerIndex('sam-k2'), openerIndex(' SAM-K2 '));
+  const seen = new Set<number>();
+  for (let i = 0; i < 500; i++) { const k = openerIndex('ref' + i); assert.ok(k >= 0 && k < OPENERS.length); seen.add(k); }
+  assert.equal(seen.size, OPENERS.length);
+});
+
+test('composePost: opener first, body unchanged, one blank sentence', () => {
+  for (const b of POSTS) {
+    const p = composePost(OPENERS[0], b);
+    assert.ok(p.startsWith(OPENERS[0] + '\n\n') && p.endsWith(b));
+    assert.equal(p.split("I'm building {blank}.").length, 2);
+  }
+});
+
+test('extractPostUrl: pulls the post URL out of share-sheet text', () => {
+  assert.equal(extractPostUrl('Check out my post https://www.linkedin.com/posts/x?utm_source=share'), 'https://www.linkedin.com/posts/x?utm_source=share');
+  assert.equal(extractPostUrl('https://lnkd.in/ab\nhttps://y.com'), 'https://lnkd.in/ab');
+  assert.equal(extractPostUrl(' m.linkedin.com/feed/update/urn:li:activity:7 '), 'https://m.linkedin.com/feed/update/urn:li:activity:7');
+  assert.equal(extractPostUrl('xlinkedin.com/posts/a'), '');
+  assert.equal(extractPostUrl('https://linkedin.com/in/jane'), '');
+});

@@ -220,12 +220,12 @@ import { VENN_LINKEDIN } from '../data/share-posts';
 </style>
 
 <script>
-  import { LINKEDIN_POSTS, FRIEND_EMAILS, variantIndex, nextVariant, fill, isLinkedInPostUrl, normalizePostUrl, timeLeft, SMS_TEXTS, smsHref } from '../scripts/share-copy';
+  import { LINKEDIN_POSTS, OPENERS, FRIEND_EMAILS, variantIndex, openerIndex, composePost, nextVariant, fill, extractPostUrl, timeLeft, SMS_TEXTS, smsHref } from '../scripts/share-copy';
   import { minWait } from '../scripts/wait';
   const SB_URL = import.meta.env.PUBLIC_SUPABASE_URL ?? '';
   const SB_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY ?? '';
 
-  type Status = { first_name: string; ref_code: string; linkedin: boolean; referrals: number; friends_submitted?: number; pending: number; share_status?: 'pending_share' | 'submitted' | 'void' | null; share_due?: string | null };
+  type Status = { first_name: string; ref_code: string; linkedin: boolean; referrals: number; friends_submitted?: number; pending: number; share_status?: 'pending_share' | 'submitted' | 'void' | null; share_due?: string | null; role?: string };
 
   const $ = <T extends Element = HTMLElement>(s: string, r: ParentNode = document) => r.querySelector<T>(s)!;
   const $$ = <T extends Element = HTMLElement>(s: string, r: ParentNode = document) => [...r.querySelectorAll<T>(s)];
@@ -313,6 +313,8 @@ import { VENN_LINKEDIN } from '../data/share-posts';
     const voided = ss === 'void';
     const fs = Math.min(st.friends_submitted ?? 0, NEED);
     const fallback = noLi && !submitted && !voided;
+    // Clubs and companies have no share step. Needs referral_status to return role (until then this never fires).
+    const org = !!st.role && st.role !== 'student';
     $('#steps-label').textContent = submitted ? 'Step 2 of 2 done' : 'Step 2 of 2: share';
     $('#bar').style.transform = `scaleX(${submitted ? 1 : 0.5})`;
     $('#headline').textContent = submitted ? `Submitted, ${nm}. You're in the running for F26.`
@@ -327,7 +329,7 @@ import { VENN_LINKEDIN } from '../data/share-posts';
     $('#p-linkedin .part').hidden = submitted;
     $('#s-linkedin').textContent = submitted ? 'Submitted' : '1 min';
     $('#steps-label').hidden = voided;
-    const liOk = isLinkedInPostUrl($<HTMLInputElement>('#post-url').value.trim());
+    const liOk = !!extractPostUrl($<HTMLInputElement>('#post-url').value);
     $<HTMLButtonElement>('#li-save').disabled = inFlight || submitted || !liOk;
     $('#submit-hint').hidden = liOk || submitted;
     $('#no-li').hidden = noLi || submitted;
@@ -352,7 +354,18 @@ import { VENN_LINKEDIN } from '../data/share-posts';
     // Only the room left under the cap can still count.
     const more = Math.min(st.pending, Math.max(0, MAX_FRIENDS - friends));
     pend.hidden = more < 1;
-    pend.textContent = more < 1 ? '' : `${more} more ${more === 1 ? 'counts' : 'count'} once their confirmation email goes out.`;
+    pend.textContent = more < 1 ? '' : `${more} more ${more === 1 ? 'counts' : 'count'} once they share their own application.`;
+    if (org) {
+      $('#headline').textContent = `Your application is in, ${nm}.`;
+      $('#subline').textContent = 'Share your link below. Students who apply with it are credited to you.';
+      $('#steps-label').hidden = true;
+      $('.step[data-step="linkedin"]').hidden = true;
+      $('.step[data-step="friends"]').hidden = false;
+      $('#countdown').hidden = true;
+      $('#fr-submit').hidden = true;
+      $('#no-li').hidden = true;
+      $('#bar').style.transform = 'scaleX(1)';
+    }
   };
 
   const merge = (s: Status | null) => { if (s) { st = s; render(); } };
@@ -362,8 +375,8 @@ import { VENN_LINKEDIN } from '../data/share-posts';
   // ---- LinkedIn -----------------------------------------------------------
   const PLACEHOLDER = '<what you\'re working on>';
   const blank = () => $<HTMLInputElement>('#building').value.trim() || PLACEHOLDER;
-  let vi = 0;
-  const postText = () => fill(LINKEDIN_POSTS[vi], { blank: blank(), link });
+  let vi = 0, oi = 0;
+  const postText = () => composePost(OPENERS[oi], fill(LINKEDIN_POSTS[vi], { blank: blank(), link }));
   const post = () => $<HTMLTextAreaElement>('#post');
   const liHref = () => `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(post().value)}`;
   // The blank text currently inside the post. When the post was hand-edited, swap only that sentence so
@@ -546,6 +559,7 @@ import { VENN_LINKEDIN } from '../data/share-posts';
 
     $('#another').addEventListener('click', () => {
       vi = nextVariant(vi, LINKEDIN_POSTS.length);
+      oi = nextVariant(oi, OPENERS.length);
       smsI = nextVariant(smsI, SMS_TEXTS.length);
       setMail();
       delete post().dataset.edited;
@@ -579,7 +593,7 @@ import { VENN_LINKEDIN } from '../data/share-posts';
     let pasted = false;
     urlIn.addEventListener('input', () => {
       err.textContent = '';
-      const ok = isLinkedInPostUrl(urlIn.value.trim());
+      const ok = !!extractPostUrl(urlIn.value);
       save.disabled = !ok;
       $('#submit-hint').hidden = ok;
       if (ok && !pasted) { pasted = true; step('url_pasted'); }
@@ -609,7 +623,7 @@ import { VENN_LINKEDIN } from '../data/share-posts';
         if (/void/i.test(m) && st) st.share_status = 'void';
       } finally { inFlight = false; render(); }
     };
-    save.addEventListener('click', () => submit(normalizePostUrl(urlIn.value), err, $('#li-status')));
+    save.addEventListener('click', () => submit(extractPostUrl(urlIn.value), err, $('#li-status')));
     $('#fr-save').addEventListener('click', () => submit(null, $('#fr-err'), $('#fr-status')));
 
     $('#no-li').addEventListener('click', () => {
@@ -651,11 +665,12 @@ import { VENN_LINKEDIN } from '../data/share-posts';
     link = `https://joinvenn.org/apply?ref=${encodeURIComponent(s.ref_code)}`;
     $('#mylink').textContent = link.replace('https://', '');
     vi = variantIndex(s.ref_code, LINKEDIN_POSTS.length);
+    oi = openerIndex(s.ref_code);
     smsI = variantIndex(s.ref_code, SMS_TEXTS.length);
     syncPost();
     setMail();
     render();
-    setOpen(s.share_status === 'submitted' || noLi ? 'friends' : 'linkedin');
+    setOpen(s.share_status === 'submitted' || noLi || (s.role && s.role !== 'student') ? 'friends' : 'linkedin');
     show('main');
     step('opened');
     $('#headline').focus({ preventScroll: true });

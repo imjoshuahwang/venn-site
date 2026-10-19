@@ -36,6 +36,23 @@ export const LINKEDIN_POSTS: string[] = [
   "Building a club, a project, a nonprofit or a startup in high school? @Venn F26 is for you. I applied.\n\nI'm building {blank}.\n\nApply here: {link}",
 ];
 
+// First line of every LinkedIn post, so a feed full of Venn posts doesn't open the same way twice.
+// Calm, first person, no claims at all. Picked per student by openerIndex (share-copy.ts), separate from the body.
+export const OPENERS: string[] = [
+  "Sharing a small step I took this week.",
+  "A quick update from my side.",
+  "Something I did today that I want to share.",
+  "Posting this so I actually follow through.",
+  "I've been heads down on a project lately, so here's an update.",
+  "I don't post here much, but here goes.",
+  "Writing this down in public so it counts.",
+  "A short one today.",
+  "Trying something new and saying it out loud.",
+  "Here's what I've been up to.",
+  "Putting this here for anyone else building something.",
+  "One thing from this week worth sharing.",
+];
+
 export const SMS_TEXTS: string[] = [
   "hey, i applied to Venn F26, it's for high schoolers building stuff. you should apply too: {link}",
   "you're building that project anyway. Venn F26 is for exactly that, here's my link: {link}",
