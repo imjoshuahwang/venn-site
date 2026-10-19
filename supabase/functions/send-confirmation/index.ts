@@ -48,6 +48,14 @@ yahooo.com yahoo.con yahoo.co yhoo.com yahho.com outlok.com outloo.com outlook.c
 icloud.con icloud.co`.split(/\s+/),
 );
 
+// Port of confirm.valid_email(): ONE plain address. submit_application stores any text up to 320 chars, so without
+// this a caller could put "a@x.com, b@y.com" or "Any Text <victim@x.com>" in email and Resend would mail several
+// people, or show attacker text as the To name, from our domain.
+const EMAIL_RE = /^[A-Za-z0-9._%+'-]+@(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,24}$/;
+const validEmail = (e: string) => e.length <= 254 && !e.includes("..") && EMAIL_RE.test(e);
+// Same set as ROLE_LOCALS in the venn repo's mail.py: not a student, never mailed.
+const ROLE_LOCALS = new Set(["noreply", "no-reply", "donotreply", "do-not-reply", "postmaster", "mailer-daemon"]);
+
 // Can this domain receive mail? MX, else its A record (RFC 5321 5.1); a null MX ("." exchange) means no mail.
 // Fails open: only a definite "no such records" answer blocks; a DNS timeout or missing Deno.resolveDns sends as before.
 async function mailable(domain: string): Promise<boolean> {
@@ -112,11 +120,13 @@ Deno.serve(async (req) => {
   if (mode === "test" && !row.is_test) return json({ skipped: "send_mode" });
   const email = (row.email ?? "").trim();
   if (!email || !row.ref_code) return json({ skipped: "no_email_or_ref_code" });
+  if (!validEmail(email)) return json({ skipped: "invalid_email" });
 
   // A known bounce/complaint (synced from Resend by `venn confirm`) is never mailed again.
   if (row.email_status) return json({ skipped: "email_status" });
   const domain = email.slice(email.lastIndexOf("@") + 1).toLowerCase();
   if (TYPO_DOMAINS.has(domain)) return json({ skipped: "typo_domain" });
+  if (ROLE_LOCALS.has(email.slice(0, email.lastIndexOf("@")).toLowerCase().split("+")[0])) return json({ skipped: "role_address" });
   if (!(await mailable(domain))) return json({ skipped: "no_mx" });
 
   // Same address applied earlier: that application gets the email, not this one.
@@ -151,27 +161,41 @@ Deno.serve(async (req) => {
       headline: headline(firstName(row.name)),
       refer_link: `${SITE}/refer?code=${encodeURIComponent(row.ref_code)}`,
     };
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${Deno.env.get("RESEND_API_KEY")}`,
-        "Content-Type": "application/json",
-        "User-Agent": "venn",
-        "Idempotency-Key": `confirm-${id}`,
-      },
-      signal: AbortSignal.timeout(15000),
-      body: JSON.stringify({
-        from: FROM,
-        to: [email],
-        reply_to: REPLY_TO,
-        subject: fill(template.subject, vals, (s) => s),
-        html: fill(template.html, vals, esc),
-        text: fill(template.text, vals, (s) => s),
-      }),
-    });
+    const post = () =>
+      fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${Deno.env.get("RESEND_API_KEY")}`,
+          "Content-Type": "application/json",
+          "User-Agent": "venn",
+          "Idempotency-Key": `confirm-${id}`,
+        },
+        signal: AbortSignal.timeout(10000),
+        body: JSON.stringify({
+          from: FROM,
+          to: [email],
+          reply_to: REPLY_TO,
+          subject: fill(template.subject, vals, (s) => s),
+          html: fill(template.html, vals, esc),
+          text: fill(template.text, vals, (s) => s),
+        }),
+      });
+    let res = await post();
+    // A burst can trip Resend's per-second rate limit (429) or hit a 5xx. Retry ONCE with the same Idempotency-Key
+    // (Resend dedupes it for 24h, so a retry can never double-send). A daily/monthly quota 429 is not retried:
+    // the claim is released below and `venn confirm` sends the row once the quota resets (00:00 UTC).
+    if (res.status === 429 || res.status >= 500) {
+      const err = await res.clone().json().catch(() => ({}));
+      if (!/quota/.test(String(err?.name ?? ""))) {
+        const wait = Math.min(Math.max(Number(res.headers.get("retry-after")) || 1, 1), 3);
+        await new Promise((r) => setTimeout(r, wait * 1000));
+        res = await post();
+      }
+    }
     if (!res.ok) {
       // Resend answered with an error, so nothing was sent: release the claim so a retry can send.
-      console.log(`resend ${res.status} for application ${id}`);
+      const err = await res.json().catch(() => ({}));
+      console.log(`resend ${res.status} ${err?.name ?? ""} for application ${id}`);
       await unclaim(id as number);
       return json({ error: "resend failed" }, 502);
     }
