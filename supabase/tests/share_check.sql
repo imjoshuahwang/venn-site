@@ -59,7 +59,7 @@ select pg_temp.ok((select submit_share(ref_code, 'https://linkedin.com/posts/old
 -- Friends path: Sam needs 2 verified friends created before share_due.
 insert into applications (role, name, email, working_on, referred_by)
   select 'student', 'Friend', 'sf' || g || '@example.org', 'x', (select ref_code from c where who = 'sam') from generate_series(1, 4) g;
-update applications set confirmed_at = now() where email in ('sf1@example.org', 'sf3@example.org');
+update applications set confirmed_at = now(), share_status = 'submitted' where email in ('sf1@example.org', 'sf3@example.org');
 insert into applications (role, name, email, working_on, referred_by)
   values ('student', 'Sam Again', 'sam+alt@example.com', 'x', (select ref_code from c where who = 'sam'));
 update applications set confirmed_at = now() where email = 'sam+alt@example.com';
@@ -76,7 +76,7 @@ select pg_temp.ok((select post_url is null from applications where email = 'sam@
 insert into applications (role, name, email, working_on) values ('student', 'Dee Test', 'dee@example.com', 'x');
 insert into applications (role, name, email, working_on, referred_by)
   select 'student', 'Friend', 'df' || g || '@example.org', 'x', (select ref_code from applications where email = 'dee@example.com') from generate_series(1, 2) g;
-update applications set confirmed_at = now() where email like 'df%@example.org';
+update applications set confirmed_at = now(), share_status = 'submitted' where email like 'df%@example.org';
 update applications set created_at = now() + interval '2 hours' where email = 'df2@example.org';
 select pg_temp.ok((select (referral_status(ref_code)->>'friends_submitted')::int = 2 from applications where email = 'dee@example.com'), 'both before due');
 update applications set share_due = now() + interval '1 hour' where email = 'dee@example.com';
