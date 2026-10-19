@@ -175,6 +175,7 @@ begin
   else
     clean := null;
   end if;
+  -- The first saved URL wins and verified_at is never cleared here (the hotfix's rule; the token is now private).
   insert into referral_steps (application_id, kind, url) values (app_id, record_step.kind, clean)
   on conflict on constraint referral_steps_application_id_kind_key do update
     set url = coalesce(referral_steps.url, excluded.url);
