@@ -1,6 +1,6 @@
 // Instant "we got your application" email. Fired by a Postgres trigger (see migration 20261018030000).
 // template.json is generated, not hand-edited: regenerate it with `python -m venn confirm --emit-template <path>`
-// in venn-referrals (confirm.py is the single source of truth), then copy it here.
+// in the venn repo (confirm.py is the single source of truth), then copy it here.
 import template from "./template.json" with { type: "json" };
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -73,10 +73,13 @@ Deno.serve(async (req) => {
     return json({ error: "no record id" }, 400);
   }
 
-  const got = await rest(`applications?id=eq.${id}&select=id,name,email,email_key,ref_code,is_test,confirmed_at`);
+  const got = await rest(`applications?id=eq.${id}&select=id,role,name,email,email_key,ref_code,is_test,confirmed_at`);
   if (!got.ok) return json({ error: "read failed" }, 502);
   const row = (await got.json())[0];
   if (!row) return json({ skipped: "not_found" });
+
+  // Only student applications get this email (venn confirm sweeps students only too).
+  if (row.role !== "student") return json({ skipped: "not_student" });
 
   const mode = Deno.env.get("SEND_MODE") === "all" ? "all" : "test";
   if (mode === "test" && !row.is_test) return json({ skipped: "send_mode" });
@@ -87,7 +90,15 @@ Deno.serve(async (req) => {
   if (row.email_key) {
     const dup = await rest(`applications?email_key=eq.${encodeURIComponent(row.email_key)}&id=lt.${id}&select=id&limit=1`);
     if (!dup.ok) return json({ error: "dedupe read failed" }, 502);
-    if ((await dup.json()).length) return json({ skipped: "duplicate" });
+    if ((await dup.json()).length) {
+      // Mark the repeat as handled so the `venn confirm` sweeper never picks it up (it skips repeats too).
+      const mark = await rest(`applications?id=eq.${id}&confirmed_at=is.null`, {
+        method: "PATCH",
+        body: JSON.stringify({ confirmed_at: new Date().toISOString() }),
+      });
+      if (!mark.ok) console.log(`duplicate mark failed ${mark.status} for application ${id}`);
+      return json({ skipped: "duplicate" });
+    }
   }
 
   // Idempotent claim: only the call that flips confirmed_at from null sends.
