@@ -88,6 +88,29 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
   };
   let at = 'role';
 
+  // Funnel log: step ids and error codes only, never anything the applicant typed. Fire and forget; it must never break the form.
+  let sid = '';
+  try { sid = sessionStorage.getItem('apply_sid') || (sessionStorage.setItem('apply_sid', crypto.randomUUID()), sessionStorage.getItem('apply_sid')!); } catch { try { sid = crypto.randomUUID(); } catch {} }
+  let live = false, done = false, gone = false;
+  const logged = new Set<string>();
+  const log = (event: string, detail?: string) => {
+    const { url, key } = form.dataset;
+    if (!live || done || !sid || !url || !key) return;
+    if (event === 'error' && !detail?.startsWith('send_')) { if (logged.has(at + detail)) return; logged.add(at + detail); }
+    gone = event === 'abandon';
+    fetch(`${url}/rest/v1/rpc/log_apply_event`, {
+      method: 'POST', keepalive: true, headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_session: sid, p_step: at, p_event: event, p_detail: detail ?? null }),
+    }).catch(() => {});
+  };
+  const start = () => { if (!live) { live = true; log('view'); } };
+  form.addEventListener('focusin', start);
+  form.addEventListener('pointerdown', start);
+  if (form.classList.contains('locked')) start();
+  const leave = () => { if (live && !gone) log('abandon', 'hide'); };
+  addEventListener('pagehide', leave);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') leave(); });
+
   const ok = (s: string) => {
     if (s === 'role') return !!picked.role;
     if (s === 'level') return !!picked.level && (picked.level !== 'other' || !!field('level_other').value.trim());
@@ -99,6 +122,13 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
     level: 'Tell us a bit more first.', building: 'Pick at least one.', name: 'Add your name to keep going.',
     email: 'That email looks off. Try you@email.com.', org: 'Fill this in to keep going.', working_on: 'A sentence or two is plenty.',
   } as Record<string, string>)[s] ?? 'Answer this one to keep going.';
+  // Why a step is blocked, as a code.
+  const why = (s: string) => {
+    if (s === 'role') return 'none_picked';
+    if (s === 'level') return picked.level ? 'other_blank' : 'none_picked';
+    if (s === 'building') return form.querySelector('input[name="building"]:checked') ? 'other_blank' : 'none_picked';
+    return (field(s) as HTMLInputElement).value.trim() ? 'invalid' : 'empty';
+  };
   const paint = () => {
     const steps = flow(), i = steps.indexOf(at), last = i === steps.length - 1;
     const k = Math.round((i / (steps.length - 1)) * 100);
@@ -117,7 +147,9 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
     el.classList.remove('in', 'in-back');
     void el.offsetWidth;
     el.classList.add(dir > 0 ? 'in' : 'in-back');
+    if (dir < 0) log('back');
     at = to;
+    log('view');
     status.textContent = '';
     paint();
     // Text steps focus the field; choice steps focus the picked (or first) button so keyboard users stay in the form.
@@ -125,7 +157,8 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
   };
   const step = (dir: 1 | -1) => {
     const steps = flow(), i = steps.indexOf(at);
-    if (dir > 0 && !ok(at)) { status.textContent = hint(at); return; }
+    if (dir > 0 && !ok(at)) { status.textContent = hint(at); log('error', why(at)); return; }
+    if (dir > 0) log('answer', at === 'role' ? picked.role : (at === 'link' || at === 'need') && !field(at).value.trim() ? 'skipped' : undefined);
     if (dir > 0 && i === steps.length - 1) return send();
     go(steps[i + dir], dir);
   };
@@ -186,14 +219,16 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
     try {
       const { url, key } = form.dataset;
       if (!url || !key) throw new Error('Supabase env vars missing');
-      const payload = { ...data, source: location.pathname + location.search, ...(ref && { referred_by: ref }) };
+      const payload = { ...data, source: location.pathname + location.search, ...(ref && { referred_by: ref }), ...(sid && { session_id: sid }) };
       const res = await fetch(`${url}/rest/v1/rpc/submit_application`, {
         method: 'POST',
         headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ payload }),
       });
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) throw Object.assign(new Error(await res.text()), { status: res.status });
       const code = await res.json().catch(() => null); // the new applicant's own ref_code, e.g. "maya-7k2"
+      done = true;
+      try { sessionStorage.removeItem('apply_sid'); } catch {}
       form.hidden = true;
       document.getElementById('apply-done')!.hidden = false;
       if (typeof code === 'string' && code) {
@@ -202,6 +237,7 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
       }
     } catch (err) {
       console.error(err);
+      log('error', `send_${(err as { status?: number }).status ?? 'network'}`);
       next.disabled = false;
       status.className = 'form-status err';
       status.textContent = 'Something went wrong. Email contact@joinvenn.org and we will sort it out.';
