@@ -2,7 +2,8 @@
 // Placeholders: {blank} {link} {friend} {name}. Every LinkedIn version keeps the exact sentence
 // "I'm building {blank}." because the blank-swap code edits that line.
 
-export { LINKEDIN_POSTS, SMS_TEXTS, VENN_LINKEDIN } from '../data/share-posts.ts';
+import { OPENERS } from '../data/share-posts.ts';
+export { LINKEDIN_POSTS, OPENERS, SMS_TEXTS, VENN_LINKEDIN } from '../data/share-posts.ts';
 
 export const FRIEND_EMAILS: { subject: string; body: string }[] = [
   {
@@ -32,6 +33,11 @@ export function variantIndex(refCode: string, n: number): number {
 
 export const nextVariant = (i: number, n: number): number => (i + 1) % n;
 
+// The opener is hashed with its own salt, so it varies independently of the body (12 x 28 combinations).
+export const openerIndex = (refCode: string, n = OPENERS.length): number => variantIndex('opener:' + refCode.trim(), n);
+// Opener line, blank line, then the post body unchanged.
+export const composePost = (opener: string, body: string): string => (opener ? opener + '\n\n' : '') + body;
+
 // Replaces {key} for own keys of vars; unknown placeholders stay. Single pass, so values are never re-expanded.
 export function fill(template: string, vars: Record<string, string>): string {
   return template.replace(/\{(\w+)\}/g, (m, k: string) =>
@@ -42,6 +48,14 @@ export function fill(template: string, vars: Record<string, string>): string {
 // Accepts lnkd.in short links and the mobile / country-subdomain variants (m., uk., ...).
 const POST_URL = /^(https?:\/\/)?((www|m|[a-z]{2})\.)?(linkedin\.com\/(posts|feed\/update|pulse|embed\/feed\/update|mwlite\/feed\/update)\/|lnkd\.in\/)[^\s]+$/i;
 export const isLinkedInPostUrl = (s: string): boolean => POST_URL.test(s);
+
+// Share sheets paste "Check out my post https://lnkd.in/x" or the URL plus a line break. Pull out the first post URL
+// (no lookbehind: it is a SyntaxError on iOS before 16.4 and would kill the whole page script).
+const POST_URL_IN = new RegExp('(?:^|[\\s(<"\'])(' + POST_URL.source.slice(1, -1).replace('[^\\s]+', '[^\\s)>"\']+') + ')', 'i');
+export function extractPostUrl(s: string): string {
+  const m = POST_URL_IN.exec(s);
+  return m ? normalizePostUrl(m[1]) : '';
+}
 
 export function normalizePostUrl(s: string): string {
   const t = s.trim();
