@@ -1,19 +1,44 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  LINKEDIN_POSTS, FRIEND_EMAILS, variantIndex, nextVariant, fill,
+  LINKEDIN_POSTS, SMS_TEXTS, VENN_LINKEDIN, FRIEND_EMAILS, variantIndex, nextVariant, fill,
   isLinkedInPostUrl, normalizePostUrl, timeLeft,
 } from './share-copy.ts';
 
-test('LinkedIn posts: 5, each keeps the blank sentence and the link', () => {
-  assert.equal(LINKEDIN_POSTS.length, 5);
+const BANNED = ['delve', 'utilize', 'facilitate', 'robust', 'enhance', 'crucial', 'vital', 'streamline', 'empower',
+  'elevate', 'embark', 'unlock', 'harness', 'seamless', 'pivotal', 'foster', 'leverage', 'synergy', 'impactful',
+  'innovative', 'passionate', 'thrilled', 'eager', 'amazing', 'incredible', 'journey', 'landscape', 'ecosystem',
+  'space', 'opportunity', 'excited'];
+
+test('LinkedIn posts: 25-30, unique, blank sentence, one link, one @Venn', () => {
+  assert.equal(LINKEDIN_POSTS.length, 28);
+  assert.ok(LINKEDIN_POSTS.length >= 25 && LINKEDIN_POSTS.length <= 30);
+  assert.equal(new Set(LINKEDIN_POSTS).size, LINKEDIN_POSTS.length);
   for (const p of LINKEDIN_POSTS) {
-    assert.ok(p.includes("I'm building {blank}."));
-    assert.ok(p.includes('{link}'));
-    assert.ok(p.includes('\n\n'));
+    assert.ok(p.includes("I'm building {blank}."), p);
+    assert.equal(p.split('{link}').length - 1, 1, p);
+    assert.equal(p.split('@Venn').length - 1, 1, p);
+    assert.ok(!p.includes('\u2014') && !p.includes('!'), p);
+    assert.ok((p.match(/#\w+/g) ?? []).length <= 1, p);
+    assert.ok(!/\p{Extended_Pictographic}/u.test(p), p);
+    for (const w of BANNED) assert.ok(!new RegExp('\\b' + w + '\\b', 'i').test(p), w + ' in ' + p);
+    for (const d of p.match(/\d+(?:,\d{3})*K?\+?/g) ?? []) {
+      assert.ok(['141', '500', '500K', '500K+', '500,320', '21', '26'].includes(d), d + ' in ' + p);
+    }
   }
-  assert.ok(LINKEDIN_POSTS[3].includes('141 student organizations'));
-  assert.ok(LINKEDIN_POSTS[3].includes('500K+'));
+});
+
+test('SMS texts: 5, each with a link and no tag or blank', () => {
+  assert.equal(SMS_TEXTS.length, 5);
+  for (const t of SMS_TEXTS) {
+    assert.ok(t.includes('{link}'));
+    assert.ok(!t.includes('@Venn') && !t.includes('{blank}'));
+  }
+});
+
+test('Venn LinkedIn page config', () => {
+  assert.ok(VENN_LINKEDIN.name.length > 0);
+  assert.ok(VENN_LINKEDIN.url.startsWith('https://'));
 });
 
 test('friend emails: 3 with subject, link and name', () => {
