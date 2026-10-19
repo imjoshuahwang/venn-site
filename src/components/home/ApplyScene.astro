@@ -43,23 +43,12 @@ import ApplyForm from '../ApplyForm.astro';
   .apply-sub { color: var(--muted); margin-top: 10px; }
   @media (prefers-reduced-motion: reduce) { .apply-bg i { animation: none; } }
 
-  /* Phones: the card fades in, then stays pinned for ~50svh of scroll before the seasons slide up.
-     No position:fixed (iOS keyboard safe). --top goes negative when the card is taller than the screen,
-     so it pins only once its bottom is on screen and every field stays reachable. */
-  @media (max-width: 640px) and (prefers-reduced-motion: no-preference) {
-    .apply-scene::after { content: ''; display: block; height: 50svh; }
-    .apply-pin { position: sticky; top: var(--top, 16px); opacity: var(--a, 1); transform: translateY(calc((1 - var(--a, 1)) * 24px)); }
-  }
-
-  /* Big screens: the card arrives as a circle (--a), opens into the card (--b) and holds while pinned.
-     The scene tucks up under the statement so the circle surfaces just below its button. */
-  @media (min-width: 900px) and (min-height: 640px) and (prefers-reduced-motion: no-preference) {
-    :global(html) { scroll-snap-type: y proximity; }
-    .apply-scene { height: 250vh; margin-top: calc(56px - 50vh); }
-    .apply-stop { top: calc(60vh + 88px); }
+  /* Morph, shared by phones and big screens: the card arrives as a circle (--a), opens into the card (--b)
+     and holds while pinned. Phones skip the scroll-snap and use svh so iOS toolbars do not move it. */
+  @media (min-width: 900px) and (min-height: 640px) and (prefers-reduced-motion: no-preference),
+         (max-width: 640px) and (prefers-reduced-motion: no-preference) {
     .apply-pin {
       position: sticky; top: 0; height: 100vh; padding: 0; display: grid; place-items: center; pointer-events: none;
-      --D: min(46vh, 380px); --W: min(760px, calc(100vw - 64px));
     }
     .glass {
       max-width: none; margin: 0; padding: 0; overflow: hidden; pointer-events: auto;
@@ -80,6 +69,30 @@ import ApplyForm from '../ApplyForm.astro';
       padding: 48px 56px; opacity: clamp(0, calc((var(--b, 0) - .6) * 2.5), 1);
     }
   }
+
+  /* Big screens: the scene tucks up under the statement so the circle surfaces just below its button. */
+  @media (min-width: 900px) and (min-height: 640px) and (prefers-reduced-motion: no-preference) {
+    :global(html) { scroll-snap-type: y proximity; }
+    .apply-scene { height: 250vh; margin-top: calc(56px - 50vh); }
+    .apply-stop { top: calc(60vh + 88px); }
+    .apply-pin { --D: min(46vh, 380px); --W: min(760px, calc(100vw - 64px)); }
+  }
+
+  /* Phones: same morph, then ~250svh of pinned scroll with only the card on screen. A heavy frost layer
+     (opacity follows --b) dims and blurs everything behind it so it is obvious you are held here.
+     No position:fixed (iOS keyboard safe). The circle starts --G below the statement button. */
+  @media (max-width: 640px) and (prefers-reduced-motion: no-preference) {
+    .apply-scene { --D: min(46svh, 76vw, 380px); --G: 96px; --W: calc(100vw - 32px); height: 350svh; margin-top: calc(var(--G) + var(--D) / 2 - 50svh); }
+    .apply-stop { top: calc(60svh + 88px); }
+    .apply-pin { height: 100svh; }
+    .apply-pin::after {
+      content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none; opacity: var(--b, 0);
+      background: rgba(52, 66, 58, .42);
+      -webkit-backdrop-filter: blur(36px) saturate(1.3); backdrop-filter: blur(36px) saturate(1.3);
+    }
+    .glass { z-index: 1; }
+    .glass-in { padding: 32px 20px; }
+  }
 </style>
 
 <script>
@@ -95,21 +108,16 @@ import ApplyForm from '../ApplyForm.astro';
   // Card height follows its content (capped to the viewport); --H is a registered length, so it eases between questions.
   let content = 0, H = '';
   const fit = () => {
-    const h = `${Math.round(Math.min(content, innerHeight - 64))}px`;
+    const h = `${Math.round(Math.min(content, (phoneMq.matches ? pin.offsetHeight : innerHeight) - 64))}px`;
     if (h !== H) glass.style.setProperty('--H', (H = h));
   };
   new ResizeObserver(([e]) => { content = e.borderBoxSize[0].blockSize; fit(); }).observe(inner);
 
   // Approach: the circle scales in as the scene enters. Morph: it opens over the first 60vh of pinned scroll, then holds.
+  // Phones measure the pin (100svh) instead of innerHeight, which jumps as the iOS toolbars collapse.
   onScroll(() => {
-    if (phoneMq.matches) {
-      const vh = innerHeight, r = scene.getBoundingClientRect();
-      pin.style.setProperty('--a', ease(clamp((vh - r.top) / (0.5 * vh))).toFixed(4));
-      pin.style.setProperty('--top', `${Math.min(16, vh - pin.offsetHeight)}px`);
-      return;
-    }
-    if (!pinMq.matches) return;
-    const vh = innerHeight, r = scene.getBoundingClientRect();
+    if (!phoneMq.matches && !pinMq.matches) return;
+    const vh = phoneMq.matches ? pin.offsetHeight : innerHeight, r = scene.getBoundingClientRect();
     pin.style.setProperty('--a', ease(clamp((vh - r.top) / vh)).toFixed(4));
     pin.style.setProperty('--b', ease(clamp(-r.top / (0.6 * vh))).toFixed(4));
     fit();
