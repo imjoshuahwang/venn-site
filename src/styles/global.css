@@ -77,7 +77,9 @@ p { margin: 0; }
   transform-origin: left; transform: scaleX(var(--p, 0)); pointer-events: none;
 }
 .nav nav { display: flex; align-items: center; gap: 10px; }
+.brand { flex-shrink: 0; display: block; }
 .brand img { filter: saturate(.6); height: 37px; width: auto; flex-shrink: 0; }
+@media (max-width: 640px) { .nav nav a[href="/guides/"] { display: none; } }
 @media (max-width: 520px) { .brand img { height: 30px; } .nav nav { gap: 8px; } .nav nav a[href="/#faq"] { display: none; } }
 
 /* Sections */
@@ -91,6 +93,7 @@ section { padding: 64px 0; }
 /* Footer */
 .footer { border-top: 1px solid var(--line); padding: 56px 0 32px; font-size: 14px; overflow: hidden; }
 .footer-mark { width: min(860px, 92%); height: auto; margin: 64px auto 0; filter: saturate(.6); }
+@media (max-width: 640px) { .footer-mark { width: 64.4%; } }
 .footer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 40px; }
 @media (min-width: 820px) { .footer-grid { grid-template-columns: 2fr 1fr 1fr 1fr; } }
 .footer-grid > div { display: flex; flex-direction: column; gap: 8px; }
