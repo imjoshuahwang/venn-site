@@ -1,4 +1,4 @@
--- Check for 20261020150000_rs_events.sql. Run against a LOCAL database with all migrations applied.
+-- Check for 20261020190000_rs_events.sql. Run against a LOCAL database with all migrations applied.
 --   psql -v ON_ERROR_STOP=1 -f supabase/tests/rs_events_check.sql   -> ends with 'rs_events_check ok'
 -- Local run (throwaway Postgres, no Docker): bash supabase/tests/run_local.sh
 begin;
