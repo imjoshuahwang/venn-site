@@ -1,0 +1,34 @@
+---
+import Base from '../layouts/Base.astro';
+---
+<Base title="Unsubscribe | Venn" description="Unsubscribe from Venn emails." noindex>
+  <section style="padding-top:180px;padding-bottom:140px">
+    <div class="narrow" style="text-align:center">
+      <p class="label">Venn</p>
+      <h1 class="h2" style="margin-top:12px">Unsubscribe from Venn emails</h1>
+      <p class="lede" id="msg" style="margin-inline:auto">Tap the button and we will stop emailing you.</p>
+      <div style="margin-top:32px"><button class="btn" id="go" type="button">Unsubscribe</button></div>
+    </div>
+  </section>
+</Base>
+<script is:inline>
+  (function () {
+    var FN = 'https://wirjadichvbmrqzamwtp.supabase.co/functions/v1/unsubscribe';
+    var p = new URLSearchParams(location.search);
+    var e = p.get('e'), t = p.get('t');
+    var btn = document.getElementById('go'), msg = document.getElementById('msg');
+    var bad = "That link didn't work. Reply to the email and we'll remove you.";
+    if (!e || !t) { msg.textContent = bad; btn.hidden = true; return; }
+    btn.addEventListener('click', function () {
+      btn.disabled = true;
+      fetch(FN + '?e=' + encodeURIComponent(e) + '&t=' + encodeURIComponent(t), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'List-Unsubscribe=One-Click'
+      }).then(function (r) {
+        msg.textContent = r.ok ? "You're unsubscribed." : bad;
+        if (r.ok) btn.hidden = true; else btn.disabled = false;
+      }).catch(function () { msg.textContent = bad; btn.disabled = false; });
+    });
+  })();
+</script>
