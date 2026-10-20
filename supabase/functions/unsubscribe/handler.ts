@@ -15,7 +15,7 @@ export type Env = (name: string) => string | undefined;
 const SITE = "https://joinvenn.org";
 const BAD = "This unsubscribe link is not valid.";
 const text = (body: string, status: number, extra: Record<string, string> = {}) =>
-  new Response(body, { status, headers: { "Content-Type": "text/plain; charset=utf-8", ...extra } });
+  new Response(body, { status, headers: { "Content-Type": "text/plain; charset=utf-8", "Access-Control-Allow-Origin": SITE, ...extra } });
 
 const b64url = (buf: ArrayBuffer): string =>
   btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -52,7 +52,13 @@ export async function handle(req: Request, env: Env): Promise<Response> {
     });
   }
 
-  const form = new URLSearchParams(await req.text());
+  let raw: string;
+  try {
+    raw = await req.text();
+  } catch {
+    return text(BAD, 400);
+  }
+  const form = new URLSearchParams(raw);
   if (form.get("List-Unsubscribe") !== "One-Click") return text(BAD, 400);
 
   const KEY = env("SUPABASE_SERVICE_ROLE_KEY") ?? "";
