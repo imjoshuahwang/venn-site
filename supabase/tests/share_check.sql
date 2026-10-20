@@ -144,6 +144,11 @@ select pg_temp.ok((select reached = 1 from v_share_funnel where step = 'li_opene
 select pg_temp.ok((select array_agg(step order by ord) = array['opened','post_copied','li_opened','url_pasted','no_linkedin','friend_applied','submitted','void']
                    from v_share_funnel), 'funnel in step order');
 select pg_temp.ok(not has_table_privilege('anon', 'public.v_share_progress', 'select') and not has_table_privilege('authenticated', 'public.v_share_funnel', 'select'), 'views closed');
+select pg_temp.ok((select hours_left between 0.9 and 1.0 from v_pending_shares where email = 'dee@example.com'), 'pending: Dee, 1h left');
+select pg_temp.ok((select count(*) = 0 from v_pending_shares where email in ('sam@example.com', 'una@example.com', 'vic@example.com', 'lee@example.com')),
+  'pending: no submitted, void or legacy rows');
+select pg_temp.ok((select bool_and(share_due > now()) and array_agg(share_due order by share_due) = array_agg(share_due) from v_pending_shares), 'pending: open only, soonest first');
+select pg_temp.ok(not has_table_privilege('anon', 'public.v_pending_shares', 'select') and not has_table_privilege('authenticated', 'public.v_pending_shares', 'select'), 'pending view closed');
 select pg_temp.ok(not has_function_privilege('anon', 'public.void_overdue_shares()', 'execute')
               and not has_function_privilege('authenticated', 'public.void_overdue_shares()', 'execute')
               and has_function_privilege('service_role', 'public.void_overdue_shares()', 'execute'), 'sweeper service_role only');
