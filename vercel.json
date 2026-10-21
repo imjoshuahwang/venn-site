@@ -2,6 +2,9 @@
   "redirects": [
     { "source": "/boost", "destination": "/refer", "permanent": true }
   ],
+  "rewrites": [
+    { "source": "/u", "destination": "https://wirjadichvbmrqzamwtp.supabase.co/functions/v1/unsubscribe" }
+  ],
   "headers": [
     {
       "source": "/(.*)",
