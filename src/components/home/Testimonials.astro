@@ -1,7 +1,7 @@
 ---
 // One entry per letter; quotes are lifted word for word from the PDFs. Letters without a pdf/letter get no dialog.
-// bg/ink override the card's dark default; ink is sampled from the org's logo. mark: 'wide' (wordmark) or 'big' (larger icon).
-type Testimonial = { org: string; logo?: string; mark?: 'wide' | 'big'; bg?: string; ink?: string; quote: string; name: string; role: string; pdf?: string; letter?: string[] };
+// Cards are white; ink overrides the near-black default and is sampled from the org's logo. mark: 'wide' (wordmark) or 'big' (larger icon).
+type Testimonial = { org: string; logo?: string; mark?: 'wide' | 'big'; ink?: string; quote: string; name: string; role: string; pdf?: string; letter?: string[] };
 const testimonials: Testimonial[] = [
   {
     org: 'The BU1LD',
@@ -21,21 +21,19 @@ const testimonials: Testimonial[] = [
     org: 'Yvette Labs',
     logo: '/logos/yvette-labs.png',
     mark: 'wide',
-    bg: '#fff',
     ink: '#151515',
     quote: 'We look forward to working with the Venn team to further our vision for safety amid the technological arms race we find ourselves in.',
     name: 'Chairman of the Board',
-    role: 'Yvette Labs, a Venn sister project',
+    role: 'Yvette Labs',
   },
   {
     org: 'The Imperial Review',
     logo: '/logos/imperial-review.png',
     mark: 'big',
-    bg: '#fff',
     ink: '#55171e',
     quote: 'We recommend Venn to organizations seeking to connect with students and make a meaningful contribution to their growth.',
     name: 'The Editorial Staff',
-    role: 'The Imperial Review, a Venn sister project',
+    role: 'The Imperial Review',
   },
 ];
 ---
@@ -44,10 +42,10 @@ const testimonials: Testimonial[] = [
     <h2 class="h2 tm-h">What partners say.</h2>
     <div class="tm-stage" aria-roledescription="carousel">
       {testimonials.map((t, i) => (
-        <article class:list={['tm-card', { on: i === 0 }]} aria-hidden={i === 0 ? undefined : 'true'} style={t.bg && `--bg: ${t.bg}; --ink: ${t.ink}`}>
+        <article class:list={['tm-card', { on: i === 0 }]} aria-hidden={i === 0 ? undefined : 'true'} style={t.ink && `--ink: ${t.ink}`}>
           {t.logo && <img class:list={['tm-logo', t.mark]} src={t.logo} alt={t.org} width={t.mark === 'wide' ? 318 : 96} height="96" loading="lazy" />}
           <blockquote class="tm-quote">“{t.quote}”</blockquote>
-          <p class="tm-by"><strong>{t.name}</strong><span>{t.role}</span></p>
+          <p class:list={['tm-by', { big: !t.letter }]}><strong>{t.name}</strong><span>{t.role}</span></p>
           {t.letter && <button class="btn tm-open" type="button" data-letter={`letter-${i}`}>Read the full letter</button>}
         </article>
       ))}
@@ -84,7 +82,7 @@ const testimonials: Testimonial[] = [
   /* Cards stack in one grid cell and cross-fade, so the stage takes the tallest card's height. */
   .tm-stage { display: grid; max-width: 640px; margin: 0 auto; }
   .tm-card {
-    --bg: #2a2a2c; --ink: #fff; --soft: color-mix(in srgb, var(--ink) 60%, var(--bg));
+    --bg: #fff; --ink: #151515; --soft: color-mix(in srgb, var(--ink) 60%, var(--bg));
     grid-area: 1 / 1; background: var(--bg); color: var(--ink); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .08); border-radius: 28px; padding: clamp(28px, 4vw, 44px);
     display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 20px;
     opacity: 0; transform: scale(.98); pointer-events: none; transition: opacity .5s ease, transform .5s var(--ease);
@@ -96,6 +94,8 @@ const testimonials: Testimonial[] = [
   .tm-quote { margin: 0; font-size: clamp(18px, 2.2vw, 24px); line-height: 1.3; font-weight: 600; letter-spacing: -.02em; }
   .tm-by { margin: 0; display: flex; flex-direction: column; gap: 2px; font-size: 15px; color: var(--soft); }
   .tm-by strong { color: var(--ink); font-weight: 600; font-size: 17px; }
+  .tm-by.big { gap: 4px; font-size: 17px; font-weight: 600; }
+  .tm-by.big strong { font-size: 21px; font-weight: 700; letter-spacing: -.02em; }
   .tm-open { background: var(--ink); color: var(--bg); }
   .tm-nav { display: flex; justify-content: center; gap: 8px; margin-top: 20px; }
 
@@ -117,10 +117,10 @@ const testimonials: Testimonial[] = [
   const stage = document.querySelector<HTMLElement>('.tm-stage')!;
   // Rotate on its own unless the visitor is reading (hover/focus) or prefers less motion.
   const auto = cards.length > 1 && !matchMedia('(prefers-reduced-motion: reduce)').matches;
-  // Each card stays up for its reading time: quote + byline at 250 wpm, plus 1.5s, at least 4s.
+  // Each card stays up for its reading time: quote + byline at 250 wpm, plus 1.5s, held to 4-5s.
   const wait = (c: HTMLElement) => {
     const words = [...c.querySelectorAll('.tm-quote, .tm-by > *')].map((e) => e.textContent).join(' ').trim().split(/\s+/).length;
-    return Math.max(4000, words / 250 * 60000 + 1500);
+    return Math.min(5000, Math.max(4000, words / 250 * 60000 + 1500));
   };
   let at = 0, timer = 0;
   const tick = () => {
