@@ -23,7 +23,7 @@ export const seasons: Season[] = [
   {
     code: 'S26', name: 'Summer 2026', tone: 'warm', reach: '58K+',
     line: 'Five weeks with Microsoft India. Nine organizations in AI, finance, public speaking and STEM.',
-    orgs: ['YouthxAI', 'Synthica', 'ByteByByte', 'EmpowerEd', 'Codify Club', 'The BUILD', 'Quanticle', 'Future Speakers Initiative', 'STEMRoots'],
+    orgs: ['YouthxAI', 'Synthica', 'ByteByByte', 'EmpowerEd', 'Codify Club', 'The BU1LD', 'Quanticle', 'Future Speakers Initiative', 'STEMRoots'],
     photos: ['bytebybyte_03', 'future_speakers_initiative_303', 'stemroots_433', 'bytebybyte_02', 'future_speakers_initiative_302'],
     partners: ['microsoft.svg'], clubs: ['mit.svg', 'princeton.svg', 'johns-hopkins.svg'],
   },
@@ -35,7 +35,7 @@ export const seasons: Season[] = [
     partners: ['northwestern.svg'], clubs: ['columbia.svg', 'emory.svg'],
   },
   {
-    code: 'W25', name: 'Winter 2025', tone: 'sky', reach: '28K+',
+    code: 'W26', name: 'Winter 2026', tone: 'sky', reach: '28K+',
     line: 'The first season. UC Berkeley’s philosophy department and four of its student clubs, with sixteen high school organizations.',
     orgs: ['UC Berkeley Philosophy', 'TOTALS', 'SCVMUN', 'AI Go Learning', 'CFAC', 'AI in STEM', 'SYALIS', 'AIM Norcal', 'Meroo AI', 'PHASE Initiative', 'Valencia Empowers', 'NeuroConnect', 'Saintly', 'Accord', 'BuddyMatch', 'Project Gen Planet', 'Genuine'],
     photos: ['scvmun_428', 'totals_438', 'cfac_273', 'ai_go_learning_043', 'ai_in_stem_137'],
