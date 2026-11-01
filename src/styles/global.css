@@ -68,7 +68,7 @@ p { margin: 0; }
 }
 .nav.scrolled .nav-inner {
   max-width: 44rem;
-  background: rgba(255, 255, 255, .62);
+  background: rgba(255, 255, 255, .86);
   box-shadow: 0 0 0 1px rgba(0, 0, 0, .07), inset 0 1px 0 rgba(255, 255, 255, .7), 0 10px 30px -14px rgba(15, 23, 42, .22);
 }
 /* Scroll position: a soft line along the bottom of the pill, eased so fast scrolls glide */

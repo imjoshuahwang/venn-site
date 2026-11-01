@@ -64,8 +64,10 @@ import ApplyForm from '../ApplyForm.astro';
       font-size: clamp(1.6rem, 3vw, 2.2rem); font-weight: 600; letter-spacing: -.04em; color: var(--black);
       opacity: clamp(0, calc(1 - var(--b, 0) * 2.5), 1);
     }
+    /* Centred with auto margins, not a vertical translate: the form's sticky Back/Next row lays out against
+       the card's edges, and a translate would leave it half a card off (it landed mid-card over the question). */
     .glass-in {
-      position: absolute; left: 50%; top: 50%; width: var(--W); translate: -50% -50%;
+      position: absolute; left: 50%; top: 0; bottom: 0; margin-block: auto; height: -webkit-fit-content; height: fit-content; width: var(--W); translate: -50% 0;
       padding: 48px 56px; opacity: clamp(0, calc((var(--b, 0) - .6) * 2.5), 1);
     }
   }
