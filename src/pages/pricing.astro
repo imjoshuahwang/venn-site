@@ -16,14 +16,22 @@ const faq = [
 <Base title="Pricing · Venn" description="Free for students, always. Companies run programs through Venn's student organizations: Reach at $10 per student reached, Launch at $4,900, or a full Season at $20,000.">
   <section class="hero">
     <div class="narrow center">
-      <p class="label">For companies</p>
+      <p class="label">For companies and enterprises only</p>
       <h1 class="h1">Pay for students reached, not for a list.</h1>
-      <p class="lead">Free for students, always. Companies fund the programs.</p>
+      <p class="lead">Students and student organizations never pay. Companies fund the programs.</p>
     </div>
   </section>
 
   <section class="tiers-wrap">
     <div class="wrap tiers">
+      <article class="tier free">
+        <h2>Students and student orgs</h2>
+        <div class="price"><span class="amt">$0</span><span class="unit">always</span></div>
+        <p class="meta">Clubs, nonprofits, projects, startups</p>
+        <p class="blurb">You never pay Venn. Apply each Season; about 30% get in.</p>
+        <ul><li>Matched to college clubs and companies</li><li>Company programs to run</li><li>Featured on the Season page</li></ul>
+        <a class="btn btn-ghost" href="/apply">Apply free</a>
+      </article>
       {tiers.map((t) => (
         <article class:list={['tier', { pop: 'popular' in t && t.popular }]} id={t.key}>
           {'popular' in t && t.popular && <span class="badge">Start here</span>}
@@ -76,7 +84,8 @@ const faq = [
   .lead { font-size: 19px; color: var(--muted); margin-top: 16px; }
   .tiers-wrap { padding-top: 24px; }
   .tiers { display: grid; gap: 16px; }
-  @media (min-width: 900px) { .tiers { grid-template-columns: repeat(3, 1fr); align-items: start; } }
+  @media (min-width: 700px) { .tiers { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 1100px) { .tiers { grid-template-columns: repeat(4, 1fr); } }
   .tier { position: relative; border: 1px solid var(--line); border-radius: 24px; padding: 28px; display: flex; flex-direction: column; gap: 14px; background: #fff; }
   .tier.pop { border-color: #000; box-shadow: 0 20px 50px -24px rgba(15, 23, 42, .3); }
   .badge { position: absolute; top: -12px; left: 28px; background: #000; color: #fff; font: 500 12px/1 var(--font); padding: 7px 12px; border-radius: 999px; }
@@ -90,7 +99,13 @@ const faq = [
   .tier ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 15px; color: var(--body); }
   .tier li { padding-left: 22px; position: relative; }
   .tier li::before { content: "✓"; position: absolute; left: 0; color: var(--black); }
-  .tier .btn { margin-top: 8px; }
+  .tier ul { flex: 1; }
+  .tier .btn { margin-top: auto; }
+  .tier.free { background: var(--panel); border-color: transparent; }
+  .tier#season { background: #000; color: #fff; }
+  .tier#season h2, .tier#season .amt { color: #fff; }
+  .tier#season .unit, .tier#season .meta, .tier#season .blurb, .tier#season ul, .tier#season li::before { color: #bbb; }
+  .tier#season .btn { background: #fff; color: #000; box-shadow: none; }
   .note { margin-top: 24px; }
   .faq { margin-top: 32px; border-top: 1px solid var(--line); }
   .faq details { border-bottom: 1px solid var(--line); padding: 20px 0; }
