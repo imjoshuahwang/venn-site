@@ -1,0 +1,174 @@
+---
+import Base from '../layouts/Base.astro';
+import { tiers, usd } from '../data/pricing';
+
+const stats = [
+  ['223', 'partner orgs'],
+  ['500,320', 'students reached'],
+  ['21', 'countries'],
+  ['~30%', 'of applicants accepted'],
+];
+
+const steps = [
+  ['You bring a program and a goal', 'Get your product used by 50 clubs. Run an AI-skills challenge. Hire next summer’s interns. Hit a CSR target of students reached. One sentence is enough to start.'],
+  ['We match it to accepted orgs', 'Venn picks the clubs, nonprofits, chapters and student startups whose members fit your program, from a network that accepts about 30% of applicants.'],
+  ['We run everything with the orgs', 'Contracts, communication, scheduling and working with minors. You never vet or manage a student group yourself.'],
+  ['The orgs do the work in public', 'They use your product, put your name on their events and projects, and publish what they did.'],
+  ['You get reach and proof', 'A count of students reached per org, the events held and the work published, in a written report at Season end.'],
+];
+
+const season = [
+  ['Week 1', 'Match', 'Kickoff call, goal written down, orgs matched and confirmed.'],
+  ['Weeks 2–3', 'Launch', 'Orgs onboard to your program. The program is live by week 3.'],
+  ['Weeks 4–9', 'Run', 'Events, builds and posts. A reach update every week.'],
+  ['Week 10', 'Report', 'Written report: reach per org, events, published work, talent.'],
+];
+
+const gets = [
+  ['Named orgs', 'Accepted orgs that use your product or run your program, with your name on their work.'],
+  ['Counted reach', 'Students reached per org, events held, work published. You see the number, not a guess.'],
+  ['One contact', 'One person at Venn handles matching, contracts, communication and the report.'],
+  ['Future talent', 'A first look at the members as interns and hires. Venn never sells a list.'],
+  ['Category exclusivity', 'The first company in a category each Season is the only one in it.'],
+];
+
+const rules = [
+  'Students and student orgs never pay.',
+  'Venn never sells or shares student data.',
+  'No blast lists. Every org is picked for your program.',
+];
+---
+<Base title="For companies · Venn" description="Venn is a selective network of student organizations that companies run programs through. Reach young builders at scale, with the vetting, contracts and minors handled for you.">
+  <section class="hero">
+    <div class="narrow center">
+      <p class="label">For companies</p>
+      <h1 class="h1">Run your program through the student orgs that build.</h1>
+      <p class="lead">Venn is a selective network of student organizations. You bring a program; we match it, run it and count every student it reaches.</p>
+      <div class="ctas"><a class="btn" href="/pricing">See pricing</a><a class="btn btn-ghost" href="mailto:contact@joinvenn.org?subject=Venn%20program">Talk to us</a></div>
+    </div>
+  </section>
+
+  <section class="stats-sec">
+    <div class="wrap stats">
+      {stats.map(([n, l]) => <div><p class="stat">{n}</p><p class="muted">{l}</p></div>)}
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap two">
+      <div>
+        <p class="label">The problem</p>
+        <h2 class="h2">Students are hard to reach well.</h2>
+      </div>
+      <div class="prose">
+        <p>Companies want young builders for marketing, early recruiting and CSR. Doing it yourself means finding, vetting and contracting hundreds of groups run by students, many of them minors, then guessing what it did.</p>
+        <p>Venn already did the hard part. Orgs apply every Season and only some get in, so the network is made of groups that ship. You get one contract and one contact for all of them.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="wrap">
+      <p class="label">How it works</p>
+      <h2 class="h2">Five steps, one contract.</h2>
+      <ol class="steps">
+        {steps.map(([h, p], i) => <li><span class="n">{String(i + 1).padStart(2, '0')}</span><div><h3>{h}</h3><p>{p}</p></div></li>)}
+      </ol>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <p class="label">A Season</p>
+      <h2 class="h2">Ten weeks from kickoff to report.</h2>
+      <div class="timeline">
+        {season.map(([w, h, p]) => <div><p class="meta">{w}</p><h3>{h}</h3><p>{p}</p></div>)}
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="wrap">
+      <p class="label">What you get</p>
+      <h2 class="h2">Reach you can count.</h2>
+      <div class="gets">
+        {gets.map(([h, p]) => <div><h3>{h}</h3><p>{p}</p></div>)}
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap two">
+      <div>
+        <p class="label">The rules</p>
+        <h2 class="h2">What Venn will never do.</h2>
+      </div>
+      <ul class="rules">{rules.map((r) => <li>{r}</li>)}</ul>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="wrap">
+      <p class="label">Pricing</p>
+      <h2 class="h2">Three ways in.</h2>
+      <div class="mini">
+        {tiers.map((t) => (
+          <a href={`/pricing#${t.key}`}>
+            <h3>{t.name}</h3>
+            <p class="amt">{t.key === 'reach' ? '$10' : usd(t.price)}</p>
+            <p class="muted">{t.unit} · {t.reach}</p>
+          </a>
+        ))}
+      </div>
+      <p class="more"><a href="/pricing">Full pricing →</a></p>
+    </div>
+  </section>
+
+  <section>
+    <div class="narrow center">
+      <h2 class="h2">Bring us a program.</h2>
+      <p class="lead">One email, one 20-minute call, and a match plan for your program.</p>
+      <div class="ctas"><a class="btn" href="mailto:contact@joinvenn.org?subject=Venn%20program">contact@joinvenn.org</a></div>
+      <p class="muted small students">A student or student org? <a href="/students">Venn is free for you →</a></p>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .center { text-align: center; }
+  .hero { padding-top: 140px; }
+  .h1 { font-size: clamp(2.25rem, 6vw, 4rem); font-weight: 600; letter-spacing: -.04em; line-height: 1.05; margin-top: 12px; }
+  .lead { font-size: 19px; color: var(--muted); margin-top: 16px; }
+  .ctas { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 28px; }
+  .stats-sec { padding-top: 0; }
+  .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 32px 16px; }
+  @media (min-width: 768px) { .stats { grid-template-columns: repeat(4, 1fr); padding: 40px 32px; } }
+  .stat { font-size: clamp(1.75rem, 4vw, 2.5rem); font-weight: 600; letter-spacing: -.03em; color: var(--black); }
+  .panel { background: var(--panel); }
+  .two { display: grid; gap: 24px; }
+  @media (min-width: 900px) { .two { grid-template-columns: 1fr 1fr; gap: 64px; } }
+  .h2 { margin-top: 10px; }
+  .prose { display: flex; flex-direction: column; gap: 16px; font-size: 18px; color: var(--body); }
+  .steps { list-style: none; margin: 40px 0 0; padding: 0; display: flex; flex-direction: column; }
+  .steps li { display: flex; gap: 24px; padding: 24px 0; border-top: 1px solid #e4e4e4; }
+  .n { font: 400 13px/1.8 var(--mono); color: var(--faint); }
+  h3 { font-size: 19px; font-weight: 600; }
+  .steps p, .timeline p:not(.meta), .gets p { color: var(--body); margin-top: 6px; }
+  .timeline { display: grid; gap: 24px; margin-top: 40px; }
+  @media (min-width: 900px) { .timeline { grid-template-columns: repeat(4, 1fr); } }
+  .timeline > div { border-top: 2px solid #000; padding-top: 16px; }
+  .meta { font: 400 12px/1.4 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .gets { display: grid; gap: 28px; margin-top: 40px; }
+  @media (min-width: 768px) { .gets { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 1000px) { .gets { grid-template-columns: repeat(3, 1fr); } }
+  .rules { list-style: none; margin: 0; padding: 0; font-size: 18px; }
+  .rules li { padding: 16px 0; border-bottom: 1px solid var(--line); color: var(--black); }
+  .mini { display: grid; gap: 16px; margin-top: 40px; }
+  @media (min-width: 768px) { .mini { grid-template-columns: repeat(3, 1fr); } }
+  .mini a { display: block; text-decoration: none; background: #fff; border-radius: 20px; padding: 24px; transition: transform .3s var(--ease); }
+  .mini a:hover { transform: translateY(-2px); }
+  .mini .amt { font-size: 34px; font-weight: 600; letter-spacing: -.03em; color: var(--black); margin: 8px 0 4px; }
+  .more { margin-top: 28px; font-weight: 500; }
+  .more a, .students a { text-decoration: none; color: var(--black); }
+  .students { margin-top: 32px; }
+</style>

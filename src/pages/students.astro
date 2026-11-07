@@ -1,0 +1,69 @@
+---
+import Base from '../layouts/Base.astro';
+
+const gets = [
+  ['College clubs in your field', 'High schoolers meet college clubs that already do what they want to do. College students meet high schoolers and other college builders.'],
+  ['Companies that back your work', 'Accepted orgs get matched to company programs: real products to use, events to run and a real name next to yours.'],
+  ['A batch of builders', 'Every Season Venn picks a small batch. You build next to people who ship.'],
+  ['Proof you can show', 'Partner orgs are featured on the Season page, and what you build is published.'],
+];
+
+const how = [
+  ['Apply', 'Tell us what you are building: a club, a nonprofit, a project or a startup. It does not need to be big. It needs to be real.'],
+  ['We pick', 'Venn accepts about 30% of applicants each Season, on what you have already done and what you will do with the network.'],
+  ['You build', 'Meet clubs and companies in your field, run the programs you are matched to, and publish what you made.'],
+];
+---
+<Base title="For students · Venn" description="Venn is free for students, always. Apply with your club, nonprofit, project or startup and meet college clubs and companies in your field.">
+  <section class="hero">
+    <div class="narrow center">
+      <p class="label">For students</p>
+      <h1 class="h1">Free. Always.</h1>
+      <p class="lead">Venn connects students building clubs, nonprofits, projects and startups with college clubs and companies in their field. Companies fund it. You never pay.</p>
+      <div class="ctas"><a class="btn" href="/apply">Apply for Fall ’26</a></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="wrap">
+      <p class="label">What you get</p>
+      <h2 class="h2">A real name next to yours.</h2>
+      <div class="grid">{gets.map(([h, p]) => <div><h3>{h}</h3><p>{p}</p></div>)}</div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <p class="label">How picks work</p>
+      <h2 class="h2">Hard to get into, on purpose.</h2>
+      <ol class="steps">{how.map(([h, p], i) => <li><span class="n">{String(i + 1).padStart(2, '0')}</span><div><h3>{h}</h3><p>{p}</p></div></li>)}</ol>
+    </div>
+  </section>
+
+  <section>
+    <div class="narrow center">
+      <h2 class="h2">Next Season could be yours.</h2>
+      <div class="ctas"><a class="btn" href="/apply">Apply</a></div>
+      <p class="muted small co">Run a company? <a href="/startups">Work with Venn’s orgs →</a></p>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .center { text-align: center; }
+  .hero { padding-top: 140px; }
+  .h1 { font-size: clamp(2.5rem, 7vw, 4.5rem); font-weight: 600; letter-spacing: -.045em; line-height: 1.02; margin-top: 12px; }
+  .lead { font-size: 19px; color: var(--muted); margin-top: 16px; }
+  .ctas { display: flex; justify-content: center; margin-top: 28px; }
+  .panel { background: var(--panel); }
+  .h2 { margin-top: 10px; }
+  h3 { font-size: 19px; font-weight: 600; }
+  .grid { display: grid; gap: 28px; margin-top: 40px; }
+  @media (min-width: 768px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  .grid p, .steps p { color: var(--body); margin-top: 6px; }
+  .steps { list-style: none; margin: 40px 0 0; padding: 0; }
+  .steps li { display: flex; gap: 24px; padding: 24px 0; border-top: 1px solid var(--line); }
+  .n { font: 400 13px/1.8 var(--mono); color: var(--faint); }
+  .co { margin-top: 32px; }
+  .co a { color: var(--black); text-decoration: none; }
+</style>
