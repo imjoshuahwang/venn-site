@@ -1,0 +1,104 @@
+---
+import Base from '../layouts/Base.astro';
+import { tiers, usd, CONTACT } from '../data/pricing';
+
+const href = (t: (typeof tiers)[number]) =>
+  t.checkout || `${CONTACT}?subject=${encodeURIComponent(`Venn ${t.name}`)}`;
+
+const faq = [
+  ['What counts as a student reached?', 'A student in a matched org who opts in to your program: joins the event, uses the product, enters the challenge. Not a name on a list. Venn never sells or shares student data.'],
+  ['Do students or student orgs pay?', 'Never. Venn is free for students and student organizations, always. Companies fund the programs.'],
+  ['Who is this for?', 'Companies and enterprises that want to work with students: startups from Series A up, developer and education teams, university recruiting, CSR. Student orgs apply for free instead.'],
+  ['How do I pay?', 'Reach and Launch pay by card or bank transfer at checkout, with an invoice. A Season is invoiced: half at signing, half once the program is running in week 3.'],
+  ['Can we go global?', 'Yes. Venn leads the US and Canada and runs India with TheYouthTalks, India’s Gen Z network. Ask about a multi-country Season.'],
+];
+---
+<Base title="Pricing · Venn" description="Free for students, always. Companies run programs through Venn's student organizations: Reach at $10 per student reached, Launch at $4,900, or a full Season at $20,000.">
+  <section class="hero">
+    <div class="narrow center">
+      <p class="label">For companies</p>
+      <h1 class="h1">Pay for students reached, not for a list.</h1>
+      <p class="lead">Free for students, always. Companies fund the programs.</p>
+    </div>
+  </section>
+
+  <section class="tiers-wrap">
+    <div class="wrap tiers">
+      {tiers.map((t) => (
+        <article class:list={['tier', { pop: 'popular' in t && t.popular }]} id={t.key}>
+          {'popular' in t && t.popular && <span class="badge">Start here</span>}
+          <h2>{t.name}</h2>
+          {t.key === 'reach' ? (
+            <div class="price" data-reach>
+              <span class="amt" data-total>{usd(1000)}</span>
+              <span class="unit">for <b data-count>100</b> students at $10 each</span>
+              <input type="range" min="100" max="5000" step="50" value="100" aria-label="Students reached" data-slider />
+            </div>
+          ) : (
+            <div class="price">
+              <span class="amt">{usd(t.price)}</span>
+              <span class="unit">{t.unit}</span>
+            </div>
+          )}
+          <p class="meta">{t.reach} · {t.perStudent} a student</p>
+          <p class="blurb">{t.blurb}</p>
+          <ul>{t.features.map((f) => <li>{f}</li>)}</ul>
+          <a class:list={['btn', { 'btn-ghost': !('popular' in t && t.popular) }]} href={href(t)} data-cta={t.key}>{t.cta}</a>
+        </article>
+      ))}
+    </div>
+    <p class="wrap muted small center note">Prices in USD. Need 50,000+ students across countries? <a href={`${CONTACT}?subject=Venn%20global%20program`}>Talk to us</a>.</p>
+  </section>
+
+  <section>
+    <div class="narrow">
+      <h2 class="h2">Questions</h2>
+      <div class="faq">
+        {faq.map(([q, a]) => <details><summary>{q}</summary><p>{a}</p></details>)}
+      </div>
+      <p class="more"><a href="/startups">How a program runs →</a></p>
+    </div>
+  </section>
+
+  <script is:inline>{`
+    var s=document.querySelector('[data-slider]');
+    if(s){var t=document.querySelector('[data-total]'),c=document.querySelector('[data-count]'),a=document.querySelector('[data-cta="reach"]'),base=a.getAttribute('href');
+    function u(){var n=+s.value;c.textContent=n.toLocaleString('en-US');t.textContent='$'+(n*10).toLocaleString('en-US');
+    if(base.indexOf('mailto:')===0)a.href=base+encodeURIComponent(' for '+n+' students');}
+    s.addEventListener('input',u);u();}
+  `}</script>
+</Base>
+
+<style>
+  .center { text-align: center; }
+  .hero { padding-top: 140px; padding-bottom: 32px; }
+  .h1 { font-size: clamp(2.25rem, 6vw, 4rem); font-weight: 600; letter-spacing: -.04em; line-height: 1.05; margin-top: 12px; }
+  .lead { font-size: 19px; color: var(--muted); margin-top: 16px; }
+  .tiers-wrap { padding-top: 24px; }
+  .tiers { display: grid; gap: 16px; }
+  @media (min-width: 900px) { .tiers { grid-template-columns: repeat(3, 1fr); align-items: start; } }
+  .tier { position: relative; border: 1px solid var(--line); border-radius: 24px; padding: 28px; display: flex; flex-direction: column; gap: 14px; background: #fff; }
+  .tier.pop { border-color: #000; box-shadow: 0 20px 50px -24px rgba(15, 23, 42, .3); }
+  .badge { position: absolute; top: -12px; left: 28px; background: #000; color: #fff; font: 500 12px/1 var(--font); padding: 7px 12px; border-radius: 999px; }
+  .tier h2 { font-size: 20px; font-weight: 600; }
+  .price { display: flex; flex-direction: column; gap: 4px; }
+  .amt { font-size: 44px; font-weight: 600; letter-spacing: -.04em; line-height: 1; color: var(--black); }
+  .unit, .meta { color: var(--muted); font-size: 14px; }
+  .meta { font-family: var(--mono); font-size: 12px; letter-spacing: .04em; }
+  input[type=range] { width: 100%; margin-top: 10px; accent-color: #000; }
+  .blurb { color: var(--body); }
+  .tier ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 15px; color: var(--body); }
+  .tier li { padding-left: 22px; position: relative; }
+  .tier li::before { content: "✓"; position: absolute; left: 0; color: var(--black); }
+  .tier .btn { margin-top: 8px; }
+  .note { margin-top: 24px; }
+  .faq { margin-top: 32px; border-top: 1px solid var(--line); }
+  .faq details { border-bottom: 1px solid var(--line); padding: 20px 0; }
+  .faq summary { cursor: pointer; font-size: 17px; font-weight: 500; list-style: none; display: flex; justify-content: space-between; gap: 16px; }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::after { content: "+"; color: var(--faint); font-weight: 400; }
+  .faq details[open] summary::after { content: "−"; }
+  .faq details p { color: var(--body); margin-top: 12px; }
+  .more { margin-top: 32px; font-weight: 500; }
+  .more a { text-decoration: none; }
+</style>
