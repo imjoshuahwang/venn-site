@@ -25,11 +25,11 @@ const faq = [
   <section class="tiers-wrap">
     <div class="wrap tiers">
       <article class="tier free">
-        <h2>Students and student orgs</h2>
+        <h2>Students and orgs</h2>
         <div class="price"><span class="amt">$0</span><span class="unit">always</span></div>
         <p class="meta">Clubs, nonprofits, projects, startups</p>
-        <p class="blurb">You never pay Venn. Apply each Season; about 30% get in.</p>
-        <ul><li>Matched to college clubs and companies</li><li>Company programs to run</li><li>Featured on the Season page</li></ul>
+        <p class="blurb">Never pay Venn. About 30% get in.</p>
+        <ul><li>Matched to clubs and companies</li><li>Company programs to run</li><li>Featured each Season</li></ul>
         <a class="btn btn-ghost" href="/apply">Apply free</a>
       </article>
       {tiers.map((t) => (
@@ -38,9 +38,10 @@ const faq = [
           <h2>{t.name}</h2>
           {t.key === 'reach' ? (
             <div class="price" data-reach>
-              <span class="amt" data-total>{usd(1000)}</span>
-              <span class="unit">for <b data-count>100</b> students at $10 each</span>
-              <input type="range" min="100" max="5000" step="50" value="100" aria-label="Students reached" data-slider />
+              <span class="amt">$10</span>
+              <span class="unit">per student reached</span>
+              <input type="range" min="100" max="5000" step="100" value="500" aria-label="Students reached" data-slider />
+              <span class="total"><b data-count>500</b> students = <b data-total>$5,000</b></span>
             </div>
           ) : (
             <div class="price">
@@ -48,7 +49,7 @@ const faq = [
               <span class="unit">{t.unit}</span>
             </div>
           )}
-          <p class="meta">{t.reach} · {t.perStudent} a student</p>
+          <p class="meta">{t.reach}</p>
           <p class="blurb">{t.blurb}</p>
           <ul>{t.features.map((f) => <li>{f}</li>)}</ul>
           <a class:list={['btn', { 'btn-ghost': !('popular' in t && t.popular) }]} href={href(t)} data-cta={t.key}>{t.cta}</a>
@@ -68,13 +69,13 @@ const faq = [
     </div>
   </section>
 
-  <script is:inline>{`
+  <script is:inline>
     var s=document.querySelector('[data-slider]');
     if(s){var t=document.querySelector('[data-total]'),c=document.querySelector('[data-count]'),a=document.querySelector('[data-cta="reach"]'),base=a.getAttribute('href');
     function u(){var n=+s.value;c.textContent=n.toLocaleString('en-US');t.textContent='$'+(n*10).toLocaleString('en-US');
     if(base.indexOf('mailto:')===0)a.href=base+encodeURIComponent(' for '+n+' students');}
     s.addEventListener('input',u);u();}
-  `}</script>
+  </script>
 </Base>
 
 <style>
@@ -83,6 +84,7 @@ const faq = [
   .h1 { font-size: clamp(2.25rem, 6vw, 4rem); font-weight: 600; letter-spacing: -.04em; line-height: 1.05; margin-top: 12px; }
   .lead { font-size: 19px; color: var(--muted); margin-top: 16px; }
   .tiers-wrap { padding-top: 24px; }
+  @media (max-width: 699px) { .hero { padding-top: 112px; } .tier { padding: 24px; gap: 12px; } .amt { font-size: 40px; } }
   .tiers { display: grid; gap: 16px; }
   @media (min-width: 700px) { .tiers { grid-template-columns: repeat(2, 1fr); } }
   @media (min-width: 1100px) { .tiers { grid-template-columns: repeat(4, 1fr); } }
@@ -93,7 +95,8 @@ const faq = [
   .price { display: flex; flex-direction: column; gap: 4px; }
   .amt { font-size: 44px; font-weight: 600; letter-spacing: -.04em; line-height: 1; color: var(--black); }
   .unit, .meta { color: var(--muted); font-size: 14px; }
-  .meta { font-family: var(--mono); font-size: 12px; letter-spacing: .04em; }
+  .total { font-size: 14px; color: var(--body); }
+  .total b { color: var(--black); font-weight: 600; }
   input[type=range] { width: 100%; margin-top: 10px; accent-color: #000; }
   .blurb { color: var(--body); }
   .tier ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 15px; color: var(--body); }
