@@ -2,8 +2,12 @@
 import Base from '../layouts/Base.astro';
 import { tiers, usd, CONTACT } from '../data/pricing';
 
+const draft = (what: string) =>
+  `Hi Venn,\n\nWe'd like to ${what}.\n\nCompany:\nWebsite:\nWhat we want students to do:\nWhen:\n\nThanks,\n`;
+const mail = (subject: string, body: string) =>
+  `${CONTACT}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 const href = (t: (typeof tiers)[number]) =>
-  t.checkout || `${CONTACT}?subject=${encodeURIComponent(`Venn ${t.name}`)}`;
+  t.checkout || mail(`Venn ${t.name}`, draft(t.key === 'reach' ? 'reach 500 students with Venn Reach' : `run a Venn ${t.name}`));
 
 const faq = [
   ['What counts as a student reached?', 'A student in a matched org who opts in to your program: joins the event, uses the product, enters the challenge. Not a name on a list. Venn never sells or shares student data.'],
@@ -56,7 +60,7 @@ const faq = [
         </article>
       ))}
     </div>
-    <p class="wrap muted small center note">Prices in USD. Need 50,000+ students across countries? <a href={`${CONTACT}?subject=Venn%20global%20program`}>Talk to us</a>.</p>
+    <p class="wrap muted small center note">Prices in USD. Need 50,000+ students across countries? <a href={mail('Venn global program', draft('run a Venn program across countries'))}>Talk to us</a>.</p>
   </section>
 
   <section>
@@ -71,9 +75,9 @@ const faq = [
 
   <script is:inline>
     var s=document.querySelector('[data-slider]');
-    if(s){var t=document.querySelector('[data-total]'),c=document.querySelector('[data-count]'),a=document.querySelector('[data-cta="reach"]'),base=a.getAttribute('href');
+    if(s){var t=document.querySelector('[data-total]'),c=document.querySelector('[data-count]'),a=document.querySelector('[data-cta="reach"]'),base=a.getAttribute('href'),m=base.indexOf('mailto:')===0;
     function u(){var n=+s.value;c.textContent=n.toLocaleString('en-US');t.textContent='$'+(n*10).toLocaleString('en-US');
-    if(base.indexOf('mailto:')===0)a.href=base+encodeURIComponent(' for '+n+' students');}
+    if(m)a.href=base.replace('reach%20500%20students','reach%20'+n+'%20students').replace('Reach&','Reach%20for%20'+n+'%20students&');}
     s.addEventListener('input',u);u();}
   </script>
 </Base>
