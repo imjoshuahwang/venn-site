@@ -1,0 +1,35 @@
+---
+import { tiers, usd } from '../../data/pricing';
+---
+<section class="ps">
+  <div class="wrap">
+    <p class="label reveal">Who pays</p>
+    <h2 class="h2 reveal">Free for students. Companies fund it.</h2>
+    <div class="row reveal">
+      <a href="/apply" class="free"><p class="name">Students and orgs</p><p class="amt">$0</p><p class="muted">always</p></a>
+      {tiers.map((t) => (
+        <a href={`/pricing#${t.key}`} class:list={[{ top: t.key === 'season' }]}>
+          <p class="name">{t.name}</p>
+          <p class="amt">{t.key === 'reach' ? '$10' : usd(t.price)}</p>
+          <p class="muted">{t.unit}</p>
+        </a>
+      ))}
+    </div>
+    <p class="more reveal"><a href="/startups">For companies →</a></p>
+  </div>
+</section>
+
+<style>
+  .ps .h2 { margin-top: 10px; }
+  .row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 40px; }
+  @media (min-width: 900px) { .row { grid-template-columns: repeat(4, 1fr); } }
+  .row a { display: flex; flex-direction: column; gap: 4px; text-decoration: none; border: 1px solid var(--line); border-radius: 20px; padding: 22px; }
+  .row .free { background: var(--panel); border-color: transparent; }
+  .row .top { background: #000; border-color: #000; }
+  .row .top .name, .row .top .amt { color: #fff; }
+  .row .top .muted { color: #bbb; }
+  .name { font-weight: 600; color: var(--black); }
+  .amt { font-size: clamp(1.75rem, 4vw, 2.5rem); font-weight: 600; letter-spacing: -.035em; color: var(--black); }
+  .more { margin-top: 24px; font-weight: 500; }
+  .more a { text-decoration: none; color: var(--black); }
+</style>

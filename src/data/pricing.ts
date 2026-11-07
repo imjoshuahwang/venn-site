@@ -2,7 +2,7 @@
 // Stripe account can take payments; until then the button books a call instead.
 export const CONTACT = 'mailto:contact@joinvenn.org';
 
-export const tiers = [
+const highToLow = [
   {
     key: 'season',
     name: 'Season',
@@ -57,5 +57,8 @@ export const tiers = [
     checkout: '',
   },
 ] as const;
+
+// Low to high on every page.
+export const tiers = [...highToLow].reverse();
 
 export const usd = (n: number) => '$' + n.toLocaleString('en-US');
