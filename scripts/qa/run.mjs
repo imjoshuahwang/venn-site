@@ -23,7 +23,7 @@ export async function runMatrix(opts) {
   let next = 0;
 
   async function runJob({ p, d }) {
-    const meta = { page: p, device: d.name, browser: d.browser };
+    const meta = { page: p, device: d.name, browser: d.browser, modes: activeModes.map((m) => m.name).filter(Boolean) };
     const ctxOpts = Object.assign(contextOptions(d), ...activeModes.map((m) => m.contextOptions || {}));
     const ctx = await browsers[d.browser].newContext(ctxOpts);
     if (Object.keys(headers).length) await ctx.route((u) => u.origin === origin, (r) => r.continue({ headers: { ...r.request().headers(), ...headers } }));
@@ -35,10 +35,11 @@ export async function runMatrix(opts) {
       const res = await page.goto(new URL(p, base).href, { waitUntil: 'load', timeout: 45000 });
       if (res && res.status() >= 400) rows.push({ check: 'load', pass: false, details: `HTTP ${res.status()}` });
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+      for (const m of activeModes) await m.afterLoad?.(page);
       await scrollFullPage(page);
       await page.waitForTimeout(settleMs);
       rows.push(...await runChecks(page, state));
-      rows.push(...await runFlows(page, d));
+      rows.push(...await runFlows(page, d, { outDir, shots, modes: activeModes }));
       if (visual) rows.push(await visualCheck(page, visual, { name: `${slug(p === '/' ? 'home' : p)}-${slug(d.name)}`, outDir }));
       if (shots) {
         const file = `shots/${slug(p === '/' ? 'home' : p)}-${slug(d.name)}.jpg`;

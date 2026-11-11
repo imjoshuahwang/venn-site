@@ -1,0 +1,29 @@
+# Interaction flows: one flow per interaction, one step per line. Each flow runs on every device, on the page named by `on`.
+# Steps: goto <path> | tap <selector or text=Label> | fill "<selector>" <value> | expect-visible <selector> | scroll-to <selector> | wait <ms, for animations> | screenshot <name>
+# Never submit a form; Supabase calls are blocked.
+- name: nav
+  on: /
+  steps:
+    - expect-visible #nav
+    - tap #nav >> text=For companies
+    - expect-visible main h1
+    - screenshot nav-opened
+- name: apply
+  on: /apply
+  steps:
+    - tap .choice[data-value=student]
+    - wait 700
+    - tap .choice[data-value=high_school]
+    - wait 700
+    - tap .chip
+    - wait 700
+    - tap .q-next:not(.off)
+    - wait 700
+    - fill "#f-name" Test Student
+    - tap .q-next:not(.off)
+    - wait 700
+    - fill "#f-email" test@example.org
+    - tap .q-next:not(.off)
+    - wait 700
+    - expect-visible #f-org
+    - screenshot apply-school
