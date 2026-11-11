@@ -1,7 +1,6 @@
 name: mobile-qa
 
 on:
-  pull_request: # PROOF-ONLY, remove before merge
   deployment_status:
   workflow_dispatch:
     inputs:
@@ -24,12 +23,12 @@ concurrency:
 jobs:
   qa:
     # Self-hosted on the mini (GitHub-hosted minutes are blocked by billing, same as venn#986).
-    if: github.event_name != 'deployment_status' || (github.event.deployment_status.state == 'success' && startsWith(github.event.deployment_status.environment, 'Preview'))
+    if: github.event_name == 'workflow_dispatch' || (github.event.deployment_status.state == 'success' && startsWith(github.event.deployment_status.environment, 'Preview'))
     runs-on: [self-hosted, venn-mini]
     timeout-minutes: 30
     env:
-      PREVIEW_URL: ${{ github.event.inputs.url || (github.event_name == 'pull_request' && 'https://joinvenn.org') || github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
-      PR_NUMBER: ${{ github.event.inputs.pr || github.event.pull_request.number }}
+      PREVIEW_URL: ${{ github.event.inputs.url || github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
+      PR_NUMBER: ${{ github.event.inputs.pr }}
       RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       GH_TOKEN: ${{ github.token }}
       BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
