@@ -61,11 +61,11 @@ const pad = (s, n) => String(s).slice(0, n).padEnd(n);
 // Pass/fail table per page x device, plus fail count per check.
 export function summaryTable(results) {
   const names = [...CHECK_NAMES, ...new Set(results.map((r) => r.check).filter((c) => !CHECK_NAMES.includes(c)))];
-  const head = pad('page', 22) + pad('device', 20) + names.map((n) => pad(n, 9)).join('');
+  const head = pad('page', 32) + pad('device', 20) + names.map((n) => pad(n, 9)).join('');
   const lines = [head];
   for (const c of cells(results)) {
     const by = Object.fromEntries(c.rows.map((r) => [r.check, r]));
-    lines.push(pad(c.page, 22) + pad(c.device, 20) + names.map((n) => pad(!by[n] ? '-' : by[n].pass ? 'ok' : 'FAIL', 9)).join(''));
+    lines.push(pad(c.page, 32) + pad(c.device, 20) + names.map((n) => pad(!by[n] ? '-' : by[n].pass ? 'ok' : 'FAIL', 9)).join(''));
   }
   const totals = names.map((n) => `${n}=${results.filter((r) => r.check === n && !r.pass).length}`).join(' ');
   lines.push('', `fails per check: ${totals}`);
