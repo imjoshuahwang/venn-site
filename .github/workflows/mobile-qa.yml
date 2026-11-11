@@ -19,7 +19,7 @@ permissions:
   issues: write
 
 concurrency:
-  group: mobile-qa-${{ github.event.inputs.pr || github.event.sha || github.sha }}
+  group: mobile-qa-${{ github.event_name }}-${{ github.event.inputs.pr || github.event.sha || github.sha }}
   cancel-in-progress: true
 
 jobs:
