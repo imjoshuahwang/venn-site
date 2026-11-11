@@ -5,13 +5,14 @@ import { chromium, webkit } from 'playwright';
 import { contextOptions, slug } from './devices.mjs';
 import { prepare, scrollFullPage, runChecks } from './checks.mjs';
 import { runFlows } from './flows.mjs';
+import { visualCheck } from './baselines.mjs';
 
 const LAUNCH = { chromium, webkit };
 
-// opts: { base, pages, devices, outDir, workers, activeModes: [{contextOptions, beforePage}], settleMs, shots, headers }
+// opts: { base, pages, devices, outDir, workers, activeModes: [{contextOptions, beforePage}], settleMs, shots, headers, visual: {dir, update, threshold, masks} }
 // headers ({ name: value }) go only to requests for the base origin, so a bypass secret never reaches third parties.
 export async function runMatrix(opts) {
-  const { base, pages, devices, outDir, workers = 4, activeModes = [], settleMs = 600, shots = true, headers = {} } = opts;
+  const { base, pages, devices, outDir, workers = 4, activeModes = [], settleMs = 600, shots = true, headers = {}, visual } = opts;
   const origin = new URL(base).origin;
   const shotDir = path.join(outDir, 'shots');
   if (shots) fs.mkdirSync(shotDir, { recursive: true });
@@ -38,6 +39,7 @@ export async function runMatrix(opts) {
       await page.waitForTimeout(settleMs);
       rows.push(...await runChecks(page, state));
       rows.push(...await runFlows(page, d));
+      if (visual) rows.push(await visualCheck(page, visual, { name: `${slug(p === '/' ? 'home' : p)}-${slug(d.name)}`, outDir }));
       if (shots) {
         const file = `shots/${slug(p === '/' ? 'home' : p)}-${slug(d.name)}.jpg`;
         await page.screenshot({ path: path.join(outDir, file), fullPage: true, type: 'jpeg', quality: 60 }).catch(() => {});

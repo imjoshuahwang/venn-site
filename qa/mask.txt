@@ -1,0 +1,1 @@
+# CSS selectors (one per line) painted over before visual-diff. Add animated or volatile regions here.

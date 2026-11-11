@@ -24,6 +24,16 @@ export function cells(results) {
   return [...map.values()];
 }
 
+// Tiles whose visual-diff failed: baseline | new | diff, shown first so a judge looks only at what moved.
+export function changedSection(all) {
+  const tiles = all.map((c) => ({ c, r: c.rows.find((x) => x.check === 'visual-diff' && !x.pass && x.newImg) })).filter((t) => t.r);
+  if (!tiles.length) return '';
+  const img = (src, label) => src ? `<figure><figcaption>${label}</figcaption><a href="${esc(src)}"><img loading="lazy" src="${esc(src)}" alt="${label}"></a></figure>` : '';
+  const items = tiles.map(({ c, r }) => `<div class="changed"><h3>${esc(c.page)} <small>${esc(c.device)} &middot; ${esc(r.details)}</small></h3>
+<div class="trio">${img(r.baselineImg, 'baseline')}${img(r.newImg, 'new')}${img(r.diff, 'diff')}</div></div>`).join('');
+  return `<section id="changed"><h2>Changed (${tiles.length})</h2>${items}</section>`;
+}
+
 export function writeHtml(outDir, results, meta = {}) {
   fs.mkdirSync(outDir, { recursive: true });
   const all = cells(results);
@@ -51,8 +61,10 @@ figcaption{display:flex;flex-wrap:wrap;gap:4px;justify-content:space-between;fon
 figcaption small{font-weight:400;color:#666}figcaption span{color:#070}.fail figcaption span{color:#c00}
 img{display:block;width:100%;max-height:320px;object-fit:cover;object-position:top;border-radius:4px;background:#eee}
 ul{margin:6px 0 0;padding-left:16px;color:#c00;font-size:12px;overflow-wrap:anywhere}
+h3{font-size:14px;margin:12px 0 4px;overflow-wrap:anywhere}h3 small{font-weight:400;color:#555}
+.trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.trio figure{margin:0;min-width:0}.trio figcaption{font-weight:400;font-size:12px;margin:0 0 2px}
 </style></head><body><h1>Mobile QA: ${failTotal ? failTotal + ' failing checks' : 'all pass'}</h1>
-<p class="meta">${esc(meta.base || '')} &middot; ${all.length} page x device runs &middot; ${esc(meta.when || new Date().toISOString())}</p>${sections}</body></html>`;
+<p class="meta">${esc(meta.base || '')} &middot; ${all.length} page x device runs &middot; ${esc(meta.when || new Date().toISOString())}</p>${changedSection(all)}${sections}</body></html>`;
   fs.writeFileSync(path.join(outDir, 'report.html'), html);
 }
 
