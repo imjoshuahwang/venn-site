@@ -16,6 +16,22 @@ interface Props {
 
 const { title, description, type = 'website', schema, bare = false, noindex = false, ogTitle = title, shareUrl = true } = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site);
+// Sitewide entity data for search and AI engines. Separate from the per-page `schema` prop.
+const site = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization', '@id': 'https://joinvenn.org/#org', name: 'Venn', url: 'https://joinvenn.org',
+      logo: 'https://joinvenn.org/Venn_Square_Logo_Dark.png', email: 'contact@joinvenn.org',
+      description: 'Venn is a selective network of student organizations that companies run programs through.',
+      founder: { '@type': 'Person', name: 'Joshua Hwang' },
+    },
+    {
+      '@type': 'WebSite', '@id': 'https://joinvenn.org/#site', name: 'Venn', url: 'https://joinvenn.org',
+      description: 'The student organization connector. Free for students, always.', publisher: { '@id': 'https://joinvenn.org/#org' }, inLanguage: 'en',
+    },
+  ],
+};
 ---
 <!doctype html>
 <html lang="en">
@@ -39,6 +55,8 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
   <meta property="og:image:type" content="image/png">
   <meta property="og:image:alt" content="Venn">
   <meta name="twitter:card" content="summary_large_image">
+  <link rel="alternate" type="text/markdown" href="/llms.txt" title="llms.txt">
+  <script type="application/ld+json" set:html={JSON.stringify(site)} />
   {schema && <script type="application/ld+json" set:html={JSON.stringify(schema)} />}
 </head>
 <body>
