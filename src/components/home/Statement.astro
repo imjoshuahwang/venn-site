@@ -14,31 +14,33 @@ const icons: Record<string, string> = {
 };
 for (const k in icons) icons[k] = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${icons[k]}</svg>`;
 const statement: [string, string?][] = [
-  ['Venn is a free program for'], ['high school and college students', 'cap'], ['already building something: a'], ['club,', 'users'],
+  ['Venn is a free program for'], ['high school and college students', 'cap'], ['already building their thing: a'], ['club,', 'users'],
   ['a'], ['nonprofit,', 'heart'], ['a'], ['project,', 'bulb'], ['or a'], ['startup.', 'rocket'],
   ['Each season we pick a small batch and connect them with the'], ['college clubs', 'columns'], ['and'],
   ['companies,', 'briefcase'], ['and students in their field.'],
 ];
 
-// Spotlight tiles, placed from viewport center in 1440px-wide units: x, y, w, h, color, icon, label,
-// drift speed, growth, outward direction, and whether it floats above the text (only small ones, out past the text's edges).
-const tiles: [number, number, number, number, string, string, string, number, number, number, boolean][] = [
-  [-461, -132, 253, 317, 'g', 'columns', 'College clubs', 1.15, 2.8, -1, false],
-  [-259, -285, 201, 251, 'b', 'heart', 'Nonprofit', 1.5, 1, 0, false],
-  [-660, 60, 130, 160, 'w', 'bulb', 'Project', 1.25, 1, 0, true],
-  [530, -40, 140, 100, 'g', 'rocket', 'Startup', 1.7, 1, 0, true],
-  [560, 150, 115, 154, 'b', 'users', 'Club', 1.35, 1, 0, false],
-  [318, -262, 213, 266, 'w', 'briefcase', 'Companies', 1.1, 3.2, 1, false],
+// Spotlight tiles, placed from viewport center in 1440px-wide units: x, y, w, h, color, icon, label, drift speed, outward direction.
+// They stream up two side lanes (|x| >= 510) so they never cross the text.
+const tiles: [number, number, number, number, string, string, string, number, number][] = [
+  [-700, -330, 180, 220, 'g', 'users', 'Club', 1.3, -1],
+  [-680, -60, 170, 210, 'b', 'heart', 'Nonprofit', 1.4, -1],
+  [-700, 220, 180, 220, 'w', 'columns', 'College clubs', 1.25, -1],
+  [520, -250, 180, 220, 'w', 'bulb', 'Project', 1.35, 1],
+  [540, 30, 170, 210, 'g', 'rocket', 'Startup', 1.3, 1],
+  [520, 300, 180, 220, 'b', 'briefcase', 'Companies', 1.4, 1],
 ];
-// Three tiles show a real photo from a past season instead of a flat color.
+// Tiles show a real photo from a past season instead of a flat color.
 const files = import.meta.glob<{ default: ImageMetadata }>('../../assets/seasons/*.jpg', { eager: true });
-const photos: Record<string, string> = { Nonprofit: 'cfac_273', Project: 'minorities_in_stem_344', Club: 'scvmun_428' };
+const photos: Record<string, string> = {
+  Club: 'scvmun_428', Nonprofit: 'cfac_273', 'College clubs': 'ai_in_stem_110', Project: 'minorities_in_stem_344', Startup: 'bytebybyte_01',
+};
 const photo = (label: string) => photos[label] && files[`../../assets/seasons/${photos[label]}.jpg`].default;
 ---
 <section class="statement">
   <div class="st-pin">
-    {tiles.map(([x, y, w, h, c, icon, label, s, g, o, top]) => (
-      <div class:list={['tile', c, { top, pic: photo(label) }]} aria-hidden="true" style={`--x:${x};--y:${y};--w:${w};--h:${h};--s:${s};--g:${g};--o:${o}`}>
+    {tiles.map(([x, y, w, h, c, icon, label, s, o]) => (
+      <div class:list={['tile', c, { pic: photo(label) }]} aria-hidden="true" style={`--x:${x};--y:${y};--w:${w};--h:${h};--s:${s};--o:${o}`}>
         {photo(label) && <Image class="tile-p" src={photo(label)} alt="" widths={[320, 520]} sizes="260px" loading="lazy" />}
         <span class="ico" set:html={icons[icon]} />
         <span class="tile-l">{label}</span>
@@ -75,7 +77,7 @@ const photo = (label: string) => photos[label] && files[`../../assets/seasons/${
   .kw.lit .ico { transform: none; opacity: 1; }
   .tile { display: none; }
 
-  /* Spotlight: the text holds dead center on a pinned stage while soft tiles wipe open around it and drift off the top.
+  /* Spotlight: the text holds dead center on a pinned stage while tiles wipe open in the side lanes and stream off the top.
      --p (stage progress), and per tile --r (wipe) and --d (drift) are set from scroll below. */
   @media (min-width: 900px) and (min-height: 640px) and (prefers-reduced-motion: no-preference) {
     .statement { height: 350vh; padding: 0; }
@@ -90,20 +92,16 @@ const photo = (label: string) => photos[label] && files[`../../assets/seasons/${
       position: absolute; z-index: 1; padding: 16px;
       left: calc(50% + var(--x) * var(--u)); top: calc(50% + var(--y) * var(--u));
       width: calc(var(--w) * var(--u)); height: calc(var(--h) * var(--u));
-      --k: calc(1 + (var(--g) - 1) * var(--d, 0));
-      transform: translate(calc(var(--o) * var(--d, 0) * 16vw), calc(var(--d, 0) * var(--s) * -120vh)) scale(var(--k));
-      clip-path: inset(calc((1 - var(--r, 0)) * 100%) 0 0 0 round calc(18px / var(--k)));
+      transform: translate(calc(var(--o) * var(--d, 0) * 4vw), calc(var(--d, 0) * var(--s) * -120vh));
+      clip-path: inset(calc((1 - var(--r, 0)) * 100%) 0 0 0 round 18px);
       will-change: transform, clip-path;
     }
-    .tile.top { z-index: 3; -webkit-backdrop-filter: blur(4px) saturate(1.3); backdrop-filter: blur(4px) saturate(1.3); }
     .g { background: linear-gradient(160deg, #e3ece1, #c8d9c4); }
     .b { background: linear-gradient(160deg, #eaf0f9, #c9d8f0); }
     .w { background: linear-gradient(160deg, #f6f4f1, #e8e4de); }
-    .top.g { background: linear-gradient(160deg, rgba(227, 236, 225, .5), rgba(200, 217, 196, .5)); }
-    .top.w { background: linear-gradient(160deg, rgba(246, 244, 241, .5), rgba(232, 228, 222, .5)); }
     .tile .ico { width: 30px; height: 30px; margin: 0; border-radius: 9px; transform: none; opacity: 1; background: rgba(255, 255, 255, .7); box-shadow: none; }
     .tile-l { font-size: 13px; font-weight: 500; color: var(--black); letter-spacing: -.01em; }
-    .tile:not(.top):not(.pic) > * { opacity: .55; }
+    .tile:not(.pic) > * { opacity: .55; }
     .pic { background: #ddd; }
     .tile-p { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -1; }
     .pic .tile-l { padding: 4px 10px; border-radius: 999px; background: rgba(255, 255, 255, .85); }

@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.4",
+    "@fontsource/dancing-script": "^5.3.0",
     "astro": "^5.18.2"
   },
   "allowScripts": {

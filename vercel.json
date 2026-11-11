@@ -1,6 +1,7 @@
 {
   "redirects": [
-    { "source": "/boost", "destination": "/refer", "permanent": true }
+    { "source": "/boost", "destination": "/refer", "permanent": true },
+    { "source": "/pricing", "destination": "/startups", "permanent": true }
   ],
   "rewrites": [
     { "source": "/u", "destination": "https://wirjadichvbmrqzamwtp.supabase.co/functions/v1/unsubscribe" }
