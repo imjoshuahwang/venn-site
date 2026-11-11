@@ -1,7 +1,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { serveFixtures } from './fixtures.mjs';
-import { crawlSitemap, parsePages, filterOnly } from './crawl.mjs';
+import { crawlSitemap, parsePages, filterOnly, withFlowPages } from './crawl.mjs';
 import { parseCli } from './cli.mjs';
 import { resolveDevices } from './devices.mjs';
 
@@ -41,4 +41,10 @@ test('device matrix: 8 entries, browser filter and exact-name override', () => {
   assert.deepEqual(resolveDevices({ browsers: ['chromium'] }).map((d) => d.name), ['Pixel 7', 'Galaxy S9+', 'Pixel 7 landscape']);
   assert.deepEqual(resolveDevices({ names: ['iphone se'] }).map((d) => d.name), ['iPhone SE']);
   assert.throws(() => resolveDevices({ names: ['Nokia'] }), /unknown device/);
+});
+
+test('pages a flow runs on join the crawl even when the sitemap leaves them out (/apply is noindexed)', () => {
+  const flows = [{ on: '/' }, { on: '/apply' }, { on: '/apply/' }];
+  assert.deepEqual(withFlowPages(['/', '/guides/'], flows), ['/', '/guides/', '/apply']);
+  assert.deepEqual(withFlowPages(['/apply/', '/'], flows), ['/apply/', '/']);
 });

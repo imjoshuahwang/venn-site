@@ -49,3 +49,12 @@ export function filterOnly(paths, only) {
   const hit = paths.filter((p) => p.includes(only));
   return hit.length || !only.startsWith('/') ? hit : [only];
 }
+
+// Pages a flow runs on but the sitemap omits (/apply is noindexed) still get crawled, so their flow and checks run by default.
+export function withFlowPages(paths, flows) {
+  const bare = (p) => p.replace(/\/+$/, '') || '/';
+  const have = new Set(paths.map(bare));
+  const extra = [];
+  for (const { on } of flows) if (!have.has(bare(on))) { have.add(bare(on)); extra.push(on.replace(/\/+$/, '') || '/'); }
+  return [...paths, ...extra];
+}
