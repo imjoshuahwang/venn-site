@@ -8,3 +8,4 @@ dist/
 .vercel
 supabase/.temp/
 qa/
+.claude/worktrees/
