@@ -1,6 +1,10 @@
 -- Check for 20261111100000_guide_members.sql. Local: bash supabase/tests/run_local.sh -> 'guide_unlock_check ok'
 begin;
 
+do $$ begin
+  if not exists (select 1 from public.guide_locked where slug = '7-things-to-scale-a-student-startup' and char_length(html) > 100) then raise exception 'seed row missing'; end if;
+end $$;
+
 insert into public.guide_locked(slug, html) values ('zz-test', '<p>SECRET-BODY</p>');
 
 do $$
