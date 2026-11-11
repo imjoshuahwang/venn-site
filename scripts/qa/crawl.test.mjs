@@ -20,6 +20,8 @@ test('crawl falls back to / when there is no sitemap', async () => {
 test('--pages accepts paths and full URLs; --only filters by substring', () => {
   assert.deepEqual(parsePages('/, /apply,https://x.org/a?b=1', 'http://h'), ['/', '/apply', '/a?b=1']);
   assert.deepEqual(filterOnly(['/', '/apply', '/about'], 'app'), ['/apply']);
+  assert.deepEqual(filterOnly(['/', '/guides/'], '/apply'), ['/apply']);
+  assert.deepEqual(filterOnly(['/', '/guides/'], 'zzz'), []);
 });
 
 test('cli: defaults, overrides, and mode flags from the registry', () => {

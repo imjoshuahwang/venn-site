@@ -43,6 +43,9 @@ export function parsePages(csv, base) {
   return csv.split(',').map((s) => s.trim()).filter(Boolean).map((s) => toPath(s, base));
 }
 
+// Pages missing from the sitemap (e.g. /apply) still run when --only is a path.
 export function filterOnly(paths, only) {
-  return only ? paths.filter((p) => p.includes(only)) : paths;
+  if (!only) return paths;
+  const hit = paths.filter((p) => p.includes(only));
+  return hit.length || !only.startsWith('/') ? hit : [only];
 }
