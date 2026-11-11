@@ -18,7 +18,7 @@ const kinds = [
       </h1>
       {kinds.map(([k, pos], i) => <span class:list={['kind', pos]} style={`--k:${i}`} aria-hidden="true">{k}</span>)}
     </div>
-    <p class="sub reveal">Venn is a free program<br>for students building their thing.</p>
+    <p class="sub reveal">Venn is a free program<br>for students building <span class="hl">their thing</span>.</p>
     <div class="hero-cta reveal">
       <a class="btn" href="#apply">Apply for Fall ’26</a>
       <a class="btn btn-ghost" href="#seasons">See past seasons</a>
@@ -74,8 +74,18 @@ const kinds = [
     .br { right: -2%; bottom: -64px; rotate: -3deg; }
   }
 
-  .sub { max-width: none; margin: 64px auto 0; color: var(--muted); font-size: clamp(17px, 1.8vw, 21px); line-height: 1.45; }
-  .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 40px; }
+  /* The subline sits midway between the headline+pills block and the CTAs: --gap above and below.
+     The stage has 8px bottom padding below the pills (stacked layout); on desktop the pills hang 64px below it. */
+  .hero { --gap: 44px; }
+  .sub { max-width: none; margin: calc(var(--gap) - 8px) auto 0; color: var(--muted); font-size: clamp(17px, 1.8vw, 21px); line-height: 1.45; }
+  .hl {
+    white-space: nowrap; color: var(--forest); font-weight: 500; padding: .02em .32em; margin: 0 -.1em;
+    background: #cfe6c9;
+    border-radius: .35em .6em .4em .65em; transform: rotate(-1deg); display: inline-block;
+    -webkit-box-decoration-break: clone; box-decoration-break: clone;
+  }
+  @media (min-width: 900px) { .sub { margin-top: calc(var(--gap) + 64px); } }
+  .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: var(--gap); }
   .hero-cta.reveal, .sub.reveal { transition-delay: .12s; }
   @media (prefers-reduced-motion: reduce) {
     .hc, .kind { animation: none; opacity: 1; }

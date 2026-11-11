@@ -7,3 +7,4 @@ dist/
 .handoff.md
 .vercel
 supabase/.temp/
+qa/
