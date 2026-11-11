@@ -1,0 +1,134 @@
+---
+// Locked-guide glass card: two questions, then the rest of the guide is fetched from Supabase (unlock_guide) and injected here.
+// The locked text is never in this page's html; ref and thing are only ever sent as JSON, never rendered as html.
+const { slug } = Astro.props;
+const url = import.meta.env.PUBLIC_SUPABASE_URL ?? '';
+const anon = import.meta.env.PUBLIC_SUPABASE_ANON_KEY ?? '';
+---
+<div class="gu-wrap" id="gu-wrap" data-slug={slug} data-url={url} data-anon={anon}>
+  <p class="gu-teaser">Things 3 to 7 and the wrap-up are locked. Answer two quick questions to read them.</p>
+  <form class="gu" id="gu-form" novalidate>
+    <div class="gu-progress" aria-hidden="true"><div class="gu-bar"><i style="transform:scaleX(.3)"></i></div><span class="gu-txt">you’re 30% there</span></div>
+    <div class="gu-q" data-step="thing">
+      <label class="gu-h" for="gu-thing">What’s your thing?</label>
+      <input id="gu-thing" name="thing" maxlength="200" autocomplete="off" placeholder="A club, a project, a startup…">
+    </div>
+    <div class="gu-q" data-step="email" hidden>
+      <label class="gu-h" for="gu-email">Where should we send it?</label>
+      <input id="gu-email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="254" placeholder="you@school.edu">
+    </div>
+    <input class="gu-hp" name="hp_field" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <p class="gu-status" id="gu-status" role="status" aria-live="polite"></p>
+    <div class="gu-nav">
+      <button type="button" class="btn btn-ghost" id="gu-back" hidden>Back</button>
+      <button type="submit" class="btn" id="gu-next" disabled>Next</button>
+    </div>
+  </form>
+</div>
+
+<script>
+  import { captureRef } from '../scripts/ref';
+  import { emailOk, thingOk, pctFor, unlockGuide, guideEvent, type Step } from '../scripts/guide-unlock';
+
+  const wrap = document.getElementById('gu-wrap')!;
+  const form = document.getElementById('gu-form') as HTMLFormElement;
+  const cfg = { url: wrap.dataset.url ?? '', key: wrap.dataset.anon ?? '' };
+  const slug = wrap.dataset.slug ?? '';
+  const ref = captureRef();
+  const thing = form.elements.namedItem('thing') as HTMLInputElement;
+  const email = form.elements.namedItem('email') as HTMLInputElement;
+  const next = document.getElementById('gu-next') as HTMLButtonElement;
+  const back = document.getElementById('gu-back') as HTMLButtonElement;
+  const status = document.getElementById('gu-status')!;
+  const bar = form.querySelector<HTMLElement>('.gu-bar i')!;
+  const txt = form.querySelector<HTMLElement>('.gu-txt')!;
+  const q = (s: string) => form.querySelector<HTMLElement>(`.gu-q[data-step="${s}"]`)!;
+  let at: Step = 'thing';
+  let started = false, busy = false;
+
+  const paint = (s: Step) => {
+    const p = pctFor(s);
+    bar.style.transform = `scaleX(${p / 100})`;
+    txt.textContent = p === 100 ? 'unlocked' : `you’re ${p}% there`;
+  };
+  const sync = () => { next.disabled = busy || !(at === 'thing' ? thingOk(thing.value) : emailOk(email.value)); };
+  const show = (s: 'thing' | 'email', dir: 'in' | 'in-back') => {
+    at = s;
+    q('thing').hidden = s !== 'thing';
+    q('email').hidden = s !== 'email';
+    const el = q(s); el.classList.remove('in', 'in-back'); void el.offsetWidth; el.classList.add(dir);
+    back.hidden = s === 'thing';
+    next.textContent = s === 'thing' ? 'Next' : 'Unlock the guide';
+    status.textContent = ''; status.classList.remove('err');
+    paint(s); sync();
+    (s === 'thing' ? thing : email).focus({ preventScroll: true });
+  };
+
+  guideEvent(fetch, cfg, 'guide_view', slug, ref);
+  form.addEventListener('input', () => {
+    if (!started) { started = true; guideEvent(fetch, cfg, 'form_start', slug, ref); }
+    sync();
+  });
+  back.addEventListener('click', () => show('thing', 'in-back'));
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (busy) return;
+    if (at === 'thing') { if (thingOk(thing.value)) show('email', 'in'); return; }
+    if ((form.elements.namedItem('hp_field') as HTMLInputElement).value) return; // bot: nothing happens
+    busy = true; sync(); status.classList.remove('err'); status.textContent = 'Unlocking…';
+    const r = await unlockGuide(fetch, cfg, { slug, email: email.value, thing: thing.value, ref });
+    busy = false;
+    if (!r.ok) {
+      status.classList.add('err');
+      status.textContent = 'Could not unlock the guide. Check your email and try again.';
+      sync(); return;
+    }
+    paint('done');
+    const rest = document.createElement('div');
+    rest.className = 'gu-rest';
+    rest.innerHTML = r.html; // trusted: returned only by our own RPC from the guide_locked table
+    setTimeout(() => {
+      wrap.replaceWith(rest);
+      document.querySelectorAll<HTMLElement>('[data-after-unlock]').forEach((n) => n.removeAttribute('hidden'));
+      rest.querySelector('h2')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 450);
+  });
+  sync();
+</script>
+
+<style>
+  .gu-wrap { margin-top: 2.4em; }
+  .gu-teaser { color: var(--muted); font-size: 15px; margin: 0 0 16px; }
+  .gu {
+    display: grid; gap: 22px; padding: 22px; border-radius: 28px;
+    background: linear-gradient(150deg, rgba(234, 240, 249, .6), rgba(255, 255, 255, .5) 55%, rgba(227, 236, 225, .6));
+    -webkit-backdrop-filter: blur(28px) saturate(1.8); backdrop-filter: blur(28px) saturate(1.8);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .95), inset 0 0 0 1px rgba(255, 255, 255, .6), inset 0 -1px 0 rgba(255, 255, 255, .35), 0 30px 70px -40px rgba(30, 45, 35, .3), 0 0 0 1px rgba(0, 0, 0, .04);
+  }
+  @media (min-width: 640px) { .gu { padding: 30px 32px; } }
+  .gu-progress { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--muted); }
+  .gu-bar { flex: 1; height: 4px; border-radius: 4px; background: rgba(0, 0, 0, .07); overflow: hidden; }
+  .gu-bar i { display: block; height: 100%; background: var(--black); border-radius: inherit; transform-origin: left; transition: transform .5s var(--ease); }
+  .gu-txt { min-width: 7.5em; text-align: right; font-variant-numeric: tabular-nums; }
+  .gu-q { display: grid; gap: 12px; }
+  .gu-q.in { animation: gu-in .45s var(--ease); }
+  .gu-q.in-back { animation: gu-back .45s var(--ease); }
+  @keyframes gu-in { from { opacity: 0; transform: translateX(28px); filter: blur(4px); } }
+  @keyframes gu-back { from { opacity: 0; transform: translateX(-28px); filter: blur(4px); } }
+  .gu-h { font-size: clamp(1.35rem, 2.6vw, 1.75rem); font-weight: 600; letter-spacing: -.03em; line-height: 1.2; color: var(--black); }
+  .gu input:not(.gu-hp) {
+    font: 17px/1.5 var(--font); color: var(--text); background: #fff; min-height: 52px; -webkit-appearance: none; appearance: none;
+    border: 0; box-shadow: inset 0 0 0 1px #e5e5e5; border-radius: 14px; padding: 14px 16px; width: 100%;
+  }
+  .gu input:focus { outline: none; box-shadow: inset 0 0 0 2px #000; }
+  .gu-hp { position: absolute; left: -9999px; }
+  .gu-nav { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .gu-nav .btn { min-height: 48px; }
+  .gu-nav .btn-ghost { background: #fff; }
+  .gu-nav #gu-next { flex: 1 1 auto; max-width: 14rem; margin-left: auto; }
+  .gu-nav #gu-next:disabled { opacity: .3; cursor: default; transform: none; }
+  .gu-status { margin: 0; font-size: 15px; overflow-wrap: anywhere; }
+  .gu-status:empty { display: none; }
+  .gu-status.err { color: #b91c1c; }
+  @media (prefers-reduced-motion: reduce) { .gu-q.in, .gu-q.in-back { animation: none; } .gu-bar i { transition: none; } }
+</style>

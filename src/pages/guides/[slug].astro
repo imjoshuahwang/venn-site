@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import { getCollection, render } from 'astro:content';
+import GuideUnlock from '../../components/GuideUnlock.astro';
 
 export async function getStaticPaths() {
   return (await getCollection('guides')).map((g) => ({ params: { slug: g.id }, props: { g } }));
@@ -8,6 +9,7 @@ export async function getStaticPaths() {
 
 const { g } = Astro.props;
 const { headings } = await render(g);
+const locked = !!g.data.locked;
 // Split the rendered article on h2 so two Apply cards can sit ~1/3 and ~2/3 of the way through (build time, no JS).
 const parts = (g.rendered?.html ?? '').split(/(?=<h2[\s>])/);
 const n = parts.length - 1;
@@ -89,6 +91,7 @@ const schema = { '@context': 'https://schema.org', '@graph': faqPage ? [article,
           ) : <Fragment set:html={html} />}
         </>
       ))}
+      {locked && <GuideUnlock slug={g.id} />}
       {faq.length > 0 && (
         <section class="faq" aria-labelledby="faq">
           <h2 id="faq">FAQ</h2>
@@ -97,7 +100,7 @@ const schema = { '@context': 'https://schema.org', '@graph': faqPage ? [article,
       )}
     </article>
   </div>
-  <section class="cta-end" aria-label="Apply to Venn">
+  <section class="cta-end" aria-label="Apply to Venn" hidden={locked} data-after-unlock={locked ? '' : undefined}>
     <div class="cta-end-bg" aria-hidden="true"><i></i><i></i><i></i></div>
     <div class="cta-end-panel reveal">
       <h2>Apply to Venn.</h2>
@@ -137,6 +140,7 @@ const schema = { '@context': 'https://schema.org', '@graph': faqPage ? [article,
   .prose > :global(* + *) { margin-top: 1.2em; }
   .prose :global(h2) { font-size: clamp(1.5rem, 4vw, 2rem); letter-spacing: -.02em; line-height: 1.3; margin-top: 2.4em; }
   .prose :global(.faq > * + *) { margin-top: 1.2em; }
+  .prose :global(.gu-rest > * + *) { margin-top: 1.2em; }
   .prose :global(h3) { font-size: 1.2rem; font-weight: 600; letter-spacing: -.01em; line-height: 1.4; margin-top: 1.8em; }
   .prose :global(a:not(.btn)) { color: var(--black); text-decoration-color: rgba(0, 0, 0, .25); text-underline-offset: 2px; }
   .prose :global(a:not(.btn):hover) { text-decoration-color: currentColor; }
