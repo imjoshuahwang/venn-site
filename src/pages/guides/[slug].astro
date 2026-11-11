@@ -167,7 +167,9 @@ const schema = { '@context': 'https://schema.org', '@graph': faqPage ? [article,
     -webkit-backdrop-filter: blur(28px) saturate(1.8); backdrop-filter: blur(28px) saturate(1.8);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, .95), inset 0 0 0 1px rgba(255, 255, 255, .6), inset 0 -1px 0 rgba(255, 255, 255, .35), 0 30px 70px -40px rgba(30, 45, 35, .3), 0 0 0 1px rgba(0, 0, 0, .04);
   }
-  .cta-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .cta-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  /* Four 12px labels ("Nonprofits") do not fit four columns on a 320px phone; two columns keep the card inside the viewport. */
+  @media (max-width: 420px) { .cta-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } .cta-tile { aspect-ratio: 5 / 3; } }
   .cta-tile { display: flex; flex-direction: column; justify-content: space-between; gap: 10px; aspect-ratio: 1; padding: 10px; border-radius: 16px; font-size: 12px; font-weight: 500; line-height: 1.2; color: var(--black); letter-spacing: -.01em; }
   .cta-tile.g { background: linear-gradient(160deg, #e3ece1, #c8d9c4); }
   .cta-tile.b { background: linear-gradient(160deg, #eaf0f9, #c9d8f0); }

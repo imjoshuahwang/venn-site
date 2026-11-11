@@ -162,7 +162,10 @@ const building = ['Just me', 'A club', 'A nonprofit', 'A project', 'A startup', 
     back.style.visibility = i ? 'visible' : 'hidden';
     nav.hidden = !i;
     next.hidden = at === 'role' || (at === 'level' && picked.level !== 'other');
-    next.textContent = last ? 'Send application' : (at === 'link' || at === 'need') && !field(at).value.trim() ? 'Skip' : 'Next';
+    // Only write when the label changes: paint() runs on the `change` that blur fires between mousedown and mouseup on Next,
+    // and replacing the button's text node there makes WebKit drop the click (the first tap after typing did nothing).
+    const label = last ? 'Send application' : (at === 'link' || at === 'need') && !field(at).value.trim() ? 'Skip' : 'Next';
+    if (next.textContent !== label) next.textContent = label;
     document.getElementById('promise-box')!.hidden = picked.role !== 'student';
     next.classList.toggle('off', !ok(at));
     saveDraft();
