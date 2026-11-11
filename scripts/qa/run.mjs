@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { chromium, webkit } from 'playwright';
 import { contextOptions, slug } from './devices.mjs';
+import { mergeContextOptions } from './modes.mjs';
 import { prepare, scrollFullPage, runChecks } from './checks.mjs';
 import { runFlows } from './flows.mjs';
 import { visualCheck } from './baselines.mjs';
@@ -24,7 +25,7 @@ export async function runMatrix(opts) {
 
   async function runJob({ p, d }) {
     const meta = { page: p, device: d.name, browser: d.browser, modes: activeModes.map((m) => m.name).filter(Boolean) };
-    const ctxOpts = Object.assign(contextOptions(d), ...activeModes.map((m) => m.contextOptions || {}));
+    const ctxOpts = mergeContextOptions(contextOptions(d), activeModes);
     const ctx = await browsers[d.browser].newContext(ctxOpts);
     if (Object.keys(headers).length) await ctx.route((u) => u.origin === origin, (r) => r.continue({ headers: { ...r.request().headers(), ...headers } }));
     const rows = [];

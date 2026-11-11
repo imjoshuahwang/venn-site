@@ -1,6 +1,7 @@
 # Interaction flows: one flow per interaction, one step per line. Each flow runs on every device, on the page named by `on`.
 # Steps: goto <path> | tap <selector or text=Label> | fill "<selector>" <value> | expect-visible <selector> | scroll-to <selector> | wait <ms, for animations> | screenshot <name>
 # Never submit a form; Supabase calls are blocked.
+# /apply ignores a Next tap within 400ms of a step change (double-tap guard), so `wait 450` after each step change is a person's pace, not a hack.
 - name: nav
   on: /
   steps:
@@ -12,18 +13,19 @@
   on: /apply
   steps:
     - tap .choice[data-value=student]
-    - wait 700
+    - expect-visible .choice[data-value=high_school]
     - tap .choice[data-value=high_school]
-    - wait 700
+    - expect-visible .chip
     - tap .chip
-    - wait 700
+    - wait 450
     - tap .q-next:not(.off)
-    - wait 700
+    - expect-visible #f-name
+    - wait 450
     - fill "#f-name" Test Student
     - tap .q-next:not(.off)
-    - wait 700
+    - expect-visible #f-email
+    - wait 450
     - fill "#f-email" test@example.org
     - tap .q-next:not(.off)
-    - wait 700
     - expect-visible #f-org
     - screenshot apply-school

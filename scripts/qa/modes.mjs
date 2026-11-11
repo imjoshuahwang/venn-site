@@ -1,9 +1,12 @@
 // Stress-mode registry, keyed by CLI flag name (e.g. --slow-3g). Modes combine; each run's report rows carry the mode names.
-// Entry = { name, contextOptions: {...merged into the Playwright context}, beforePage: async (page) => {...} (before goto),
+// Entry = { name, contextOptions: {...merged into the Playwright context} or (optionsSoFar) => {...}, beforePage: async (page) => {...} (before goto),
 // afterLoad: async (page) => {...} (after load, before checks) }. A valued flag (--zoom 200) is { arg: true, build(value) -> entry }.
 
 const browserName = (page) => page.context().browser()?.browserType().name();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// Merge the active modes' contextOptions (plain objects, or functions of the options so far) onto a device's base options.
+export const mergeContextOptions = (base, active) => active.reduce((o, m) => ({ ...o, ...(typeof m.contextOptions === 'function' ? m.contextOptions(o) : m.contextOptions) }), { ...base });
 
 export const modes = {
   zoom: {
@@ -13,12 +16,12 @@ export const modes = {
       if (!(pct >= 50 && pct <= 500)) throw new Error(`--zoom takes a percent between 50 and 500, got "${value}"`);
       return {
         name: `zoom=${pct}`,
-        // CSS zoom on <html> scales text and boxes like browser zoom or large text, in Chromium and WebKit alike.
-        beforePage: (page) => page.addInitScript((z) => {
-          const apply = () => { if (document.documentElement) document.documentElement.style.zoom = String(z); };
-          apply();
-          document.addEventListener('DOMContentLoaded', apply);
-        }, pct / 100),
+        // Real browser zoom: a viewport 1/z the size at z x the pixel density. CSS `zoom` on <html> is not the same: it scales
+        // vh/dvh units too, so a 100dvh app shell (like /apply) grows past the screen and strands its own buttons.
+        contextOptions: (base) => ({
+          viewport: { width: Math.round(base.viewport.width / (pct / 100)), height: Math.round(base.viewport.height / (pct / 100)) },
+          deviceScaleFactor: (base.deviceScaleFactor || 1) * (pct / 100),
+        }),
       };
     },
   },

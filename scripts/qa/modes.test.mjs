@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import http from 'node:http';
 import { chromium, webkit, devices } from 'playwright';
-import { modes } from './modes.mjs';
+import { modes, mergeContextOptions } from './modes.mjs';
 import { parseCli } from './cli.mjs';
 import { runMatrix } from './run.mjs';
 import { resolveDevices } from './devices.mjs';
@@ -28,7 +28,7 @@ after(async () => { server.closeAllConnections?.(); await new Promise((r) => ser
 async function open(launcher, device, active) {
   const browser = await launcher.launch();
   const { defaultBrowserType, ...desc } = devices[device];
-  const ctx = await browser.newContext(Object.assign({ ...desc }, ...active.map((m) => m.contextOptions || {})));
+  const ctx = await browser.newContext(mergeContextOptions(desc, active));
   const page = await ctx.newPage();
   for (const m of active) await m.beforePage?.(page);
   await page.goto(base + '/');
@@ -62,7 +62,12 @@ test('zoom scales the document in chromium and webkit, and rejects nonsense', as
   for (const [launcher, device] of [[chromium, 'Pixel 7'], [webkit, 'iPhone SE']]) {
     const s = await open(launcher, device, [modes.zoom.build('200')]);
     try {
-      assert.equal(await s.page.evaluate(() => getComputedStyle(document.documentElement).zoom), '2');
+      // Real zoom: half the CSS viewport at twice the density, so vh-based layouts shrink like they do for a student at 200%.
+      const v = await s.page.evaluate(() => ({ w: innerWidth, h: innerHeight, dpr: devicePixelRatio }));
+      const base = devices[device];
+      assert.equal(v.w, Math.round(base.viewport.width / 2));
+      assert.equal(v.h, Math.round(base.viewport.height / 2));
+      assert.equal(v.dpr, base.deviceScaleFactor * 2);
       assert.ok(await s.page.evaluate(() => document.querySelector('h1').getBoundingClientRect().height) > 0);
     } finally { await s.close(); }
   }
