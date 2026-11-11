@@ -8,9 +8,11 @@ import { runFlows } from './flows.mjs';
 
 const LAUNCH = { chromium, webkit };
 
-// opts: { base, pages, devices, outDir, workers, activeModes: [{contextOptions, beforePage}], settleMs, shots }
+// opts: { base, pages, devices, outDir, workers, activeModes: [{contextOptions, beforePage}], settleMs, shots, headers }
+// headers ({ name: value }) go only to requests for the base origin, so a bypass secret never reaches third parties.
 export async function runMatrix(opts) {
-  const { base, pages, devices, outDir, workers = 4, activeModes = [], settleMs = 600, shots = true } = opts;
+  const { base, pages, devices, outDir, workers = 4, activeModes = [], settleMs = 600, shots = true, headers = {} } = opts;
+  const origin = new URL(base).origin;
   const shotDir = path.join(outDir, 'shots');
   if (shots) fs.mkdirSync(shotDir, { recursive: true });
   const browsers = {};
@@ -23,6 +25,7 @@ export async function runMatrix(opts) {
     const meta = { page: p, device: d.name, browser: d.browser };
     const ctxOpts = Object.assign(contextOptions(d), ...activeModes.map((m) => m.contextOptions || {}));
     const ctx = await browsers[d.browser].newContext(ctxOpts);
+    if (Object.keys(headers).length) await ctx.route((u) => u.origin === origin, (r) => r.continue({ headers: { ...r.request().headers(), ...headers } }));
     const rows = [];
     try {
       const page = await ctx.newPage();
