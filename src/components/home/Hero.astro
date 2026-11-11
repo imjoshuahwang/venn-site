@@ -18,7 +18,7 @@ const kinds = [
       </h1>
       {kinds.map(([k, pos], i) => <span class:list={['kind', pos]} style={`--k:${i}`} aria-hidden="true">{k}</span>)}
     </div>
-    <p class="sub reveal">Venn is a free program for high school and college students already building their thing.</p>
+    <p class="sub reveal">Venn is a free program<br>for students building their thing.</p>
     <div class="hero-cta reveal">
       <a class="btn" href="#apply">Apply for Fall ’26</a>
       <a class="btn btn-ghost" href="#seasons">See past seasons</a>
@@ -65,6 +65,7 @@ const kinds = [
   @keyframes bob { 50% { translate: 0 -6px; } }
   .kind { margin: 24px 4px 0; }
   @media (max-width: 899px) { .stage { display: block; } .kind { margin: 20px 3px 0; } }
+  @media (max-width: 480px) { .kind { font-size: 13px; padding: 7px 11px; margin: 16px 1px 0; } }
   @media (min-width: 900px) {
     .kind { position: absolute; margin: 0; }
     .tl { left: -6%; top: -56px; rotate: -4deg; }
@@ -73,7 +74,7 @@ const kinds = [
     .br { right: -2%; bottom: -64px; rotate: -3deg; }
   }
 
-  .sub { max-width: 34rem; margin: 64px auto 0; color: var(--muted); font-size: clamp(17px, 1.8vw, 21px); line-height: 1.45; }
+  .sub { max-width: none; margin: 64px auto 0; color: var(--muted); font-size: clamp(17px, 1.8vw, 21px); line-height: 1.45; }
   .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 40px; }
   .hero-cta.reveal, .sub.reveal { transition-delay: .12s; }
   @media (prefers-reduced-motion: reduce) {
