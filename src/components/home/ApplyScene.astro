@@ -48,9 +48,12 @@ import ApplyForm from '../ApplyForm.astro';
   @media (min-width: 900px) and (min-height: 640px) and (prefers-reduced-motion: no-preference),
          (max-width: 640px) and (prefers-reduced-motion: no-preference) {
     .apply-pin {
-      position: sticky; top: 0; height: 100vh; padding: 0; display: grid; place-items: center; pointer-events: none;
+      position: sticky; top: 0; height: 100vh; padding: 0; pointer-events: none;
     }
+    /* Centred by translate from a fixed top-left, not by grid: the card resizes on every scroll tick, and a
+       grid-centred card moves its top-left each time, which Chrome scores as layout shift (CLS 0.16 on Pixel 7). */
     .glass {
+      position: absolute; left: 50%; top: 50%; translate: -50% -50%;
       max-width: none; margin: 0; padding: 0; overflow: hidden; pointer-events: auto;
       width: calc(var(--D) + (var(--W) - var(--D)) * var(--b, 0));
       height: calc(var(--D) + (var(--H) - var(--D)) * var(--b, 0));
@@ -64,10 +67,11 @@ import ApplyForm from '../ApplyForm.astro';
       font-size: clamp(1.6rem, 3vw, 2.2rem); font-weight: 600; letter-spacing: -.04em; color: var(--black);
       opacity: clamp(0, calc(1 - var(--b, 0) * 2.5), 1);
     }
-    /* Centred with auto margins, not a vertical translate: the form's sticky Back/Next row lays out against
-       the card's edges, and a translate would leave it half a card off (it landed mid-card over the question). */
+    /* Centred by translate from a fixed top-left (a moving top-left is scored as layout shift). The form's sticky
+       Back/Next row lays out against the card's edges, so check it still sits at the card bottom. */
     .glass-in {
-      position: absolute; left: 50%; top: 0; bottom: 0; margin-block: auto; height: -webkit-fit-content; height: fit-content; width: var(--W); translate: -50% 0;
+      position: absolute; left: 0; top: 50%; height: -webkit-fit-content; height: fit-content; width: var(--W);
+      translate: calc((var(--D) - var(--W)) * (1 - var(--b, 0)) / 2) -50%; /* centred in the card as it widens, without moving its left edge */
       padding: 48px 56px; opacity: clamp(0, calc((var(--b, 0) - .6) * 2.5), 1);
     }
   }
