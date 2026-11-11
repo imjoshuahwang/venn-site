@@ -48,4 +48,4 @@ If your members are minors, follow your school's rules on contact with college s
 
 ## Where Venn fits
 
-This is one of the main things Venn does. High school builders in a season meet college clubs in their field, and clubs get members who want to get involved in what they already do. Venn is free for high school and college students who are already building a club, nonprofit, project or startup. You apply each season, Venn picks a small batch (about 30% of applicants were accepted for Fall '26), and we connect the batch with college clubs and companies in their field. [Apply to Venn](/apply).
+This is one of the main things Venn does. High school builders in a season meet college clubs in their field, and clubs get members who want to get involved in what they already do. Venn is free for high school and college students who are already building a club, nonprofit, project or startup. You apply each season, Venn picks a small batch (about 30% of applicants were accepted for Fall '26), and Venn aims to connect the batch with college clubs and companies in their field. [Apply to Venn](/apply).

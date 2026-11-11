@@ -52,4 +52,4 @@ Guest speakers, college students and company demos make a club feel bigger. They
 
 ## Where Venn fits
 
-Venn connects high school clubs with college clubs and companies in their field, so your members get something new to do and people to meet. Clubs that are building tend to attract more members. Venn is free for high school and college students who are already building a club, nonprofit, project or startup. You apply each season, Venn picks a small batch (about 30% of applicants were accepted for Fall '26), and we connect the batch with college clubs and companies in their field. [Apply to Venn](/apply).
+Venn connects high school clubs with college clubs and companies in their field, so your members get something new to do and people to meet. Venn is free for high school and college students who are already building a club, nonprofit, project or startup. You apply each season, Venn picks a small batch (about 30% of applicants were accepted for Fall '26), and Venn aims to connect the batch with college clubs and companies in their field. [Apply to Venn](/apply).

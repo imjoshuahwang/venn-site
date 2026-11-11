@@ -52,4 +52,4 @@ Track users, feedback and what you changed. This becomes the story you tell on a
 
 ## Where Venn fits
 
-If you are building an app and want feedback from people in your field, Venn connects high school builders with college clubs and companies that work on similar things. Venn is free for high school and college students who are already building a club, nonprofit, project or startup. You apply each season, Venn picks a small batch (about 30% of applicants were accepted for Fall '26), and we connect the batch with college clubs and companies in their field. [Apply to Venn](/apply).
+If you are building an app and want feedback from people in your field, Venn connects high school builders with college clubs and companies that work on similar things. Venn is free for high school and college students who are already building a club, nonprofit, project or startup. You apply each season, Venn picks a small batch (about 30% of applicants were accepted for Fall '26), and Venn aims to connect the batch with college clubs and companies in their field. [Apply to Venn](/apply).

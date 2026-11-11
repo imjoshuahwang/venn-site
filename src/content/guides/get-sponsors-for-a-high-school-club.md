@@ -55,4 +55,4 @@ After your event, send each sponsor a short summary: how many people came, what 
 
 ## Where Venn fits
 
-If your club is already building and you want companies and college clubs in your field to know about you, Venn is built for that. Sponsors are easier to find when a real name sits next to yours. Venn is free for high school and college students who are already building a club, nonprofit, project or startup. You apply each season, Venn picks a small batch (about 30% of applicants were accepted for Fall '26), and we connect the batch with college clubs and companies in their field. [Apply to Venn](/apply).
+If your club is already building and you want companies and college clubs in your field to know about you, Venn is built for that. Venn is free for high school and college students who are already building a club, nonprofit, project or startup. You apply each season, Venn picks a small batch (about 30% of applicants were accepted for Fall '26), and Venn aims to connect the batch with college clubs and companies in their field. [Apply to Venn](/apply).

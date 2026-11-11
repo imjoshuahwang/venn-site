@@ -48,4 +48,4 @@ If they say yes, do exactly what you promised and send a short recap with photos
 
 ## Where Venn fits
 
-Pitching is easier with a real name next to yours. Venn works with companies and connects accepted high school and college builders with companies in their field. Venn is free for high school and college students who are already building a club, nonprofit, project or startup. You apply each season, Venn picks a small batch (about 30% of applicants were accepted for Fall '26), and we connect the batch with college clubs and companies in their field. [Apply to Venn](/apply).
+Venn works with companies and aims to connect accepted high school and college builders with companies in their field. Venn is free for high school and college students who are already building a club, nonprofit, project or startup. You apply each season, Venn picks a small batch (about 30% of applicants were accepted for Fall '26), and Venn aims to connect the batch with college clubs and companies in their field. [Apply to Venn](/apply).

@@ -48,4 +48,4 @@ Build, change the idea or stop. Stopping early is a win. Write down what you lea
 
 ## Where Venn fits
 
-Venn is for students already building, and part of building is getting feedback. We connect accepted students with college clubs and companies in their field, which can be useful people to test with. Venn is free for high school and college students who are already building a club, nonprofit, project or startup. You apply each season, Venn picks a small batch (about 30% of applicants were accepted for Fall '26), and we connect the batch with college clubs and companies in their field. [Apply to Venn](/apply).
+Venn is for students already building, and part of building is getting feedback. We connect accepted students with college clubs and companies in their field, which can be useful people to test with. Venn is free for high school and college students who are already building a club, nonprofit, project or startup. You apply each season, Venn picks a small batch (about 30% of applicants were accepted for Fall '26), and Venn aims to connect the batch with college clubs and companies in their field. [Apply to Venn](/apply).

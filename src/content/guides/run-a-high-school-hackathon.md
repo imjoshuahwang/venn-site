@@ -52,4 +52,4 @@ Assign roles for check-in, food, mentors and tech help. Afterward, send thank-yo
 
 ## Where Venn fits
 
-A hackathon is a good way to bring in college clubs and companies. Venn connects high school builders with college clubs and companies in their field, which gives you mentors, judges and a bigger audience. Venn is free for high school and college students who are already building a club, nonprofit, project or startup. You apply each season, Venn picks a small batch (about 30% of applicants were accepted for Fall '26), and we connect the batch with college clubs and companies in their field. [Apply to Venn](/apply).
+A hackathon is a good way to bring in college clubs and companies. Venn connects high school builders with college clubs and companies in their field, which can bring people in to help and to watch. Venn is free for high school and college students who are already building a club, nonprofit, project or startup. You apply each season, Venn picks a small batch (about 30% of applicants were accepted for Fall '26), and Venn aims to connect the batch with college clubs and companies in their field. [Apply to Venn](/apply).

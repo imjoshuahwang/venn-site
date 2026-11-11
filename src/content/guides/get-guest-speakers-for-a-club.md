@@ -48,4 +48,4 @@ Record names, topics and contacts. Every event makes the next one easier.
 
 ## Where Venn fits
 
-This is close to what Venn does. College clubs run a session for a batch of high school builders, and members show what they build. Apply if you are building and want to meet them. Venn is free for high school and college students who are already building a club, nonprofit, project or startup. You apply each season, Venn picks a small batch (about 30% of applicants were accepted for Fall '26), and we connect the batch with college clubs and companies in their field. [Apply to Venn](/apply).
+This is close to what Venn does. College clubs run a session for a batch of high school builders, and members show what they build. Apply if you are building and want to meet them. Venn is free for high school and college students who are already building a club, nonprofit, project or startup. You apply each season, Venn picks a small batch (about 30% of applicants were accepted for Fall '26), and Venn aims to connect the batch with college clubs and companies in their field. [Apply to Venn](/apply).

@@ -48,4 +48,4 @@ Write down what you did, what you learned and any results. This is useful for ap
 
 ## Where Venn fits
 
-Venn works with companies and connects high school and college builders with them. It is a way to meet teams in your field while you are building your own project. Venn is free for high school and college students who are already building a club, nonprofit, project or startup. You apply each season, Venn picks a small batch (about 30% of applicants were accepted for Fall '26), and we connect the batch with college clubs and companies in their field. [Apply to Venn](/apply).
+Venn works with companies and connects high school and college builders with them. It is a way to meet teams in your field while you are building your own project. Venn is free for high school and college students who are already building a club, nonprofit, project or startup. You apply each season, Venn picks a small batch (about 30% of applicants were accepted for Fall '26), and Venn aims to connect the batch with college clubs and companies in their field. [Apply to Venn](/apply).

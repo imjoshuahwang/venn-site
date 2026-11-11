@@ -48,4 +48,4 @@ Weekly check-ins, visible progress and thanks. Teams drift when no one knows wha
 
 ## Where Venn fits
 
-Venn connects students who are building with one another, college students and companies in their field, so you can meet more people who might want to work on something. Venn is free for high school and college students who are already building a club, nonprofit, project or startup. You apply each season, Venn picks a small batch (about 30% of applicants were accepted for Fall '26), and we connect the batch with college clubs and companies in their field. [Apply to Venn](/apply).
+Venn connects students who are building with one another, college students and companies in their field, so you can meet more people who might want to work on something. Venn is free for high school and college students who are already building a club, nonprofit, project or startup. You apply each season, Venn picks a small batch (about 30% of applicants were accepted for Fall '26), and Venn aims to connect the batch with college clubs and companies in their field. [Apply to Venn](/apply).

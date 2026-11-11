@@ -48,4 +48,4 @@ If you do not get in, run your own summer. Pick a project, set weekly goals, boo
 
 ## Where Venn fits
 
-Venn runs four seasons a year, and each season high school builders who are already working on something apply and Venn picks a small batch. If you are building, it is one more program worth applying to. Venn is free for high school and college students who are already building a club, nonprofit, project or startup. You apply each season, Venn picks a small batch (about 30% of applicants were accepted for Fall '26), and we connect the batch with college clubs and companies in their field. [Apply to Venn](/apply).
+Venn runs four seasons a year, and each season high school builders who are already working on something apply and Venn picks a small batch. If you are building, it is one more program worth applying to. Venn is free for high school and college students who are already building a club, nonprofit, project or startup. You apply each season, Venn picks a small batch (about 30% of applicants were accepted for Fall '26), and Venn aims to connect the batch with college clubs and companies in their field. [Apply to Venn](/apply).

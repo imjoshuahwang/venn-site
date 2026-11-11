@@ -52,4 +52,4 @@ A spreadsheet with names, dates, what you discussed and when to follow up is eno
 
 ## Where Venn fits
 
-Venn connects accepted high school and college students with companies in their field, which makes the first conversation with a founder easier. Apply with what you are building. Venn is free for high school and college students who are already building a club, nonprofit, project or startup. You apply each season, Venn picks a small batch (about 30% of applicants were accepted for Fall '26), and we connect the batch with college clubs and companies in their field. [Apply to Venn](/apply).
+Venn connects accepted high school and college students with companies in their field, so a first conversation with a founder has somewhere to start. Apply with what you are building. Venn is free for high school and college students who are already building a club, nonprofit, project or startup. You apply each season, Venn picks a small batch (about 30% of applicants were accepted for Fall '26), and Venn aims to connect the batch with college clubs and companies in their field. [Apply to Venn](/apply).

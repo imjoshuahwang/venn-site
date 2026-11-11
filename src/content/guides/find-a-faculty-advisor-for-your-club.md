@@ -54,4 +54,4 @@ Send reminders, share updates and say thank you. Invite them to events. An advis
 
 ## Where Venn fits
 
-An advisor makes your club official, and Venn helps with the next step: connecting your club with college clubs and companies in your field. Venn is for high school and college students who are already building. Venn is free for high school and college students who are already building a club, nonprofit, project or startup. You apply each season, Venn picks a small batch (about 30% of applicants were accepted for Fall '26), and we connect the batch with college clubs and companies in their field. [Apply to Venn](/apply).
+An advisor makes your club official, and Venn helps with the next step: connecting your club with college clubs and companies in your field. Venn is free for high school and college students who are already building a club, nonprofit, project or startup. You apply each season, Venn picks a small batch (about 30% of applicants were accepted for Fall '26), and Venn aims to connect the batch with college clubs and companies in their field. [Apply to Venn](/apply).

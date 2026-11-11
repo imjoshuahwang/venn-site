@@ -50,4 +50,4 @@ Different mentors help with different things. A teacher, a college student and a
 
 ## Where Venn fits
 
-Mentors are easier to find when you have something to show. Venn connects high school builders with college clubs, college students and companies in their field, which is a faster way to meet people a few steps ahead. Venn is free for high school and college students who are already building a club, nonprofit, project or startup. You apply each season, Venn picks a small batch (about 30% of applicants were accepted for Fall '26), and we connect the batch with college clubs and companies in their field. [Apply to Venn](/apply).
+Mentors are easier to find when you have something to show. Venn connects high school builders with college clubs, college students and companies in their field, which is one way to meet people a few steps ahead. Venn is free for high school and college students who are already building a club, nonprofit, project or startup. You apply each season, Venn picks a small batch (about 30% of applicants were accepted for Fall '26), and Venn aims to connect the batch with college clubs and companies in their field. [Apply to Venn](/apply).

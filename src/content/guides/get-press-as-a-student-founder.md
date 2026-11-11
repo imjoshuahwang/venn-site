@@ -48,4 +48,4 @@ Share the article, add it to your page and send it to mentors and sponsors. Pres
 
 ## Where Venn fits
 
-Venn works with companies and shows partner organizations on its site and season pages. For you, that can mean a real name next to your project when you pitch. Venn is free for high school and college students who are already building a club, nonprofit, project or startup. You apply each season, Venn picks a small batch (about 30% of applicants were accepted for Fall '26), and we connect the batch with college clubs and companies in their field. [Apply to Venn](/apply).
+Venn works with companies and shows partner organizations on its site and season pages. If you are accepted, your project could be listed there too. Venn is free for high school and college students who are already building a club, nonprofit, project or startup. You apply each season, Venn picks a small batch (about 30% of applicants were accepted for Fall '26), and Venn aims to connect the batch with college clubs and companies in their field. [Apply to Venn](/apply).
