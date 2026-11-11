@@ -25,7 +25,9 @@ export const PAGES = {
 };
 
 export async function serveFixtures() {
+  const seen = []; // { path, headers } per request, for header assertions
   const server = http.createServer((req, res) => {
+    seen.push({ path: new URL(req.url, 'http://x').pathname, headers: req.headers });
     const hit = PAGES[new URL(req.url, 'http://x').pathname];
     if (!hit) { res.writeHead(404, { 'content-type': 'text/plain' }); return res.end('nope'); }
     const typed = typeof hit === 'object';
@@ -33,5 +35,5 @@ export async function serveFixtures() {
     res.end(typed ? hit.body() : hit);
   });
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
-  return { base: `http://127.0.0.1:${server.address().port}`, close: () => new Promise((r) => { server.closeAllConnections?.(); server.close(r); }) };
+  return { seen, base: `http://127.0.0.1:${server.address().port}`, close: () => new Promise((r) => { server.closeAllConnections?.(); server.close(r); }) };
 }

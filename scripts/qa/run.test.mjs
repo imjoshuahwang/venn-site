@@ -6,6 +6,7 @@ import path from 'node:path';
 import { serveFixtures } from './fixtures.mjs';
 import { runMatrix } from './run.mjs';
 import { resolveDevices } from './devices.mjs';
+import { parseCli, parseHeaders } from './cli.mjs';
 import { writeJson, writeHtml, summaryTable } from './report.mjs';
 
 let srv, out;
@@ -36,4 +37,15 @@ test('runMatrix over fixtures writes report.json, report.html and shots; modes a
 test('a page that 404s is reported as a load failure', async () => {
   const results = await runMatrix({ base: srv.base, pages: ['/nope'], devices: resolveDevices({ names: ['Pixel 7'] }), outDir: out, settleMs: 50, shots: false });
   assert.ok(results.some((r) => r.check === 'load' && !r.pass && /404/.test(r.details)));
+});
+
+test('headers go to the base origin on page requests, and parseHeaders reads Name: value lines', async () => {
+  const headers = parseHeaders(['x-vercel-protection-bypass: s3cret', '']);
+  assert.deepEqual(headers, { 'x-vercel-protection-bypass': 's3cret' });
+  assert.deepEqual(parseCli(['--header', 'X-A: 1'], undefined, { QA_EXTRA_HEADERS: 'X-B: 2\n\n' }).headers, { 'X-A': '1', 'X-B': '2' });
+  assert.throws(() => parseHeaders(['no colon']), /bad header/);
+  srv.seen.length = 0;
+  await runMatrix({ base: srv.base, pages: ['/clean'], devices: resolveDevices({ names: ['Pixel 7'] }), outDir: out, settleMs: 50, shots: false, headers });
+  const hits = srv.seen.filter((r) => r.path === '/clean');
+  assert.ok(hits.length && hits.every((r) => r.headers['x-vercel-protection-bypass'] === 's3cret'));
 });

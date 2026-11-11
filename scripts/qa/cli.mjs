@@ -4,7 +4,18 @@ import { modes } from './modes.mjs';
 
 const csv = (s) => (s ? s.split(',').map((x) => x.trim()).filter(Boolean) : undefined);
 
-export function parseCli(argv, registry = modes) {
+// "Name: value" lines (repeated --header flags, or newline-separated QA_EXTRA_HEADERS) -> { name: value }.
+export function parseHeaders(lines) {
+  const out = {};
+  for (const line of lines.map((l) => l.trim()).filter(Boolean)) {
+    const i = line.indexOf(':');
+    if (i < 1) throw new Error('bad header, expected "Name: value"');
+    out[line.slice(0, i).trim()] = line.slice(i + 1).trim();
+  }
+  return out;
+}
+
+export function parseCli(argv, registry = modes, env = process.env) {
   const options = {
     pages: { type: 'string' },
     only: { type: 'string' },
@@ -12,6 +23,7 @@ export function parseCli(argv, registry = modes) {
     browsers: { type: 'string' },
     workers: { type: 'string', default: '4' },
     out: { type: 'string', default: 'qa/out' },
+    header: { type: 'string', multiple: true },
     ...Object.fromEntries(Object.keys(registry).map((k) => [k, { type: 'boolean' }])),
   };
   const { values, positionals } = parseArgs({ args: argv, options, allowPositionals: true });
@@ -23,6 +35,7 @@ export function parseCli(argv, registry = modes) {
     browsers: csv(values.browsers),
     workers: Math.max(1, parseInt(values.workers, 10) || 4),
     out: values.out,
+    headers: parseHeaders([...(values.header || []), ...(env.QA_EXTRA_HEADERS || '').split('\n')]),
     activeModes: Object.keys(registry).filter((k) => values[k]).map((k) => registry[k]),
   };
 }

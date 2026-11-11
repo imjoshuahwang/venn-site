@@ -1,4 +1,4 @@
-// Mobile QA harness CLI. Usage: npm run qa:mobile [base-url] [-- --pages /,/apply --only x --devices "iPhone SE" --browsers webkit --workers 4]
+// Mobile QA harness CLI. Usage: npm run qa:mobile [base-url] [-- --pages /,/apply --only x --devices "iPhone SE" --browsers webkit --workers 4 --header "Name: value"] (or env QA_EXTRA_HEADERS, one "Name: value" per line)
 import path from 'node:path';
 import { parseCli } from './qa/cli.mjs';
 import { crawlSitemap, parsePages, filterOnly } from './qa/crawl.mjs';
@@ -7,7 +7,7 @@ import { runMatrix } from './qa/run.mjs';
 import { writeJson, writeHtml, summaryTable } from './qa/report.mjs';
 
 const cli = parseCli(process.argv.slice(2));
-const pages = filterOnly(cli.pages ? parsePages(cli.pages.join(','), cli.base) : await crawlSitemap(cli.base), cli.only);
+const pages = filterOnly(cli.pages ? parsePages(cli.pages.join(','), cli.base) : await crawlSitemap(cli.base, (u) => fetch(u, { headers: cli.headers })), cli.only);
 const devices = resolveDevices({ names: cli.devices, browsers: cli.browsers });
 if (!pages.length || !devices.length) {
   console.error(`nothing to run: ${pages.length} pages, ${devices.length} devices`);
@@ -15,7 +15,7 @@ if (!pages.length || !devices.length) {
 }
 const outDir = path.resolve(cli.out);
 console.log(`qa:mobile ${cli.base}: ${pages.length} pages x ${devices.length} devices, ${cli.workers} workers`);
-const results = await runMatrix({ base: cli.base, pages, devices, outDir, workers: cli.workers, activeModes: cli.activeModes });
+const results = await runMatrix({ base: cli.base, pages, devices, outDir, workers: cli.workers, activeModes: cli.activeModes, headers: cli.headers });
 writeJson(outDir, results);
 writeHtml(outDir, results, { base: cli.base });
 console.log(summaryTable(results));
