@@ -1,0 +1,60 @@
+name: mobile-qa
+
+on:
+  deployment_status:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: Base URL to test
+        required: true
+      pr:
+        description: PR number to comment on (blank = none)
+        required: false
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: mobile-qa-${{ github.event.inputs.pr || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  qa:
+    # Self-hosted on the mini (GitHub-hosted minutes are blocked by billing, same as venn#986).
+    if: github.event_name == 'workflow_dispatch' || (github.event.deployment_status.state == 'success' && startsWith(github.event.deployment_status.environment, 'Preview'))
+    runs-on: [self-hosted, venn-mini]
+    timeout-minutes: 30
+    env:
+      PREVIEW_URL: ${{ github.event.inputs.url || github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
+      PR_NUMBER: ${{ github.event.inputs.pr }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      GH_TOKEN: ${{ github.token }}
+      BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - name: Playwright browsers (only if missing)
+        run: |
+          node --input-type=module -e "
+            import fs from 'node:fs';
+            import { chromium, webkit } from 'playwright';
+            process.exit([chromium, webkit].every((b) => fs.existsSync(b.executablePath())) ? 0 : 1);
+          " || npx playwright install chromium webkit
+      - name: Preview reachable
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' -H "x-vercel-protection-bypass: ${BYPASS}" "$PREVIEW_URL/")
+          echo "$PREVIEW_URL -> $code"
+          if [ "$code" = 401 ] || [ "$code" = 403 ]; then echo "::error::Preview is behind Vercel auth ($code); disable protection or fix VERCEL_AUTOMATION_BYPASS_SECRET"; exit 1; fi
+      - name: Mobile QA
+        run: npm run qa:mobile "$PREVIEW_URL" -- --workers 2
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mobile-qa
+          path: qa/out
+          if-no-files-found: ignore
+      - name: PR comment
+        if: always() && hashFiles('qa/out/report.json') != ''
+        run: node scripts/qa/pr-comment.mjs
