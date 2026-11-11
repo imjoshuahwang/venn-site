@@ -4,6 +4,7 @@ import { parseCli } from './qa/cli.mjs';
 import { crawlSitemap, parsePages, filterOnly } from './qa/crawl.mjs';
 import { resolveDevices } from './qa/devices.mjs';
 import { runMatrix } from './qa/run.mjs';
+import { loadMask } from './qa/baselines.mjs';
 import { writeJson, writeHtml, summaryTable } from './qa/report.mjs';
 
 const cli = parseCli(process.argv.slice(2));
@@ -15,7 +16,8 @@ if (!pages.length || !devices.length) {
 }
 const outDir = path.resolve(cli.out);
 console.log(`qa:mobile ${cli.base}: ${pages.length} pages x ${devices.length} devices, ${cli.workers} workers`);
-const results = await runMatrix({ base: cli.base, pages, devices, outDir, workers: cli.workers, activeModes: cli.activeModes, headers: cli.headers });
+const results = await runMatrix({ base: cli.base, pages, devices, outDir, workers: cli.workers, activeModes: cli.activeModes, headers: cli.headers,
+  visual: { dir: path.resolve('qa/baselines'), update: cli.updateBaselines, threshold: cli.diffThreshold, masks: loadMask('qa/mask.txt') } });
 writeJson(outDir, results);
 writeHtml(outDir, results, { base: cli.base });
 console.log(summaryTable(results));

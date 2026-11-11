@@ -24,6 +24,8 @@ export function parseCli(argv, registry = modes, env = process.env) {
     workers: { type: 'string', default: '4' },
     out: { type: 'string', default: 'qa/out' },
     header: { type: 'string', multiple: true },
+    'update-baselines': { type: 'boolean' },
+    'diff-threshold': { type: 'string', default: '0.2' },
     ...Object.fromEntries(Object.keys(registry).map((k) => [k, { type: 'boolean' }])),
   };
   const { values, positionals } = parseArgs({ args: argv, options, allowPositionals: true });
@@ -36,6 +38,8 @@ export function parseCli(argv, registry = modes, env = process.env) {
     workers: Math.max(1, parseInt(values.workers, 10) || 4),
     out: values.out,
     headers: parseHeaders([...(values.header || []), ...(env.QA_EXTRA_HEADERS || '').split('\n')]),
+    updateBaselines: !!values['update-baselines'],
+    diffThreshold: parseFloat(values['diff-threshold']) >= 0 ? parseFloat(values['diff-threshold']) : 0.2,
     activeModes: Object.keys(registry).filter((k) => values[k]).map((k) => registry[k]),
   };
 }

@@ -19,6 +19,8 @@
     "esbuild@0.25.12": true
   },
   "devDependencies": {
-    "playwright": "^1.64.0"
+    "pixelmatch": "^8.0.0",
+    "playwright": "^1.64.0",
+    "pngjs": "^7.0.0"
   }
 }
