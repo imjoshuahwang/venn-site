@@ -7,5 +7,5 @@ dist/
 .handoff.md
 .vercel
 supabase/.temp/
-qa/
+qa/out/
 .claude/worktrees/

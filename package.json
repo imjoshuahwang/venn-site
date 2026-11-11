@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "astro dev --host 0.0.0.0 --port 8000",
     "build": "astro build",
-    "preview": "astro preview --host 0.0.0.0 --port 8000"
+    "preview": "astro preview --host 0.0.0.0 --port 8000",
+    "qa:mobile": "node scripts/mobile-qa.mjs",
+    "test": "node --test scripts/qa/*.test.mjs"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.4",
