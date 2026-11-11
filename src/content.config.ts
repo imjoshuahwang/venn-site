@@ -8,6 +8,7 @@ const guides = defineCollection({
     description: z.string(),
     pubDate: z.coerce.date(),
     keyword: z.string().optional(),
+    faq: z.array(z.object({ q: z.string(), a: z.string() })).optional(),
   }),
 });
 
