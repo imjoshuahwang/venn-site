@@ -35,6 +35,17 @@ async function onPage(fn) {
   try { return await fn(page); } finally { await browser.close(); }
 }
 
+test('shipped flows wait out the /apply double-tap guard before a second choice tap (#101)', () => {
+  // ApplyForm ignores a .choice click within 300ms of a step change; a harness click lands ~35ms after the screen appears.
+  for (const flow of loadFlows()) {
+    flow.steps.forEach((step, i) => {
+      if (!/^tap\s.*\.choice/.test(step) || !flow.steps.slice(0, i).some((s) => s.startsWith('tap '))) return;
+      const prev = flow.steps[i - 1] ?? '';
+      assert.ok(/^wait\s+\d+/.test(prev) && Number(prev.split(/\s+/)[1]) >= 350, `flow ${flow.name}: "${step}" must follow a wait >= 350`);
+    });
+  }
+});
+
 test('parseFlows reads names, pages and steps; the shipped flows.yaml parses', () => {
   const f = parseFlows('# c\n- name: a\n  on: /x\n  steps:\n    - tap #go\n    - "fill \\"#n\\" hi"\n- name: b\n  steps:\n    - goto /\n');
   assert.deepEqual(f.map((x) => [x.name, x.on, x.steps.length]), [['a', '/x', 2], ['b', '/', 1]]);
