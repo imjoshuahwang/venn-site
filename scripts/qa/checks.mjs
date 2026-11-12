@@ -62,7 +62,8 @@ function installHelpers() {
     if (cs.display === 'none' || cs.visibility === 'hidden' || +cs.opacity === 0) return false;
     for (let p = el.parentElement; p && p !== document.documentElement; p = p.parentElement) if (+getComputedStyle(p).opacity === 0) return false;
     const r = el.getBoundingClientRect();
-    return r.width > 0 && r.height > 0;
+    // 1px boxes are the visually-hidden (sr-only) pattern: clipped away, not on screen
+    return r.width > 1 && r.height > 1;
   };
   const describe = (el) => {
     let s = el.tagName.toLowerCase();

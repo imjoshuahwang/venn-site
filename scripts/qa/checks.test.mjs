@@ -82,3 +82,8 @@ test('content under a fully transparent ancestor is not visible, so stacked cros
   const rows = await audit('/faded-stack');
   assert.deepEqual(rows.filter((r) => !r.pass), []);
 });
+
+test('a visually-hidden 1px heading does not overlap the visible text it sits over', async () => {
+  const rows = await audit('/sr-only');
+  assert.deepEqual(rows.filter((r) => !r.pass), []);
+});
