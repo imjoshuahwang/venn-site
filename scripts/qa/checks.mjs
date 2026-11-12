@@ -60,6 +60,7 @@ function installHelpers() {
     if (SKIP.has(el.tagName) || inClosedDetails(el)) return false;
     const cs = getComputedStyle(el);
     if (cs.display === 'none' || cs.visibility === 'hidden' || +cs.opacity === 0) return false;
+    for (let p = el.parentElement; p && p !== document.documentElement; p = p.parentElement) if (+getComputedStyle(p).opacity === 0) return false;
     const r = el.getBoundingClientRect();
     return r.width > 0 && r.height > 0;
   };

@@ -21,6 +21,7 @@ export const PAGES = {
 <p>Read the <a href="/a">first guide</a> and then the <a href="/b">second one</a> before you apply.</p>
 <ul><li>Items can carry <a href="/c">a link</a> in the middle of a sentence.</li></ul>`),
   '/tap-list': doc(`${clean}<ul style="list-style:none;padding:0"><li><a href="/p">Pricing</a></li><li><a href="/q">Contact</a></li></ul>`),
+  '/faded-stack': doc(`${clean}<div style="position:relative;height:80px"><div style="position:absolute;inset:0"><blockquote style="margin:0">First quote shown now</blockquote></div><div style="position:absolute;inset:0;opacity:0"><blockquote style="margin:0">Second quote faded out</blockquote></div></div>`),
   '/details-closed': doc(`${clean}<div class="faq"><details><summary>Question one?</summary><p>Answer one is long enough to wrap on a phone screen.</p></details><details><summary>Question two?</summary><p>Answer two is also long enough to wrap on a phone screen.</p></details><details><summary>Question three?</summary><p>Answer three, hidden until the summary is opened.</p></details></div>`),
   '/smooth-fixed': doc(`<div style="position:fixed;top:0;left:0;right:0;height:60px;background:#fff;z-index:2">Fixed header text</div>
 <div style="height:70px"></div>${Array.from({ length: 80 }, (_, i) => `<p>Paragraph ${i} of a very tall page with smooth scrolling.</p>`).join('')}`, { css: 'html{scroll-behavior:smooth}' }),

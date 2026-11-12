@@ -77,3 +77,8 @@ test('scrollFullPage returns settled at the top even with smooth scrolling', asy
     assert.deepEqual(rows.filter((r) => !r.pass), []);
   } finally { await ctx.close(); }
 });
+
+test('content under a fully transparent ancestor is not visible, so stacked crossfade cards do not overlap', async () => {
+  const rows = await audit('/faded-stack');
+  assert.deepEqual(rows.filter((r) => !r.pass), []);
+});

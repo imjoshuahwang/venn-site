@@ -78,7 +78,7 @@ p { margin: 0; }
   transform-origin: left; transform: scaleX(var(--p, 0)); pointer-events: none;
 }
 .nav nav { display: flex; align-items: center; gap: 10px; }
-.brand { flex-shrink: 0; display: block; }
+.brand { flex-shrink: 0; display: flex; align-items: center; min-height: 44px; }
 .brand img { filter: saturate(.6); height: 37px; width: auto; flex-shrink: 0; }
 @media (max-width: 640px) { .nav nav a[href="/guides/"] { display: none; } }
 @media (max-width: 520px) { .brand img { height: 30px; } .nav nav { gap: 8px; } .nav nav a[href="/#faq"] { display: none; } }
@@ -98,10 +98,10 @@ section { padding: 64px 0; }
 @media (max-width: 640px) { .footer-mark { width: 64.4%; } }
 .footer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 40px; }
 @media (min-width: 820px) { .footer-grid { grid-template-columns: 2fr 1fr 1fr 1fr; } }
-.footer-grid > div { display: flex; flex-direction: column; gap: 8px; }
-.footer-grid a { color: var(--muted); text-decoration: none; }
+.footer-grid > div { display: flex; flex-direction: column; gap: 0; }
+.footer-grid a { color: var(--muted); text-decoration: none; display: flex; align-items: center; min-height: 44px; }
 .footer-grid a:hover { color: var(--black); }
-.footer-h { font-weight: 600; color: var(--black); }
+.footer-h { font-weight: 600; color: var(--black); margin-bottom: 8px; }
 
 /* Reveal on scroll */
 .reveal { opacity: 0; transform: translateY(20px); filter: blur(8px); transition: opacity .9s var(--ease), transform .9s var(--ease), filter .9s var(--ease); }
