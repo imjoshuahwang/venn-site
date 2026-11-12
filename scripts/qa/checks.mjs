@@ -27,7 +27,7 @@ export async function scrollFullPage(page) {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const step = Math.max(200, Math.floor(innerHeight * 0.8));
     for (let y = 0, i = 0; i < 80; i++, y += step) {
-      scrollTo(0, y);
+      scrollTo({ top: y, left: 0, behavior: 'instant' });
       await wait(60);
       if (y + innerHeight >= document.documentElement.scrollHeight) break;
     }
@@ -35,7 +35,12 @@ export async function scrollFullPage(page) {
       Promise.all([...document.images].map((im) => im.complete ? 0 : new Promise((r) => { im.onload = im.onerror = r; }))),
       wait(4000),
     ]);
-    scrollTo(0, 0);
+    // smooth scroll-behavior would leave the page mid-scroll (fixed navs over text) when the checks run
+    document.documentElement.style.scrollBehavior = 'auto';
+    scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    for (let i = 0; i < 40 && scrollY !== 0; i++) await wait(25);
+    await wait(50);
+    document.documentElement.style.scrollBehavior = '';
   });
 }
 
@@ -43,12 +48,22 @@ export async function scrollFullPage(page) {
 function installHelpers() {
   if (window.__qa) return;
   const SKIP = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'HEAD', 'TITLE', 'META', 'LINK', 'TEMPLATE']);
+  // content of a closed <details> (anything but its first <summary>) is not rendered, though engines may still report boxes for it
+  const inClosedDetails = (el) => {
+    for (let p = el; p && p !== document.documentElement; p = p.parentElement) {
+      const d = p.parentElement;
+      if (d && d.tagName === 'DETAILS' && !d.open && !(p.tagName === 'SUMMARY' && p === d.querySelector(':scope > summary'))) return true;
+    }
+    return false;
+  };
   const isVisible = (el) => {
-    if (SKIP.has(el.tagName)) return false;
+    if (SKIP.has(el.tagName) || inClosedDetails(el)) return false;
     const cs = getComputedStyle(el);
     if (cs.display === 'none' || cs.visibility === 'hidden' || +cs.opacity === 0) return false;
+    for (let p = el.parentElement; p && p !== document.documentElement; p = p.parentElement) if (+getComputedStyle(p).opacity === 0) return false;
     const r = el.getBoundingClientRect();
-    return r.width > 0 && r.height > 0;
+    // 1px boxes are the visually-hidden (sr-only) pattern: clipped away, not on screen
+    return r.width > 1 && r.height > 1;
   };
   const describe = (el) => {
     let s = el.tagName.toLowerCase();
@@ -76,7 +91,14 @@ function installHelpers() {
     }
     return false;
   };
-  window.__qa = { isVisible, describe, ownText, textRects, clipped };
+  // not a real target: aria-hidden (honeypots), or parked outside the page horizontally
+  const hiddenTarget = (el, r) => !!el.closest('[aria-hidden="true"]') || r.right <= 0 || r.left >= document.documentElement.scrollWidth;
+  // WCAG 2.5.8 inline exception: an inline link inside a sentence is sized by the line height of the text around it
+  const inProse = (el) => {
+    if (getComputedStyle(el).display !== 'inline') return false;
+    return [...el.parentElement.childNodes].some((n) => n !== el && n.nodeType === 3 && n.textContent.trim().length > 2);
+  };
+  window.__qa = { hiddenTarget, inProse, isVisible, describe, ownText, textRects, clipped };
 }
 
 const result = (check, bad, details) => ({ check, pass: bad === 0, details: bad === 0 ? '' : details });
@@ -159,6 +181,7 @@ export async function tapTargets(page) {
     for (const el of document.querySelectorAll('a, button, input:not([type=hidden]), [role=button]')) {
       if (!q.isVisible(el)) continue;
       const r = el.getBoundingClientRect();
+      if (q.hiddenTarget(el, r) || q.inProse(el)) continue;
       if (r.width < min || r.height < min) out.push(`${q.describe(el)} ${Math.round(r.width)}x${Math.round(r.height)}`);
     }
     return out;

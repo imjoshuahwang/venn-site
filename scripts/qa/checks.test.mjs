@@ -49,3 +49,41 @@ test('overflow names the widest offender', async () => {
   assert.match(row.details, /div/);
   assert.match(row.details, /right=61\d/);
 });
+
+test('hidden honeypots and inline links in prose are not tap failures', async () => {
+  const rows = await audit('/tap-exempt');
+  assert.deepEqual(rows.filter((r) => !r.pass), []);
+});
+
+test('a small link standing alone in a list still fails tap', async () => {
+  const rows = await audit('/tap-list');
+  assert.deepEqual(rows.filter((r) => !r.pass).map((r) => r.check), ['tap']);
+});
+
+test('closed details content does not overlap its siblings', async () => {
+  const rows = await audit('/details-closed');
+  assert.deepEqual(rows.filter((r) => !r.pass), []);
+});
+
+test('scrollFullPage returns settled at the top even with smooth scrolling', async () => {
+  const ctx = await browser.newContext(contextOptions({ name: 'iPhone 15' }));
+  try {
+    const page = await ctx.newPage();
+    const state = await prepare(page);
+    await page.goto(srv.base + '/smooth-fixed', { waitUntil: 'load' });
+    await scrollFullPage(page);
+    assert.equal(await page.evaluate(() => scrollY), 0);
+    const rows = await runChecks(page, state); // no settle wait: must already be stable
+    assert.deepEqual(rows.filter((r) => !r.pass), []);
+  } finally { await ctx.close(); }
+});
+
+test('content under a fully transparent ancestor is not visible, so stacked crossfade cards do not overlap', async () => {
+  const rows = await audit('/faded-stack');
+  assert.deepEqual(rows.filter((r) => !r.pass), []);
+});
+
+test('a visually-hidden 1px heading does not overlap the visible text it sits over', async () => {
+  const rows = await audit('/sr-only');
+  assert.deepEqual(rows.filter((r) => !r.pass), []);
+});
