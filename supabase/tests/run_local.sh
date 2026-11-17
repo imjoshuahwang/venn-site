@@ -20,7 +20,15 @@ psql_() { "$PGBIN/psql" -X -q -h "$tmp" -p "$port" -U postgres -v ON_ERROR_STOP=
 psql_ -d postgres -c 'create database t' >/dev/null
 psql_ -d t >/dev/null <<'SQL'
 create role anon nologin; create role authenticated nologin; create role service_role nologin;
-create schema extensions; create schema net; create schema vault;
+create schema extensions; create schema net; create schema vault; create schema auth;
+-- Auth stubs mirroring Supabase: uid()/jwt() read request.jwt.claims; minimal auth.users.
+create table auth.users (id uuid primary key default gen_random_uuid(), email text, email_confirmed_at timestamptz);
+create function auth.jwt() returns jsonb language sql stable as
+  $f$ select coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb $f$;
+create function auth.uid() returns uuid language sql stable as
+  $f$ select nullif(auth.jwt()->>'sub', '')::uuid $f$;
+grant usage on schema auth to anon, authenticated, service_role;
+grant execute on function auth.jwt(), auth.uid() to anon, authenticated, service_role;
 -- NO-OP: pg_net is not installed; this never makes a network call.
 create function net.http_post(url text, body jsonb default '{}', params jsonb default '{}',
   headers jsonb default '{"Content-Type":"application/json"}', timeout_milliseconds int default 5000)
