@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { portalRewrite, isPublicPortalPath } from '../../src/lib/portal/host.ts';
+import { portalRewrite, isPublicPortalPath, safeNext } from '../../src/lib/portal/host.ts';
 
 test('portal host root maps to /portal', () => {
   assert.equal(portalRewrite('portal.joinvenn.org', '/'), '/portal');
@@ -31,4 +31,10 @@ test('public portal paths', () => {
   }
   assert.ok(!isPublicPortalPath('/portal'));
   assert.ok(!isPublicPortalPath('/portal/loginx'));
+});
+test('safeNext blocks open redirects', () => {
+  assert.equal(safeNext('/portal/x?a=1'), '/portal/x?a=1');
+  assert.equal(safeNext('//evil.com'), null);
+  assert.equal(safeNext('/\\evil.com'), null);
+  assert.equal(safeNext('https://evil.com'), null);
 });
