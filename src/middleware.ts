@@ -4,7 +4,7 @@ import { createServerClient, getUser } from './lib/portal/supabase';
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const { pathname } = context.url;
-  const target = portalRewrite(context.url.host, pathname, import.meta.env.PORTAL_HOST);
+  const target = portalRewrite(context.url.host, pathname, import.meta.env.PORTAL_HOST ?? process.env.PORTAL_HOST);
   if (!target) return next();
 
   const done = (res: Response) => {
