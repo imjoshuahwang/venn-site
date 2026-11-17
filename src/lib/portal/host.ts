@@ -18,3 +18,9 @@ export function isPublicPortalPath(pathname: string): boolean {
   const p = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
   return PUBLIC.includes(p) || p === '/portal/auth' || p.startsWith('/portal/auth/');
 }
+
+/** `?next=` value for the login redirect: same-origin paths only, else null. */
+export function safeNext(pathAndSearch: string): string | null {
+  if (!pathAndSearch.startsWith('/') || pathAndSearch.startsWith('//') || pathAndSearch.startsWith('/\\')) return null;
+  return pathAndSearch;
+}
