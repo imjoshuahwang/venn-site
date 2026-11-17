@@ -47,6 +47,9 @@ create table public.peer_matches (
 -- A result may sit on only one side of one pair (the unique indexes cover same-side; this covers cross-side).
 create function public.peer_matches_one_pair() returns trigger language plpgsql set search_path = public as $$
 begin
+  -- Serialize pair writes: under READ COMMITTED, concurrent inserts (x,y) and (z,x) would both pass the
+  -- exists check below and commit. The transaction-scoped lock makes the second one see the first.
+  perform pg_advisory_xact_lock(hashtext('peer_matches_pair'));
   if exists (
     select 1 from public.peer_matches p
     where p.id is distinct from new.id
@@ -89,6 +92,7 @@ revoke all on public.cohorts, public.results, public.peer_matches, public.mou_si
 grant select on public.cohorts, public.results, public.peer_matches, public.mou_signatures to authenticated;
 grant all on public.cohorts, public.results, public.peer_matches, public.mou_signatures to service_role;
 
+-- Policies below are SELECT-only on purpose: there is no insert/update/delete path for authenticated.
 create policy results_own_approved on public.results for select to authenticated
   using (status = 'approved' and application_id in (select public.portal_my_application_ids()));
 
