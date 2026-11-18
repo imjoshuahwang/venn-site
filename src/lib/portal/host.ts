@@ -25,5 +25,7 @@ export function isPublicPortalPath(pathname: string): boolean {
 /** `?next=` value for the login redirect: same-origin paths only, else null. */
 export function safeNext(pathAndSearch: string): string | null {
   if (!pathAndSearch.startsWith('/') || pathAndSearch.startsWith('//') || pathAndSearch.startsWith('/\\')) return null;
+  // The URL parser drops tabs and newlines ("/\t/evil.com" becomes "//evil.com") and reads a backslash as "/".
+  if (/[\u0000-\u001f\u007f\\]/.test(pathAndSearch)) return null;
   return pathAndSearch;
 }

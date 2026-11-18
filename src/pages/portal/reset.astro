@@ -1,6 +1,6 @@
 ---
 import Portal from '../../layouts/Portal.astro';
-import { sameOrigin, formFields, cleanEmail, validEmail, callbackUrl } from '../../lib/portal/form';
+import { sameOrigin, formFields, cleanEmail, validEmail, callbackUrl, addressDependentError } from '../../lib/portal/form';
 export const prerender = false;
 
 let sent = false;
@@ -11,7 +11,7 @@ if (Astro.request.method === 'POST') {
   if (!validEmail(email)) error = 'Enter the email you applied with.';
   else {
     const { error: e } = await Astro.locals.supabase.auth.resetPasswordForEmail(email, { redirectTo: callbackUrl(Astro, '/portal/set-password') });
-    if (e?.status === 429) error = 'Too many tries. Wait a minute, then try again.';
+    if (e?.status === 429 && !addressDependentError(e)) error = 'Too many tries. Wait a minute, then try again.';
     else sent = true; // same answer whether or not the address has an account
   }
 }

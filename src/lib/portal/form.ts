@@ -23,12 +23,24 @@ export const cleanEmail = (e: string | undefined) => (e ?? '').trim().toLowerCas
 export const validEmail = (e: string) => /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(e) && e.length <= 320;
 export const MIN_PASSWORD = 8;
 
-/** Where to land after sign in: a same-origin portal path, else /portal. */
+/** Where to land after sign in: a same-origin path under /portal, else /portal. Normalized with the URL parser
+ *  so dot segments (/portal/../apply, %2e%2e) and look-alikes (/portalx) cannot leave /portal. */
 export function landing(next: string | null | undefined): string {
   const n = next ? safeNext(next) : null;
-  return n && n.startsWith('/portal') ? n : '/portal';
+  if (!n) return '/portal';
+  let u: URL;
+  try { u = new URL(n, 'https://portal.invalid'); } catch { return '/portal'; }
+  if (u.origin !== 'https://portal.invalid') return '/portal';
+  if (u.pathname !== '/portal' && !u.pathname.startsWith('/portal/')) return '/portal';
+  return u.pathname + u.search + u.hash;
 }
 
 /** Auth emails link back here (Supabase PKCE). Must be in Supabase Auth > URL Configuration > Redirect URLs. */
 export const callbackUrl = (ctx: Ctx, next = '/portal') =>
   `${ctx.url.origin}/portal/auth/callback?next=${encodeURIComponent(landing(next))}`;
+
+/** Rate limit errors that depend on the address (a mail went to it a moment ago, or the mail quota is used up by
+ *  mails to real accounts). Showing them would tell a stranger the address has an account, so the pages answer
+ *  "sent" instead. Only the per-IP request limit (over_request_rate_limit) is shown. */
+export const addressDependentError = (e: { code?: string; status?: number } | null | undefined) =>
+  !!e && e.code === 'over_email_send_rate_limit';

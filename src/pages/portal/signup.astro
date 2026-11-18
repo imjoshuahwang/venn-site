@@ -1,6 +1,6 @@
 ---
 import Portal from '../../layouts/Portal.astro';
-import { sameOrigin, formFields, cleanEmail, validEmail, MIN_PASSWORD, callbackUrl } from '../../lib/portal/form';
+import { sameOrigin, formFields, cleanEmail, validEmail, MIN_PASSWORD, callbackUrl, addressDependentError } from '../../lib/portal/form';
 export const prerender = false;
 
 if (Astro.locals.user) return Astro.redirect('/portal', 303);
@@ -22,7 +22,8 @@ if (Astro.request.method === 'POST') {
       email, password: pw, options: { emailRedirectTo: callbackUrl(Astro, '/portal') },
     });
     // Supabase answers the same way for a new and an existing address, so nobody can probe who applied.
-    if (!e) sent = true;
+    // A mail rate limit only shows up for addresses that already have an account, so it answers like success.
+    if (!e || addressDependentError(e)) sent = true;
     else if (e.code === 'weak_password') error = 'Pick a stronger password. Longer, and not a common one.';
     else if (e.status === 429) error = 'Too many tries. Wait a minute, then try again.';
     else error = "We couldn't create your account just now. Try again in a minute.";
