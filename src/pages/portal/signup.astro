@@ -1,0 +1,63 @@
+---
+import Portal from '../../layouts/Portal.astro';
+import { sameOrigin, formFields, cleanEmail, validEmail, MIN_PASSWORD, callbackUrl } from '../../lib/portal/form';
+export const prerender = false;
+
+if (Astro.locals.user) return Astro.redirect('/portal', 303);
+const google = import.meta.env.PUBLIC_GOOGLE_AUTH === '1';
+let error = '';
+let sent = false;
+let email = '';
+
+if (Astro.request.method === 'POST') {
+  if (!sameOrigin(Astro)) return new Response('Forbidden', { status: 403 });
+  const f = await formFields(Astro);
+  email = cleanEmail(f.email);
+  const pw = f.password ?? '';
+  if (!validEmail(email)) error = 'Enter the email address you applied with.';
+  else if (pw.length < MIN_PASSWORD) error = `Use at least ${MIN_PASSWORD} characters for your password.`;
+  else if (pw !== (f.confirm ?? '')) error = 'The two passwords do not match.';
+  else {
+    const { error: e } = await Astro.locals.supabase.auth.signUp({
+      email, password: pw, options: { emailRedirectTo: callbackUrl(Astro, '/portal') },
+    });
+    // Supabase answers the same way for a new and an existing address, so nobody can probe who applied.
+    if (!e) sent = true;
+    else if (e.code === 'weak_password') error = 'Pick a stronger password: longer, and not a common one.';
+    else if (e.status === 429) error = 'Too many tries. Wait a minute and try again.';
+    else error = 'We could not create your account just now. Try again in a minute.';
+  }
+}
+---
+<Portal title="Create your account">
+  <div class="card">
+    {sent ? <>
+      <h1>Check your inbox</h1>
+      <p class="muted">We sent a confirmation link to <strong>{email}</strong>. Open it on this device to finish. It can take a minute, and it may land in spam.</p>
+      <div class="links"><a href="/portal/login">Back to sign in</a></div>
+    </> : <>
+      <h1>Create your account</h1>
+      <p class="muted">Your Fall 2026 update is waiting.</p>
+      <p class="note" style="margin-top:16px">Use the <strong>same email you applied with</strong>. That is how we find your update.</p>
+      <form method="post" class="stack" novalidate>
+        {error && <p class="note err" role="alert">{error}</p>}
+        <label class="field">Email you applied with
+          <input name="email" type="email" autocomplete="email" inputmode="email" required value={email} />
+        </label>
+        <label class="field">Password <span class="hint">At least {MIN_PASSWORD} characters</span>
+          <input name="password" type="password" autocomplete="new-password" minlength={MIN_PASSWORD} required />
+        </label>
+        <label class="field">Password again
+          <input name="confirm" type="password" autocomplete="new-password" minlength={MIN_PASSWORD} required />
+        </label>
+        <button class="btn btn-full" type="submit">Create account</button>
+        {google && <>
+          <div class="or">or</div>
+          <a class="btn btn-ghost btn-full" href="/portal/auth/google">Continue with Google</a>
+          <p class="hint">Only works if your Google account is the email you applied with.</p>
+        </>}
+      </form>
+      <div class="links"><a href="/portal/login">Already have an account? Sign in</a></div>
+    </>}
+  </div>
+</Portal>

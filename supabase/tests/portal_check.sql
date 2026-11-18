@@ -46,15 +46,22 @@ begin
   begin insert into public.peer_matches (season, result_a, result_b) values ('fall-2026', rc, rc); ok := false;
   exception when check_violation then ok := true; end;
   if not ok then raise exception 'peer pair a=b accepted'; end if;
-  begin insert into public.peer_matches (season, result_a, result_b) values ('fall-2026', ra, rc); ok := false;
-  exception when others then ok := true; end;
-  if not ok then raise exception 'result in two pairs accepted (a side)'; end if;
-  begin insert into public.peer_matches (season, result_a, result_b) values ('fall-2026', rc, rb); ok := false;
-  exception when others then ok := true; end;
-  if not ok then raise exception 'result in two pairs accepted (b side)'; end if;
-  begin insert into public.peer_matches (season, result_a, result_b) values ('fall-2026', rc, ra); ok := false;
-  exception when others then ok := true; end;
-  if not ok then raise exception 'result in two pairs accepted (cross side)'; end if;
+  -- Peers (portal v1): up to 2 pairs per result, never the same pair twice. Checked in a savepoint that rolls back.
+  begin
+    insert into public.peer_matches (season, result_a, result_b) values ('fall-2026', ra, rc);  -- A's 2nd pair: ok
+    begin insert into public.peer_matches (season, result_a, result_b) values ('fall-2026', rd, ra); ok := false;
+    exception when unique_violation then ok := true; end;
+    if not ok then raise exception 'third pair for one result accepted (b side)'; end if;
+    begin insert into public.peer_matches (season, result_a, result_b) values ('fall-2026', ra, rd); ok := false;
+    exception when unique_violation then ok := true; end;
+    if not ok then raise exception 'third pair for one result accepted (a side)'; end if;
+    begin insert into public.peer_matches (season, result_a, result_b) values ('fall-2026', rb, ra); ok := false;
+    exception when unique_violation then ok := true; end;
+    if not ok then raise exception 'same pair accepted twice (reversed)'; end if;
+    raise exception 'rollback_pairs';
+  exception when raise_exception then
+    if sqlerrm <> 'rollback_pairs' then raise; end if;
+  end;
   begin insert into public.mou_signatures (result_id, cohort_id, typed_name, agreed, user_id) values (ra, coh, 'Maya', true, ua); ok := false;
   exception when unique_violation then ok := true; end;
   if not ok then raise exception 'second MOU for one result accepted'; end if;

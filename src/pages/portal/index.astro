@@ -1,6 +1,164 @@
 ---
+import Portal from '../../layouts/Portal.astro';
+import { sameOrigin, formFields } from '../../lib/portal/form';
 export const prerender = false;
-const { user } = Astro.locals;
+
+type Peer = { match_id: number; name: string; org: string | null; building: string | null; why: string | null; me_down: boolean; both_down: boolean; email: string | null };
+type Track = { name: string; company: string | null; goal: string | null; criteria: string | null; timeline: string | null; video_url: string | null; slides_url: string | null; prompts: string | null };
+type Result = { outcome: 'cohort' | 'peer' | 'network_waitlist' | 'track_waitlist' | 'not_this_season'; outlet: string | null; viewed: boolean; track: Track | null; peers: Peer[] };
+type Me = { application: boolean; first_name?: string; org?: string | null; result?: Result | null };
+
+const sb = Astro.locals.supabase;
+const user = Astro.locals.user!; // middleware sends signed-out visitors to /portal/login
+
+if (Astro.request.method === 'POST') {
+  if (!sameOrigin(Astro)) return new Response('Forbidden', { status: 403 });
+  const f = await formFields(Astro);
+  if (f.action === 'view') {
+    await sb.rpc('portal_mark_viewed');
+    return Astro.redirect('/portal?reveal=1', 303);
+  }
+  if (f.action === 'down' && /^\d{1,12}$/.test(f.match ?? '')) {
+    await sb.rpc('portal_peer_down', { p_match: Number(f.match) });
+    return Astro.redirect('/portal#peers', 303);
+  }
+  return Astro.redirect('/portal', 303);
+}
+
+const { data, error } = await sb.rpc('portal_me');
+const me = (data ?? { application: false }) as Me;
+const r = me.result ?? null;
+const first = me.first_name || 'there';
+const org = me.org || 'your org';
+const reveal = Astro.url.searchParams.get('reveal') === '1' && !!r;
+const showLetter = !!r && (r.viewed || reveal);
+const celebrate = reveal && (r?.outcome === 'cohort' || r?.outcome === 'peer');
+
+const textLine = import.meta.env.PUBLIC_TEXT_LINE as string | undefined;
+const textLineFor = ((import.meta.env.PUBLIC_TEXT_LINE_FOR as string | undefined) ?? 'cohort,peer,not_this_season').split(',');
+const showTextLine = !!textLine && !!r && textLineFor.includes(r.outcome);
+const smsHref = textLine ? `sms:${textLine.replace(/[^\d+]/g, '')}` : '';
+
+const lines = (s: string | null | undefined) => (s ?? '').split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
+const safeUrl = (u: string | null | undefined) => (u && /^https:\/\//i.test(u) ? u : null);
+const peers = r?.peers ?? [];
 ---
-<html lang="en"><head><meta charset="utf-8" /><meta name="robots" content="noindex" /><title>Portal</title></head>
-<body><p>Signed in as {user?.email}</p></body></html>
+<Portal title="Your update" signedIn wide>
+  {error && <div class="card"><p class="note err" role="alert">We could not load your update just now. Refresh in a minute.</p></div>}
+
+  {!error && !me.application && <div class="card">
+    <h1>We could not find your application</h1>
+    <p class="muted">You are signed in as <strong>{user.email}</strong>, and no Fall 2026 application uses that email.</p>
+    <p class="muted" style="margin-top:12px">Sign out and create your account with the email you applied with. If you think this is wrong, write to contact@joinvenn.org.</p>
+  </div>}
+
+  {!error && me.application && !r && <div class="card">
+    <p class="label">Fall 2026</p>
+    <h1>Hi {first}, your update is not ready yet</h1>
+    <p class="muted">We will email you the moment it is.</p>
+  </div>}
+
+  {!error && r && !showLetter && <div class="card center">
+    <p class="label">Fall 2026</p>
+    <h1>Hi {first}, your Venn update is ready</h1>
+    <p class="muted">Take a breath. It is one tap away.</p>
+    <form method="post" class="stack"><input type="hidden" name="action" value="view" /><button class="btn btn-full" type="submit">View update</button></form>
+  </div>}
+
+  {reveal && <div class="loader" aria-hidden="true"><span></span><span></span><span></span><p>Opening your update</p></div>}
+  {celebrate && <div class="confetti" aria-hidden="true">{Array.from({ length: 28 }, (_, i) => <i style={`--i:${i}`}></i>)}</div>}
+
+  {!error && r && showLetter && <div class:list={['letter', { delayed: reveal }]}>
+    {r.outcome === 'cohort' && r.track && <section class="card">
+      <p class="label">Fall 2026 · {r.track.name} track</p>
+      <h1>Congratulations, {first}. You are in the {r.track.name} track.</h1>
+      <p>Out of more than 400 applications, {org} was picked for one of a few seats{r.track.company ? <> working with {r.track.company}</> : null}.</p>
+      {r.track.goal && <div class="block"><h2>The goal</h2><p>{r.track.goal}</p></div>}
+      {r.track.timeline && <div class="block"><h2>Timeline</h2><p>{r.track.timeline}</p></div>}
+      {r.track.criteria && <div class="block"><h2>What we look for</h2><p>{r.track.criteria}</p></div>}
+      {lines(r.track.prompts).length > 0 && <div class="block"><h2>Your first prompts</h2><ol>{lines(r.track.prompts).map((p) => <li>{p}</li>)}</ol></div>}
+      {(safeUrl(r.track.video_url) || safeUrl(r.track.slides_url)) && <div class="row">
+        {safeUrl(r.track.video_url) && <a class="btn btn-ghost btn-sm" href={safeUrl(r.track.video_url)} rel="noopener" target="_blank">Watch the kickoff</a>}
+        {safeUrl(r.track.slides_url) && <a class="btn btn-ghost btn-sm" href={safeUrl(r.track.slides_url)} rel="noopener" target="_blank">Open the slides</a>}
+      </div>}
+    </section>}
+
+    {r.outcome === 'peer' && <section class="card">
+      <p class="label">Fall 2026 · Peer match</p>
+      <h1>You are in, {first}.</h1>
+      <p>We matched {org} with {peers.length === 1 ? 'one org' : `${peers.length} orgs`} building something close to yours. Each pair takes on one small project together over 4 weeks, with a check-in at the end.</p>
+    </section>}
+
+    {(r.outcome === 'network_waitlist' || r.outcome === 'track_waitlist') && <section class="card">
+      <p class="label">Fall 2026 · Waitlist</p>
+      <h1>You are on the {r.outcome === 'track_waitlist' ? 'track' : 'network'} waitlist, {first}.</h1>
+      <p>{org} stood out, and we want to place you as soon as a seat opens that fits. You get first pick when it does.</p>
+    </section>}
+
+    {r.outcome === 'not_this_season' && <section class="card">
+      <p class="label">Fall 2026</p>
+      <h1>Thank you, {first}.</h1>
+      <p>We could not place {org} in a track or a peer match this season. That is not a verdict on you. The applications we placed told us clearly what they were building and what they needed, and that is the bar for next time.</p>
+      <p style="margin-top:12px">Applications for Spring 2027 open soon, and we would love to see you again.</p>
+      {r.outlet && <div class="block"><h2>One more thing</h2><p>Venn will coordinate a feature on {org} with {r.outlet}. Write to contact@joinvenn.org with what you are working on, and we will take it from there.</p></div>}
+    </section>}
+
+    {peers.length > 0 && <section class="card" id="peers">
+      <h2>{peers.length === 1 ? 'Your peer match' : 'Your peer matches'}</h2>
+      <p class="muted small">Tap "I'd be down" if you want to work together. Contact details only show once you both tap.</p>
+      <div class="peers">
+        {peers.map((p) => <article class="peer">
+          <h3>{p.name}</h3>
+          {p.org && <p class="muted">{p.org}</p>}
+          {p.building && <p><span class="k">Building</span> {p.building}</p>}
+          {p.why && <p><span class="k">Why we matched you</span> {p.why}</p>}
+          {p.both_down ? <p class="note ok">You are both in. Venn will introduce you over text.{p.email && <> You can also reach them at <a href={`mailto:${p.email}`}>{p.email}</a>.</>}</p>
+            : p.me_down ? <p class="note">You are down. We will introduce you as soon as they tap too.</p>
+            : <form method="post"><input type="hidden" name="action" value="down" /><input type="hidden" name="match" value={String(p.match_id)} /><button class="btn btn-full" type="submit">I'd be down</button></form>}
+        </article>)}
+      </div>
+    </section>}
+
+    {showTextLine && <section class="card">
+      <h2>Text Venn</h2>
+      <p>Save this number and text it anytime: what you are working on, what is stuck, what you need. It remembers your conversation.</p>
+      <p class="muted small" style="margin-top:8px">Replies come from Venn's AI assistant, and Joshua reads along.</p>
+      <div class="row"><a class="btn btn-sm" href={smsHref}>Text {textLine}</a></div>
+    </section>}
+  </div>}
+</Portal>
+
+<style>
+  .center { text-align: center; }
+  .block { margin-top: 20px; }
+  .block p, .block ol { color: var(--body); }
+  .block ol { padding-left: 20px; margin: 6px 0 0; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
+  .peers { display: grid; gap: 12px; margin-top: 16px; }
+  .peer { border: 1px solid var(--line); border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 8px; }
+  .peer h3 { font-size: 18px; color: var(--black); margin: 0; }
+  .peer .k { display: block; font: 400 11px/1.4 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+  .peer .note a { color: inherit; }
+
+  .loader { position: fixed; inset: 0; z-index: 60; background: var(--panel); display: flex; flex-wrap: wrap; align-content: center; justify-content: center; gap: 8px; animation: out .5s ease 3s forwards; }
+  .loader span { width: 10px; height: 10px; border-radius: 50%; background: var(--black); animation: breathe 1.2s ease-in-out infinite; }
+  .loader span:nth-child(2) { animation-delay: .2s; }
+  .loader span:nth-child(3) { animation-delay: .4s; }
+  .loader p { flex-basis: 100%; text-align: center; color: var(--muted); font-size: 14px; margin-top: 14px; }
+  @keyframes breathe { 0%, 100% { opacity: .2; transform: scale(.8); } 50% { opacity: 1; transform: scale(1); } }
+  @keyframes out { to { opacity: 0; visibility: hidden; } }
+
+  .letter.delayed { opacity: 0; transform: translateY(16px); animation: in .8s cubic-bezier(.25,1,.5,1) 3.1s forwards; }
+  @keyframes in { to { opacity: 1; transform: none; } }
+
+  .confetti { position: fixed; inset: 0; pointer-events: none; z-index: 61; overflow: hidden; }
+  .confetti i { position: absolute; top: -12px; left: calc(var(--i) * 3.6%); width: 8px; height: 12px; border-radius: 2px; opacity: 0;
+    background: hsl(calc(var(--i) * 47), 70%, 60%); animation: fall 2.6s cubic-bezier(.3,.6,.5,1) calc(3.2s + var(--i) * 40ms) forwards; }
+  @keyframes fall { 0% { opacity: 1; transform: translateY(0) rotate(0); } 100% { opacity: 0; transform: translateY(100vh) rotate(calc(var(--i) * 53deg)); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .loader { animation-delay: 1s; }
+    .letter.delayed { animation-delay: 1.1s; animation-duration: .01s; }
+    .confetti { display: none; }
+  }
+</style>

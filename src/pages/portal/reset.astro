@@ -1,0 +1,36 @@
+---
+import Portal from '../../layouts/Portal.astro';
+import { sameOrigin, formFields, cleanEmail, validEmail, callbackUrl } from '../../lib/portal/form';
+export const prerender = false;
+
+let sent = false;
+let error = '';
+if (Astro.request.method === 'POST') {
+  if (!sameOrigin(Astro)) return new Response('Forbidden', { status: 403 });
+  const email = cleanEmail((await formFields(Astro)).email);
+  if (!validEmail(email)) error = 'Enter the email address you applied with.';
+  else {
+    const { error: e } = await Astro.locals.supabase.auth.resetPasswordForEmail(email, { redirectTo: callbackUrl(Astro, '/portal/set-password') });
+    if (e?.status === 429) error = 'Too many tries. Wait a minute and try again.';
+    else sent = true; // same answer whether or not the address has an account
+  }
+}
+---
+<Portal title="Reset password">
+  <div class="card">
+    {sent ? <>
+      <h1>Check your inbox</h1>
+      <p class="muted">If that email has an account, a reset link is on its way.</p>
+    </> : <>
+      <h1>Reset your password</h1>
+      <form method="post" class="stack" novalidate>
+        {error && <p class="note err" role="alert">{error}</p>}
+        <label class="field">Email you applied with
+          <input name="email" type="email" autocomplete="email" inputmode="email" required />
+        </label>
+        <button class="btn btn-full" type="submit">Send reset link</button>
+      </form>
+    </>}
+    <div class="links"><a href="/portal/login">Back to sign in</a></div>
+  </div>
+</Portal>
