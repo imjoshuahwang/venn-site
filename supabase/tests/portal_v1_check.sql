@@ -1,4 +1,4 @@
--- Portal v1 check for 20261118120000_portal_v1.sql. LOCAL db only; all rolls back. Every assertion raises.
+-- Portal v1 check for 20261118045934_portal_v1.sql. LOCAL db only; all rolls back. Every assertion raises.
 begin;
 
 create function pg_temp.as_user(uid uuid, em text) returns void language sql as $$
