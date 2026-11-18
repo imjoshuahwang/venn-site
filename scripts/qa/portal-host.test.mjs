@@ -37,6 +37,10 @@ test('safeNext blocks open redirects', () => {
   assert.equal(safeNext('//evil.com'), null);
   assert.equal(safeNext('/\\evil.com'), null);
   assert.equal(safeNext('https://evil.com'), null);
+  // the URL parser strips tabs and newlines, so these would become //evil.com
+  assert.equal(safeNext('/\t/evil.com'), null);
+  assert.equal(safeNext('/\n/evil.com'), null);
+  assert.equal(safeNext('/portal\\..\\evil'), null);
 });
 test('portal host leaves build assets and public files at the root', () => {
   assert.equal(portalRewrite('portal.joinvenn.org', '/_astro/Portal.abc123.css'), null);
