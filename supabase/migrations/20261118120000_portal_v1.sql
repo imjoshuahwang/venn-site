@@ -76,7 +76,10 @@ declare app record; res public.results; coh public.cohorts; peers jsonb;
 begin
   select a.id, a.name, a.org, a.role into app
   from public.applications a where a.id in (select public.portal_my_application_ids())
-  order by a.created_at desc limit 1;
+  -- Some people applied twice: prefer the application that carries an approved Result.
+  order by exists (select 1 from public.results r where r.application_id = a.id and r.season = 'fall-2026'
+                   and r.status = 'approved') desc, a.created_at desc
+  limit 1;
   if app.id is null then return jsonb_build_object('application', false); end if;
 
   select * into res from public.results r

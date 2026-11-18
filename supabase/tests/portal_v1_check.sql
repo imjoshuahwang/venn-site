@@ -114,6 +114,22 @@ begin
   if not ok then raise exception 'authenticated wrote peer_matches directly'; end if;
   reset role;
 
+  -- applied twice: the older application has the approved result, the newer one has none
+  declare ue uuid := gen_random_uuid(); e1 bigint; e2 bigint;
+  begin
+    insert into auth.users (id, email, email_confirmed_at) values (ue, 'eve@example.com', now());
+    insert into public.applications (role, name, email, org, working_on, source, created_at)
+      values ('student', 'Eve Park', 'eve@example.com', 'Lab', 'x', '/apply', now() - interval '2 days') returning id into e1;
+    insert into public.applications (role, name, email, org, working_on, source)
+      values ('student', 'Eve Park', 'eve@example.com', 'Lab again', 'x', '/apply') returning id into e2;
+    insert into public.results (application_id, outcome, cohort_id, status) values (e1, 'cohort', coh, 'approved');
+    set local role authenticated;
+    perform pg_temp.as_user(ue, 'eve@example.com');
+    me := public.portal_me();
+    if me->'result'->>'outcome' is distinct from 'cohort' then raise exception 'duplicate applicant lost their result: %', me; end if;
+    reset role;
+  end;
+
   -- C approved: outlet comes through
   update public.results set status = 'approved' where id = rc;
   set local role authenticated;
