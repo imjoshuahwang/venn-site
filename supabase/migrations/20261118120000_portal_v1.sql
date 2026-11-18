@@ -1,5 +1,5 @@
 -- Portal v1 (Fall '26 Results). Josh's calls on Nov 17:
---   * Each Applicant gets at most 1 track (a Cohort, max 10 seats) and at most 2 Peer matches.
+--   * Each Applicant gets at most 1 track (a Cohort, seat_cap seats, default 20: "15, 20 per track if relevant") and at most 2 Peer matches.
 --   * Not this Season can carry a news feature (results.outlet); Venn coordinates it.
 -- Additive: no data is deleted. Drafts stay invisible to applicants (RLS from 20261118000000 still holds).
 
@@ -25,8 +25,8 @@ begin
   return new;
 end $$;
 
--- 2. Tracks: a Cohort holds at most seat_cap results (default 10). Prompts shown to members.
-alter table public.cohorts add column seat_cap int not null default 10 check (seat_cap between 1 and 50);
+-- 2. Tracks: a Cohort holds at most seat_cap results (default 20). Prompts shown to members.
+alter table public.cohorts add column seat_cap int not null default 20 check (seat_cap between 1 and 50);
 alter table public.cohorts add column prompts text;
 
 create function public.results_seat_cap() returns trigger language plpgsql set search_path = public as $$
