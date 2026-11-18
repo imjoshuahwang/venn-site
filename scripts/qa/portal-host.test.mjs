@@ -38,3 +38,12 @@ test('safeNext blocks open redirects', () => {
   assert.equal(safeNext('/\\evil.com'), null);
   assert.equal(safeNext('https://evil.com'), null);
 });
+test('portal host leaves build assets and public files at the root', () => {
+  assert.equal(portalRewrite('portal.joinvenn.org', '/_astro/Portal.abc123.css'), null);
+  assert.equal(portalRewrite('portal.joinvenn.org', '/favicon-32.png'), null);
+  assert.equal(portalRewrite('portal.joinvenn.org', '/robots.txt'), null);
+  assert.equal(portalRewrite('portal.joinvenn.org', '/auth/callback'), '/portal/auth/callback');
+});
+test('demo is reachable signed out (it 404s outside preview on its own)', () => {
+  assert.ok(isPublicPortalPath('/portal/demo'));
+});

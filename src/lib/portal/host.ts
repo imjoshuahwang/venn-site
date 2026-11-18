@@ -1,5 +1,7 @@
 const DEFAULT_PORTAL_HOST = 'portal.joinvenn.org';
-const PUBLIC = ['/portal/login', '/portal/signup', '/portal/set-password', '/portal/reset', '/portal/logout'];
+const PUBLIC = ['/portal/login', '/portal/signup', '/portal/set-password', '/portal/reset', '/portal/logout', '/portal/demo'];
+/** Build assets and public files stay at the root on the portal host. Mirrors the host rewrite in vercel.json. */
+const ASSET = /^\/(?:_astro|_vercel)\/|\.[a-z0-9]+$/i;
 
 const bare = (h: string) => h.toLowerCase().replace(/:\d+$/, '');
 
@@ -9,6 +11,7 @@ export function portalRewrite(host: string, pathname: string, portalHost?: strin
   const inPortal = pathname === '/portal' || pathname.startsWith('/portal/');
   if (isPortalHost) {
     if (inPortal) return pathname;
+    if (ASSET.test(pathname)) return null;
     return pathname === '/' ? '/portal' : '/portal' + pathname;
   }
   return inPortal ? pathname : null;
