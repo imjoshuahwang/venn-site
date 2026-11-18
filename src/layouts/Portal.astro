@@ -3,8 +3,10 @@ import { Image } from 'astro:assets';
 import logo from '../assets/venn-logo.png';
 import '../styles/global.css';
 
-interface Props { title: string; signedIn?: boolean; wide?: boolean }
-const { title, signedIn = false, wide = false } = Astro.props;
+// The applicant portal: one glass card on the same soft green and blue field as /apply and /refer.
+// demo: the preview-only /portal/demo page. Sign out goes nowhere real and a small flag says the data is fake.
+interface Props { title: string; signedIn?: boolean; wide?: boolean; demo?: boolean }
+const { title, signedIn = false, wide = false, demo = false } = Astro.props;
 ---
 <!doctype html>
 <html lang="en">
@@ -13,44 +15,113 @@ const { title, signedIn = false, wide = false } = Astro.props;
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex, nofollow">
   <meta name="referrer" content="same-origin">
+  <meta name="theme-color" content="#ffffff">
   <title>{title} · Venn</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body class="portal">
   <header class="p-top">
-    <a href="/portal" class="brand"><Image src={logo} alt="Venn" width={110} densities={[1, 2]} loading="eager" /></a>
-    {signedIn && <form method="post" action="/portal/logout"><button class="btn btn-ghost btn-sm" type="submit">Sign out</button></form>}
+    <a href={demo ? '/portal/demo' : '/portal'} class="brand"><Image src={logo} alt="Venn" width={96} densities={[1, 2]} loading="eager" /></a>
+    {signedIn && (demo
+      ? <a class="btn btn-ghost btn-sm" href="/portal/demo">Sign out</a>
+      : <form method="post" action="/portal/logout"><button class="btn btn-ghost btn-sm" type="submit">Sign out</button></form>)}
   </header>
+  {demo && <p class="p-demo">Demo with fake data. Nothing here is saved.</p>}
   <main class:list={['p-main', { wide }]}><slot /></main>
-  <footer class="p-foot muted small">Questions? <a href="mailto:contact@joinvenn.org">contact@joinvenn.org</a></footer>
+  <footer class="p-foot">Questions? <a href="mailto:contact@joinvenn.org">contact@joinvenn.org</a></footer>
 </body>
 </html>
 
 <style is:global>
-  body.portal { background: var(--panel); min-height: 100dvh; display: flex; flex-direction: column; }
-  .p-top { display: flex; align-items: center; justify-content: space-between; padding: calc(12px + env(safe-area-inset-top)) 16px 12px; max-width: 640px; width: 100%; margin: 0 auto; }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  body.portal {
+    min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; background: #fff;
+    --forest: #2a4a30; --leaf: #5f8f63; --sage: #9fbf9a; --mint: #cfe6c9; --sky: #c4d4ef;
+    --glass-line: rgba(0, 0, 0, .08);
+  }
+  /* Same field as /apply: sage from the top left, sky from the bottom right. Fixed, so it never scrolls or seams. */
+  body.portal::before {
+    content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background:
+      radial-gradient(60vmax 60vmax at 0% 0%, rgba(159, 191, 154, .28), transparent 70%),
+      radial-gradient(60vmax 60vmax at 100% 100%, rgba(196, 212, 239, .4), transparent 70%),
+      #fff;
+  }
+
+  .p-top {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; max-width: 640px; margin: 0 auto;
+    padding: calc(16px + env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 8px max(16px, env(safe-area-inset-left));
+  }
+  .p-top .brand { min-height: 44px; }
   .p-top .brand img { height: 30px; width: auto; filter: saturate(.6); }
-  .p-main { flex: 1; width: 100%; max-width: 480px; margin: 0 auto; padding: 8px 16px 40px; }
-  .p-main.wide { max-width: 640px; }
-  .p-foot { text-align: center; padding: 24px 16px calc(24px + env(safe-area-inset-bottom)); }
-  .card { background: #fff; border-radius: 24px; padding: 28px 22px; box-shadow: 0 0 0 1px rgba(0,0,0,.05), 0 12px 32px -20px rgba(15,23,42,.18); }
-  @media (min-width: 480px) { .card { padding: 36px 32px; } }
+  .p-top form { margin: 0; }
+  .p-demo {
+    align-self: center; margin: 4px 16px 0; padding: 6px 14px; border-radius: 999px; font-size: 13px; color: var(--forest);
+    background: #e9f0e7; box-shadow: inset 0 0 0 1px #d3e0cf; text-align: center;
+  }
+  .p-main {
+    flex: 1; width: 100%; max-width: 480px; margin: 0 auto;
+    padding: 16px max(16px, env(safe-area-inset-right)) 32px max(16px, env(safe-area-inset-left));
+  }
+  .p-main.wide { max-width: 600px; }
+  @media (min-width: 768px) { .p-main { padding-top: 40px; } }
+  .p-foot {
+    text-align: center; font-size: 14px; color: var(--muted);
+    padding: 16px max(16px, env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  }
+  .p-foot a { color: var(--muted); display: inline-flex; align-items: center; min-height: 44px; text-underline-offset: 3px; text-decoration-color: #ccc; }
+  .p-foot a:hover { color: var(--black); }
+
+  /* The card: the frosted glass of /refer. */
+  .card {
+    position: relative; padding: 28px 20px 24px; border-radius: 28px; overflow-wrap: anywhere;
+    background: rgba(255, 255, 255, .62); -webkit-backdrop-filter: blur(28px) saturate(1.8); backdrop-filter: blur(28px) saturate(1.8);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .95), inset 0 0 0 1px rgba(255, 255, 255, .6), 0 0 0 1px rgba(0, 0, 0, .04), 0 40px 90px -40px rgba(30, 45, 35, .3);
+  }
+  @media (min-width: 480px) { .card { padding: 36px 36px 32px; } }
   .card + .card { margin-top: 16px; }
-  .card h1 { font-size: 28px; letter-spacing: -.02em; line-height: 1.15; margin-bottom: 8px; }
-  .card h2 { font-size: 20px; letter-spacing: -.01em; margin-bottom: 6px; }
-  .stack { display: flex; flex-direction: column; gap: 14px; margin-top: 20px; }
-  .field { display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 500; color: var(--black); }
-  .field input { font: 400 16px/1.4 var(--font); padding: 14px 16px; border-radius: 14px; border: 1px solid #ddd; background: #fff; color: var(--text); min-height: 48px; }
-  .field input:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
-  .hint { font-size: 13px; color: var(--muted); font-weight: 400; }
-  .note { font-size: 14px; padding: 12px 14px; border-radius: 14px; background: #f1f5fb; color: #2b3f63; }
-  .note.err { background: #fdf0f0; color: #8a2b2b; }
-  .note.ok { background: #eef7f0; color: #25573a; }
+  .card .label { margin-bottom: 10px; }
+  .card h1 { font-size: clamp(1.9rem, 7vw, 2.5rem); font-weight: 600; letter-spacing: -.04em; line-height: 1.08; margin-bottom: 12px; }
+  .card h2 { font-size: 1.25rem; font-weight: 600; letter-spacing: -.02em; line-height: 1.25; margin-bottom: 8px; }
+  .card p { color: var(--body); }
+  .card p + p { margin-top: 12px; }
+  .card strong { color: var(--black); font-weight: 600; }
+  .card a:not(.btn) { text-underline-offset: 3px; text-decoration-color: rgba(0, 0, 0, .25); }
+  .card a:not(.btn):hover { text-decoration-color: currentColor; }
+  .lede { font-size: 17px; }
+
+  /* The highlighter mark from the homepage ("their thing"). */
+  .hl {
+    color: var(--forest); background: var(--mint); padding: 0 .28em; margin: 0 -.06em; border-radius: .35em .6em .4em .65em;
+    -webkit-box-decoration-break: clone; box-decoration-break: clone;
+  }
+
+  .stack { display: flex; flex-direction: column; gap: 16px; margin-top: 24px; }
+  .field { display: grid; gap: 6px; }
+  .field-l { font-size: 14px; color: var(--muted); }
+  .field-l b { font-weight: 500; color: var(--black); }
+  .field input {
+    font: 17px/1.5 var(--font); color: var(--text); background: rgba(255, 255, 255, .85); width: 100%; min-height: 52px;
+    border: 0; border-radius: 14px; padding: 13px 16px; box-shadow: inset 0 0 0 1px #e0e0e0;
+    -webkit-appearance: none; appearance: none;
+  }
+  .field input::placeholder { color: #a5a5a8; }
+  .field input:focus { outline: none; box-shadow: inset 0 0 0 2px #000; }
+  .hint { font-size: 14px; color: var(--muted); line-height: 1.5; }
+
+  .note { font-size: 15px; line-height: 1.5; padding: 12px 16px; border-radius: 14px; color: var(--text); background: rgba(255, 255, 255, .7); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05); }
+  .card p.note { color: var(--text); }
+  .card p.note.ok, .note.ok { color: var(--forest); background: #e9f0e7; box-shadow: inset 0 0 0 1px #d3e0cf; }
+  .card p.note.err, .note.err { color: #991b1b; background: #fdf2f2; box-shadow: inset 0 0 0 1px #f5d5d5; }
+  .note a { color: inherit; }
+
   .btn-full { width: 100%; min-height: 52px; }
-  .or { display: flex; align-items: center; gap: 12px; color: var(--faint); font-size: 13px; margin: 4px 0; }
-  .or::before, .or::after { content: ''; flex: 1; height: 1px; background: var(--line); }
-  .links { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 18px; font-size: 14px; }
-  .links a { color: var(--muted); min-height: 44px; display: inline-flex; align-items: center; }
-  .p-foot a { color: var(--muted); }
+  .portal .btn-sm { min-height: 44px; }
+  .btn:focus-visible, .card a:focus-visible, .p-foot a:focus-visible, .brand:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .or { display: flex; align-items: center; gap: 12px; color: var(--faint); font-size: 13px; }
+  .or::before, .or::after { content: ''; flex: 1; height: 1px; background: var(--glass-line); }
+  .links { display: flex; justify-content: space-between; gap: 4px 16px; flex-wrap: wrap; margin-top: 16px; font-size: 15px; }
+  .card .links a { color: var(--muted); min-height: 44px; display: inline-flex; align-items: center; }
+  .card .links a:hover { color: var(--black); }
 </style>

@@ -9,7 +9,7 @@ if (Astro.locals.user) return Astro.redirect(next, 303);
 const google = import.meta.env.PUBLIC_GOOGLE_AUTH === '1';
 let error = '';
 let email = '';
-const notice = ({ confirmed: 'Email confirmed. Sign in to see your update.', reset: 'Password updated. Sign in with your new password.', out: 'You are signed out.', link: 'That link has expired or was already used. Sign in, or ask for a new one.' } as Record<string, string>)[Astro.url.searchParams.get('m') ?? ''] ?? '';
+const notice = ({ confirmed: 'Email confirmed. Sign in to see your update.', reset: 'Password updated. Sign in with your new one.', out: "You're signed out. See you soon.", link: 'That link expired or was already used. Sign in, or ask for a new one.' } as Record<string, string>)[Astro.url.searchParams.get('m') ?? ''] ?? '';
 
 if (Astro.request.method === 'POST') {
   if (!sameOrigin(Astro)) return new Response('Forbidden', { status: 403 });
@@ -18,22 +18,23 @@ if (Astro.request.method === 'POST') {
   const { error: e } = await Astro.locals.supabase.auth.signInWithPassword({ email, password: f.password ?? '' });
   if (!e) return Astro.redirect(next, 303);
   error = e.code === 'email_not_confirmed'
-    ? 'Confirm your email first. We sent a link when you signed up.'
-    : e.status === 429 ? 'Too many tries. Wait a minute and try again.'
-    : 'That email and password do not match.';
+    ? 'Confirm your email first. We sent you a link when you signed up.'
+    : e.status === 429 ? 'Too many tries. Wait a minute, then try again.'
+    : "That email and password don't match.";
 }
 ---
 <Portal title="Sign in">
   <div class="card">
+    <p class="label">Fall ’26</p>
     <h1>Sign in</h1>
-    <p class="muted">See your Venn Fall 2026 update.</p>
+    <p class="lede">See your Venn update.</p>
     <form method="post" class="stack" novalidate>
       {notice && <p class="note ok" role="status">{notice}</p>}
       {error && <p class="note err" role="alert">{error}</p>}
-      <label class="field">Email you applied with
-        <input name="email" type="email" autocomplete="email" inputmode="email" required value={email} />
+      <label class="field"><span class="field-l">Email you applied with</span>
+        <input name="email" type="email" autocomplete="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" required value={email} />
       </label>
-      <label class="field">Password
+      <label class="field"><span class="field-l">Password</span>
         <input name="password" type="password" autocomplete="current-password" required />
       </label>
       <button class="btn btn-full" type="submit">Sign in</button>
@@ -43,8 +44,8 @@ if (Astro.request.method === 'POST') {
       </>}
     </form>
     <div class="links">
-      <a href="/portal/signup">First time? Create your account</a>
-      <a href="/portal/reset">Forgot password</a>
+      <a href="/portal/signup">First time here? Create your account</a>
+      <a href="/portal/reset">Forgot your password?</a>
     </div>
   </div>
 </Portal>

@@ -1,0 +1,78 @@
+---
+// Preview only: every portal state with fake data, for checking the design in a browser.
+// 404 on production. Nothing here reads or writes Supabase, and its forms are GET links back to this page.
+import Portal from '../../layouts/Portal.astro';
+import Update from '../../components/portal/Update.astro';
+import type { Me, Peer, Result, FormFor } from '../../components/portal/types';
+import { demoAllowed } from '../../lib/demo-gate';
+export const prerender = false;
+
+if (!demoAllowed({ dev: import.meta.env.DEV, vercelEnv: process.env.VERCEL_ENV })) {
+  return new Response('Not found', { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+}
+
+const base = { application: true, first_name: 'Alex', org: 'Lincoln High Robotics' };
+const track = {
+  name: 'Climate', company: 'Northwind Energy',
+  goal: 'Ship one tool your school can use to cut its energy bill, and show the numbers by the end of the season.',
+  timeline: 'Kickoff call this Saturday, a short call every Thursday, and demo day in four weeks.',
+  criteria: 'Something real people use, a clear before and after, and a short write up of what you learned.',
+  video_url: 'https://example.com/kickoff', slides_url: 'https://example.com/slides',
+  prompts: 'Who on your campus pays the energy bill, and have you met them?\nWhat could you measure this week, with what you already have?\nWhat would make Northwind want to keep working with you?',
+};
+const peer = (id: number, name: string, org: string, building: string, why: string, me_down = false, both_down = false, email: string | null = null): Peer =>
+  ({ match_id: id, name, org, building, why, me_down, both_down, email });
+const maya = (down = false, both = false) => peer(101, 'Maya Chen', 'Eastside Code Club', 'A tutoring app that pairs juniors with seniors for AP prep.', 'You both run weekly sessions for younger students and want more of them to come back.', down || both, both, both ? 'maya@example.com' : null);
+const diego = (down = false) => peer(102, 'Diego Ramos', 'Green Commute Project', 'A bike to school challenge across three middle schools.', 'You both need a simple way to track who shows up and to share it with sponsors.', down);
+const result = (r: Partial<Result>): Result => ({ outcome: 'cohort', why: null, outlet: null, viewed: true, track: null, peers: [], ...r });
+
+const states: Record<string, { label: string; me: Me }> = {
+  ready: { label: 'Ready: the View update screen', me: { ...base, result: result({ outcome: 'cohort', viewed: false, track }) } },
+  cohort: { label: 'Cohort: in a track', me: { ...base, result: result({ outcome: 'cohort', track }) } },
+  peer: { label: 'Peer match: 2 peers', me: { ...base, result: result({ outcome: 'peer', peers: [maya(), diego()] }) } },
+  peer_down: { label: 'Peer match: tapped one', me: { ...base, result: result({ outcome: 'peer', peers: [maya(true), diego()] }) } },
+  both_down: { label: 'Peer match: one mutual, with contact', me: { ...base, result: result({ outcome: 'peer', peers: [maya(true, true), diego()] }) } },
+  waitlist: { label: 'Waitlist: network', me: { ...base, result: result({ outcome: 'network_waitlist' }) } },
+  waitlist_track: { label: 'Waitlist: track', me: { ...base, result: result({ outcome: 'track_waitlist' }) } },
+  nts: { label: 'Not this season', me: { ...base, result: result({ outcome: 'not_this_season' }) } },
+  nts_outlet: { label: 'Not this season, with a feature', me: { ...base, result: result({ outcome: 'not_this_season', outlet: 'Bay Student Press' }) } },
+  notready: { label: 'Not ready yet', me: { ...base, result: null } },
+  noapp: { label: 'No application for this email', me: { application: false } },
+  error: { label: 'Could not load', me: { application: false } },
+};
+
+const q = Astro.url.searchParams;
+const state = q.get('state') ?? '';
+const s = states[state];
+const reveal = q.get('reveal') === '1';
+const after: Record<string, string> = { peer: 'peer_down', peer_down: 'both_down', both_down: 'both_down' };
+const formFor: FormFor = (action) => action === 'view'
+  ? { method: 'get', action: '/portal/demo', fields: { state: state === 'ready' ? 'cohort' : state, reveal: '1' } }
+  : { method: 'get', action: '/portal/demo#peers', fields: { state: after[state] ?? state } };
+---
+{s
+  ? <Portal title={`Demo: ${s.label}`} signedIn wide demo>
+      <Update me={s.me} reveal={reveal} email="alex@example.com" error={state === 'error'} textLine="(408) 555 0134" formFor={formFor} demo />
+    </Portal>
+  : <Portal title="Portal demo" demo>
+      <div class="card">
+        <p class="label">Preview only</p>
+        <h1>Portal demo</h1>
+        <p>Every state of the update page, with fake data. Forms here only move between these pages.</p>
+        <ul class="states">
+          {Object.entries(states).map(([k, v]) => <li><a href={`/portal/demo?state=${k}`}>{v.label}</a></li>)}
+          <li><a href="/portal/demo?state=cohort&reveal=1">Cohort, with the reveal and confetti</a></li>
+          <li><a href="/portal/demo?state=peer&reveal=1">Peer match, with the reveal and confetti</a></li>
+          <li><a href="/portal/demo?state=nts&reveal=1">Not this season, with the reveal</a></li>
+        </ul>
+        <p class="hint">Sign in, sign up and reset have no fake states. Open them at <a href="/portal/login">/portal/login</a>, <a href="/portal/signup">/portal/signup</a> and <a href="/portal/reset">/portal/reset</a>.</p>
+      </div>
+    </Portal>}
+
+<style>
+  .states { list-style: none; margin: 20px 0; padding: 0; border-top: 1px solid var(--glass-line); }
+  .states li { border-bottom: 1px solid var(--glass-line); }
+  .states a { display: flex; align-items: center; min-height: 48px; padding: 8px 0; color: var(--black); text-decoration: none; font-weight: 500; }
+  .states a::after { content: '›'; margin-left: auto; padding-left: 12px; color: var(--faint); }
+  .states a:hover { color: var(--accent); }
+</style>

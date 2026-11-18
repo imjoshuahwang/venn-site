@@ -8,10 +8,10 @@ let error = '';
 if (Astro.request.method === 'POST') {
   if (!sameOrigin(Astro)) return new Response('Forbidden', { status: 403 });
   const email = cleanEmail((await formFields(Astro)).email);
-  if (!validEmail(email)) error = 'Enter the email address you applied with.';
+  if (!validEmail(email)) error = 'Enter the email you applied with.';
   else {
     const { error: e } = await Astro.locals.supabase.auth.resetPasswordForEmail(email, { redirectTo: callbackUrl(Astro, '/portal/set-password') });
-    if (e?.status === 429) error = 'Too many tries. Wait a minute and try again.';
+    if (e?.status === 429) error = 'Too many tries. Wait a minute, then try again.';
     else sent = true; // same answer whether or not the address has an account
   }
 }
@@ -20,13 +20,14 @@ if (Astro.request.method === 'POST') {
   <div class="card">
     {sent ? <>
       <h1>Check your inbox</h1>
-      <p class="muted">If that email has an account, a reset link is on its way.</p>
+      <p class="lede">If that email has an account, a reset link is on its way. It can take a minute, and it might land in spam.</p>
     </> : <>
       <h1>Reset your password</h1>
+      <p class="lede">We'll email you a link to set a new one.</p>
       <form method="post" class="stack" novalidate>
         {error && <p class="note err" role="alert">{error}</p>}
-        <label class="field">Email you applied with
-          <input name="email" type="email" autocomplete="email" inputmode="email" required />
+        <label class="field"><span class="field-l">Email you applied with</span>
+          <input name="email" type="email" autocomplete="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" required />
         </label>
         <button class="btn btn-full" type="submit">Send reset link</button>
       </form>

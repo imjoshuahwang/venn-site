@@ -14,50 +14,63 @@ if (Astro.request.method === 'POST') {
   const f = await formFields(Astro);
   email = cleanEmail(f.email);
   const pw = f.password ?? '';
-  if (!validEmail(email)) error = 'Enter the email address you applied with.';
+  if (!validEmail(email)) error = 'Enter the email you applied with.';
   else if (pw.length < MIN_PASSWORD) error = `Use at least ${MIN_PASSWORD} characters for your password.`;
-  else if (pw !== (f.confirm ?? '')) error = 'The two passwords do not match.';
+  else if (pw !== (f.confirm ?? '')) error = "Those two passwords don't match.";
   else {
     const { error: e } = await Astro.locals.supabase.auth.signUp({
       email, password: pw, options: { emailRedirectTo: callbackUrl(Astro, '/portal') },
     });
     // Supabase answers the same way for a new and an existing address, so nobody can probe who applied.
     if (!e) sent = true;
-    else if (e.code === 'weak_password') error = 'Pick a stronger password: longer, and not a common one.';
-    else if (e.status === 429) error = 'Too many tries. Wait a minute and try again.';
-    else error = 'We could not create your account just now. Try again in a minute.';
+    else if (e.code === 'weak_password') error = 'Pick a stronger password. Longer, and not a common one.';
+    else if (e.status === 429) error = 'Too many tries. Wait a minute, then try again.';
+    else error = "We couldn't create your account just now. Try again in a minute.";
   }
 }
 ---
 <Portal title="Create your account">
   <div class="card">
     {sent ? <>
+      <p class="label">Almost there</p>
       <h1>Check your inbox</h1>
-      <p class="muted">We sent a confirmation link to <strong>{email}</strong>. Open it on this device to finish. It can take a minute, and it may land in spam.</p>
+      <p class="lede">We sent a confirmation link to <strong>{email}</strong>. Open it on this device to finish.</p>
+      <p>It can take a minute, and it might land in spam. If that isn't the email you applied with, <a href="/portal/signup">start again</a> with the one you did.</p>
       <div class="links"><a href="/portal/login">Back to sign in</a></div>
     </> : <>
+      <p class="label">Fall ’26</p>
       <h1>Create your account</h1>
-      <p class="muted">Your Fall 2026 update is waiting.</p>
-      <p class="note" style="margin-top:16px">Use the <strong>same email you applied with</strong>. That is how we find your update.</p>
+      <p class="lede">Your update is waiting.</p>
+      <div class="key">
+        <p>Use the <span class="hl">same email you applied with</span>.</p>
+        <p>That's how we find your update. Any other email shows nothing.</p>
+      </div>
       <form method="post" class="stack" novalidate>
         {error && <p class="note err" role="alert">{error}</p>}
-        <label class="field">Email you applied with
-          <input name="email" type="email" autocomplete="email" inputmode="email" required value={email} />
+        <label class="field"><span class="field-l"><b>Email you applied with</b></span>
+          <input name="email" type="email" autocomplete="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" required value={email} />
         </label>
-        <label class="field">Password <span class="hint">At least {MIN_PASSWORD} characters</span>
+        <label class="field"><span class="field-l">Password, at least {MIN_PASSWORD} characters</span>
           <input name="password" type="password" autocomplete="new-password" minlength={MIN_PASSWORD} required />
         </label>
-        <label class="field">Password again
+        <label class="field"><span class="field-l">Password again</span>
           <input name="confirm" type="password" autocomplete="new-password" minlength={MIN_PASSWORD} required />
         </label>
         <button class="btn btn-full" type="submit">Create account</button>
         {google && <>
           <div class="or">or</div>
           <a class="btn btn-ghost btn-full" href="/portal/auth/google">Continue with Google</a>
-          <p class="hint">Only works if your Google account is the email you applied with.</p>
+          <p class="hint">Only works if your Google account uses the email you applied with.</p>
         </>}
       </form>
       <div class="links"><a href="/portal/login">Already have an account? Sign in</a></div>
     </>}
   </div>
 </Portal>
+
+<style>
+  .key { margin-top: 20px; padding: 16px 18px; border-radius: 16px; background: rgba(255, 255, 255, .8); box-shadow: inset 0 0 0 1.5px var(--sage); }
+  .key p { color: var(--text); font-size: 15px; line-height: 1.5; }
+  .key p:first-child { font-size: 17px; font-weight: 600; color: var(--black); letter-spacing: -.01em; }
+  .card .key p + p { margin-top: 4px; }
+</style>

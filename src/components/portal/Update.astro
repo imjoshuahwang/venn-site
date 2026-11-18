@@ -1,0 +1,204 @@
+---
+// The signed-in update: every state of portal_me, the View update screen, the reveal and each letter.
+// The live page (/portal) loads the data and handles the POSTs; /portal/demo renders this with fake data.
+import type { Me, FormFor } from './types';
+
+interface Props {
+  me: Me;
+  reveal: boolean;            // just tapped View update: play the loader, then show the letter
+  email?: string;             // the signed-in address, for the "no application" state
+  error?: boolean;            // portal_me failed
+  textLine?: string;          // PUBLIC_TEXT_LINE
+  textLineFor?: string[];     // outcomes that see the text line card
+  formFor?: FormFor;          // where the View and I'd be down forms go (default: POST to this page)
+  demo?: boolean;             // no real sign out
+}
+
+const live: FormFor = (action, match) => ({ method: 'post', fields: action === 'down' ? { action, match: String(match) } : { action } });
+const { me, email = '', error = false, textLine, textLineFor = ['cohort', 'peer', 'not_this_season'], formFor = live, demo = false } = Astro.props;
+
+const r = me.result ?? null;
+const first = me.first_name || 'there';
+const org = me.org || 'your org';
+const Org = me.org || 'Your org'; // at the start of a sentence
+const reveal = Astro.props.reveal && !!r;
+const showLetter = !!r && (r.viewed || reveal);
+const celebrate = reveal && (r?.outcome === 'cohort' || r?.outcome === 'peer');
+
+const showTextLine = !!textLine && !!r && textLineFor.includes(r.outcome);
+const smsHref = textLine ? `sms:${textLine.replace(/[^\d+]/g, '')}` : '';
+
+const lines = (s: string | null | undefined) => (s ?? '').split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
+const safeUrl = (u: string | null | undefined) => (u && /^https:\/\//i.test(u) ? u : null);
+const peers = r?.peers ?? [];
+const view = formFor('view');
+const season = 'Fall ’26';
+---
+{error && <div class="card"><p class="note err" role="alert">We couldn't load your update just now. Refresh in a minute.</p></div>}
+
+{!error && !me.application && <div class="card">
+  <p class="label">{season}</p>
+  <h1>We couldn't find your application</h1>
+  <p>You're signed in as <strong>{email}</strong>, and no {season} application uses that email.</p>
+  <p>Sign out, then create your account with the email you applied with. Think this is a mistake? Email <a href="mailto:contact@joinvenn.org">contact@joinvenn.org</a>.</p>
+  {demo
+    ? <div class="row"><a class="btn btn-full" href="/portal/demo">Sign out</a></div>
+    : <form method="post" action="/portal/logout" class="row"><button class="btn btn-full" type="submit">Sign out</button></form>}
+</div>}
+
+{!error && me.application && !r && <div class="card">
+  <p class="label">{season}</p>
+  <h1>Hi {first}, your update isn't ready yet</h1>
+  <p class="lede">We'll email you the moment it is. Nothing to do until then.</p>
+</div>}
+
+{!error && r && !showLetter && <div class="card center ready">
+  <p class="label">{season}</p>
+  <h1>Hi {first}, your Venn update is ready</h1>
+  <p class="lede">Take a breath. It's one tap away.</p>
+  <form method={view.method} action={view.action} class="row">
+    {Object.entries(view.fields).map(([k, v]) => <input type="hidden" name={k} value={v} />)}
+    <button class="btn btn-full" type="submit">View update</button>
+  </form>
+</div>}
+
+{reveal && <div class="loader" aria-hidden="true"><span></span><span></span><span></span><p>Opening your update</p></div>}
+{celebrate && <div class="confetti" aria-hidden="true">{Array.from({ length: 28 }, (_, i) => <i style={`--i:${i}`}></i>)}</div>}
+
+{!error && r && showLetter && <div class:list={['letter', { delayed: reveal }]}>
+  {r.outcome === 'cohort' && r.track && <section class="card">
+    <p class="label">{season} · {r.track.name} track</p>
+    <h1>Congratulations, {first}. You're in the <span class="hl">{r.track.name}</span> track.</h1>
+    <p class="lede">Out of more than 400 applications, {org} was picked for one of a few seats{r.track.company ? <> working with {r.track.company}</> : null}.</p>
+    {r.track.goal && <div class="block"><h2>The goal</h2><p>{r.track.goal}</p></div>}
+    {r.track.timeline && <div class="block"><h2>Timeline</h2><p>{r.track.timeline}</p></div>}
+    {r.track.criteria && <div class="block"><h2>What we look for</h2><p>{r.track.criteria}</p></div>}
+    {lines(r.track.prompts).length > 0 && <div class="block"><h2>Your first prompts</h2><ol class="prompts">{lines(r.track.prompts).map((p) => <li>{p}</li>)}</ol></div>}
+    {(safeUrl(r.track.video_url) || safeUrl(r.track.slides_url)) && <div class="row">
+      {safeUrl(r.track.video_url) && <a class="btn btn-ghost" href={safeUrl(r.track.video_url)} rel="noopener" target="_blank">Watch the kickoff</a>}
+      {safeUrl(r.track.slides_url) && <a class="btn btn-ghost" href={safeUrl(r.track.slides_url)} rel="noopener" target="_blank">Open the slides</a>}
+    </div>}
+  </section>}
+
+  {r.outcome === 'peer' && <section class="card">
+    <p class="label">{season} · Peer match</p>
+    <h1>You're in, {first}.</h1>
+    <p class="lede">We matched {org} with {peers.length === 1 ? 'one org' : `${peers.length} orgs`} building something close to yours. Each pair takes on one small project together over 4 weeks, and we check in with you at the end.</p>
+  </section>}
+
+  {(r.outcome === 'network_waitlist' || r.outcome === 'track_waitlist') && <section class="card">
+    <p class="label">{season} · Waitlist</p>
+    <h1>You're on the {r.outcome === 'track_waitlist' ? 'track' : 'network'} waitlist, {first}.</h1>
+    <p class="lede">{Org} stood out, and we want to place you as soon as a seat opens that fits. When one does, you get first pick.</p>
+  </section>}
+
+  {r.outcome === 'not_this_season' && <section class="card">
+    <p class="label">{season}</p>
+    <h1>Thank you, {first}.</h1>
+    <p class="lede">We couldn't place {org} in a track or a peer match this season. That's not a verdict on you.</p>
+    <p>The applications we placed told us clearly what they were building and what they needed. That's the bar for next time.</p>
+    <p>Applications for Spring ’27 open soon, and we'd love to see you again.</p>
+    {r.outlet && <div class="block"><h2>One more thing</h2><p>Venn will set up a feature on {org} with {r.outlet}. Email <a href="mailto:contact@joinvenn.org">contact@joinvenn.org</a> with what you're working on, and we'll take it from there.</p></div>}
+  </section>}
+
+  {peers.length > 0 && <section class="card" id="peers">
+    <h2>{peers.length === 1 ? 'Your peer match' : 'Your peer matches'}</h2>
+    <p class="hint">Tap "I'd be down" if you want to work together. Contact details show up once you both tap.</p>
+    <div class="peers">
+      {peers.map((p) => {
+        const down = formFor('down', p.match_id);
+        return <article class:list={['peer', { mutual: p.both_down }]}>
+          <div>
+            <h3>{p.name}</h3>
+            {p.org && <p class="peer-org">{p.org}</p>}
+          </div>
+          {p.building && <p><span class="k">Building</span> {p.building}</p>}
+          {p.why && <p><span class="k">Why we matched you</span> {p.why}</p>}
+          {p.both_down ? <p class="note ok">You're both in. Venn will introduce you over text.{p.email && <> You can also reach them at <a href={`mailto:${p.email}`}>{p.email}</a>.</>}</p>
+            : p.me_down ? <p class="note">You're down. We'll introduce you as soon as they tap too.</p>
+            : <form method={down.method} action={down.action}>{Object.entries(down.fields).map(([k, v]) => <input type="hidden" name={k} value={v} />)}<button class="btn btn-full" type="submit">I'd be down</button></form>}
+        </article>;
+      })}
+    </div>
+  </section>}
+
+  {showTextLine && <section class="card">
+    <h2>Text Venn</h2>
+    <p>Save this number and text it anytime: what you're working on, what's stuck, what you need. It remembers your conversation.</p>
+    <p class="hint">Replies come from Venn's AI assistant, and Joshua reads along.</p>
+    <div class="row"><a class="btn btn-full" href={smsHref}>Text {textLine}</a></div>
+  </section>}
+</div>}
+
+<style>
+  .center { text-align: center; }
+  .ready { padding-top: 40px; padding-bottom: 32px; }
+  .ready .lede { margin-inline: auto; max-width: 22rem; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 24px; }
+  .row .btn { flex: 1 1 12rem; min-height: 52px; text-align: center; line-height: 1.25; }
+  .hint { margin-top: 8px; }
+  p.hint + .row, .peers { margin-top: 20px; }
+
+  /* Letter sections: thin rules between them, like the FAQ. */
+  .block { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--glass-line); }
+  .block h2 { font-size: 17px; letter-spacing: -.01em; margin-bottom: 6px; }
+  .prompts { list-style: none; counter-reset: p; margin: 10px 0 0; padding: 0; display: grid; gap: 10px; }
+  .prompts li { counter-increment: p; position: relative; padding-left: 36px; color: var(--body); min-height: 26px; }
+  .prompts li::before {
+    content: counter(p); position: absolute; left: 0; top: 0; width: 26px; height: 26px; border-radius: 50%;
+    display: grid; place-items: center; font: 500 13px/1 var(--font); color: var(--forest); background: #e9f0e7; box-shadow: inset 0 0 0 1px #d3e0cf;
+  }
+
+  .peers { display: grid; gap: 12px; }
+  .peer {
+    display: grid; gap: 12px; padding: 18px; border-radius: 20px;
+    background: rgba(255, 255, 255, .8); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .06);
+  }
+  .peer.mutual { box-shadow: inset 0 0 0 1.5px var(--sage); }
+  .peer h3 { font-size: 19px; font-weight: 600; letter-spacing: -.02em; line-height: 1.25; color: var(--black); margin: 0; }
+  .peer-org { font-size: 15px; color: var(--muted); margin-top: 2px; }
+  .peer p { color: var(--body); }
+  .card .peer p + p { margin-top: 0; }
+  .peer .k { display: block; margin-bottom: 2px; font: 400 12px/1.4 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .peer form { margin-top: 2px; }
+
+  /* Reveal: three breathing dots on the portal field for 3s, then the letter rises in. */
+  .loader {
+    position: fixed; inset: 0; z-index: 60; display: flex; flex-wrap: wrap; align-content: center; justify-content: center; gap: 8px;
+    background:
+      radial-gradient(60vmax 60vmax at 0% 0%, rgba(159, 191, 154, .28), transparent 70%),
+      radial-gradient(60vmax 60vmax at 100% 100%, rgba(196, 212, 239, .4), transparent 70%),
+      #fff;
+    animation: out .5s ease 3s forwards;
+  }
+  .loader span { width: 10px; height: 10px; border-radius: 50%; background: var(--black); animation: breathe 1.2s ease-in-out infinite; }
+  .loader span:nth-child(2) { animation-delay: .2s; }
+  .loader span:nth-child(3) { animation-delay: .4s; }
+  .loader p { flex-basis: 100%; text-align: center; color: var(--muted); font-size: 15px; margin-top: 14px; }
+  @keyframes breathe { 0%, 100% { opacity: .2; transform: scale(.8); } 50% { opacity: 1; transform: scale(1); } }
+  @keyframes out { to { opacity: 0; visibility: hidden; } }
+
+  .letter.delayed { opacity: 0; transform: translateY(16px); animation: in .8s var(--ease) 3.1s forwards; }
+  @keyframes in { to { opacity: 1; transform: none; } }
+
+  /* Confetti in Venn's own colors: sage, leaf, mint, sky, accent blue, warm stone, ink. */
+  .confetti { position: fixed; inset: 0; pointer-events: none; z-index: 61; overflow: hidden; }
+  .confetti i {
+    position: absolute; top: -12px; left: calc(var(--i) * 3.6%); width: 8px; height: 12px; border-radius: 2px; opacity: 0; background: var(--sage);
+    animation: fall 2.6s cubic-bezier(.3, .6, .5, 1) calc(3.2s + var(--i) * 40ms) forwards;
+  }
+  .confetti i:nth-child(7n + 2) { background: var(--leaf); }
+  .confetti i:nth-child(7n + 3) { background: var(--sky); }
+  .confetti i:nth-child(7n + 4) { background: var(--accent); }
+  .confetti i:nth-child(7n + 5) { background: var(--mint); }
+  .confetti i:nth-child(7n + 6) { background: #e8e4de; }
+  .confetti i:nth-child(7n) { background: var(--black); }
+  @keyframes fall { 0% { opacity: 1; transform: translateY(0) rotate(0); } 100% { opacity: 0; transform: translateY(100vh) rotate(calc(var(--i) * 53deg)); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .loader { animation-delay: 1s; }
+    .loader span { animation: none; opacity: .6; }
+    .letter.delayed { animation-delay: 1.1s; animation-duration: .01s; transform: none; }
+    .confetti { display: none; }
+  }
+</style>
