@@ -1,6 +1,28 @@
 {
   "redirects": [
     {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "portal.joinvenn.org"
+        }
+      ],
+      "destination": "/portal",
+      "permanent": false
+    },
+    {
+      "source": "/:path((?!portal(?:/|$)|_astro/|_vercel/|_image)[^.]*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "portal.joinvenn.org"
+        }
+      ],
+      "destination": "/portal/:path",
+      "permanent": false
+    },
+    {
       "source": "/boost",
       "destination": "/refer",
       "permanent": true
@@ -12,26 +34,6 @@
     }
   ],
   "rewrites": [
-    {
-      "source": "/",
-      "has": [
-        {
-          "type": "host",
-          "value": "portal.joinvenn.org"
-        }
-      ],
-      "destination": "/portal"
-    },
-    {
-      "source": "/:path((?!portal(?:/|$)|_astro/|_vercel/|.*\\.[a-zA-Z0-9]+$).*)",
-      "has": [
-        {
-          "type": "host",
-          "value": "portal.joinvenn.org"
-        }
-      ],
-      "destination": "/portal/:path"
-    },
     {
       "source": "/u",
       "destination": "https://wirjadichvbmrqzamwtp.supabase.co/functions/v1/unsubscribe"
