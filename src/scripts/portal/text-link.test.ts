@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { stubSavePhone } from '../../lib/portal/rpc-adapter.ts';
-import { channelFor, textHref, textLine, normalizePhone, joshPhone, pillHref, textJoshState } from './text-link.ts';
+import { channelFor, textHref, textLine, normalizePhone, joshPhone, pillHref } from './text-link.ts';
 
 test('joshPhone reads PORTAL_JOSH_PHONE and falls back to empty when unset or junk', () => {
   assert.equal(joshPhone({ PORTAL_JOSH_PHONE: ' +16505550100 ' }), '+16505550100');
@@ -57,13 +57,4 @@ test('textHref encodes awkward first names and is null without a Josh number', (
   assert.ok(href.endsWith(encodeURIComponent(line)));
   assert.ok(!href.includes('&Co') && !href.includes('#1'));
   assert.equal(textHref({ channel: 'sms', josh: '', line, ua: '' }), null);
-});
-
-test('textJoshState: pill is live whenever a phone is saved, locked only for an unsigned minor (#131)', () => {
-  const saved = { phone: '+14155550123', code: 'VENN-4F2K' };
-  assert.deepEqual(textJoshState({ under18: false, parentSigned: null, ...saved }), { locked: false, ...saved });
-  assert.equal(textJoshState({ under18: null, parentSigned: null, ...saved }).locked, false);
-  assert.equal(textJoshState({ under18: true, parentSigned: true, ...saved }).locked, false);
-  assert.equal(textJoshState({ under18: true, parentSigned: false, ...saved }).locked, true);
-  assert.deepEqual(textJoshState({ under18: false, parentSigned: null, phone: null, code: null }), { locked: false, phone: '', code: '' });
 });

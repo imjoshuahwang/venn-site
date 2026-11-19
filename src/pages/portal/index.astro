@@ -4,7 +4,7 @@ import Portal from '../../layouts/Portal.astro';
 import NextStep from '../../components/portal/NextStep.astro';
 import TextJosh from '../../components/portal/TextJosh.astro';
 import { pickNextStep, type NextStepInput } from '../../scripts/portal/next-step';
-import { joshPhone, textJoshState } from '../../scripts/portal/text-link';
+import { joshPhone } from '../../scripts/portal/text-link';
 import { stubSavePhone } from '../../lib/portal/rpc-adapter';
 import { loadHome } from '../../lib/portal/home';
 
@@ -46,14 +46,14 @@ try {
   failed = true;
 }
 const step = pickNextStep(input);
-const tj = textJoshState({ under18: input.under18, parentSigned: input.parentSigned, phone: savedPhone, code: savedCode });
+const locked = input.under18 === true;
 ---
 <Portal title="Your Venn home">
   {failed ? <p role="alert" data-home-error>We could not load your home page. Please refresh, or email contact@joinvenn.org.</p> : (
     <>
       <NextStep step={step} />
       <section class="home-section" id="text-josh">
-        <TextJosh firstName="" code={tj.code} phone={tj.phone} josh={joshPhone(import.meta.env)} locked={tj.locked} />
+        <TextJosh firstName="" code={savedCode ?? ''} phone={savedPhone ?? ''} josh={joshPhone(import.meta.env)} locked={locked} />
       </section>
       {result && <section class="home-section" data-result-summary>
         <h2>Your Result</h2>

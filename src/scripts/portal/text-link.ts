@@ -32,8 +32,3 @@ export function pillHref(o: { firstName: string; code: string; phone: string; wh
   if (!p || !o.code) return null;
   return textHref({ channel: channelFor(p, o.whatsapp), josh: o.josh, line: textLine(o.firstName, o.code), ua: o.ua });
 }
-
-/** Props for the Text Josh section: locked only for an under-18 whose parent has not signed; a saved phone and code prefill it so the pill is live. */
-export function textJoshState(o: { under18: boolean | null; parentSigned: boolean | null; phone: string | null; code: string | null }) {
-  return { locked: o.under18 === true && o.parentSigned !== true, phone: o.phone ?? '', code: o.code ?? '' };
-}
