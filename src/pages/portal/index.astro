@@ -56,14 +56,22 @@ try {
   consentFailed = true;
 }
 if (!consentFailed && consent?.application && consent.done === false) return Astro.redirect('/portal/ceremony', 303);
-const step = pickNextStep(input);
-const locked = input.under18 === true;
+const under18 = consent?.minor === true || input.under18 === true;
+const locked = under18 && input.parentSigned !== true;
+const showParentForm = !dev && consent?.minor === true && input.parentSigned !== true;
+const step = pickNextStep({ ...input, under18 });
+
 ---
 <Portal title="Your Venn home">
   {consentFailed ? <><p role="alert">We could not load this page.</p><form method="get" action="/portal"><button class="pill" type="submit" data-retry>Retry</button></form></> : failed ? <p role="alert" data-home-error>We could not load your home page. Please refresh, or email contact@joinvenn.org.</p> : (
     <>
       <NextStep step={step} />
-      <a class="pill" href="/portal/consent">Review consent</a>
+      <a class="pill" style="margin-top: var(--sp-24)" href="/portal/consent">Review consent</a>
+      {showParentForm && <form method="post" action="/portal/parent-request" class="parent-request">
+        <label for="parent_email">Parent email</label>
+        <input id="parent_email" name="parent_email" type="email" required autocomplete="off" style="min-height: 44px" />
+        <button class="pill" type="submit">Send to my parent</button>
+      </form>}
       <section class="home-section" id="text-josh">
         <TextJosh firstName="" code={savedCode ?? ''} phone={savedPhone ?? ''} josh={joshPhone(import.meta.env)} locked={locked} />
       </section>
