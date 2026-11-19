@@ -29,7 +29,8 @@ const { title = 'Portal' } = Astro.props;
   .pill { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; padding: var(--sp-12) var(--sp-24); border-radius: var(--r-pill); background: var(--ink); color: var(--white); font-size: var(--fs-15); font-weight: var(--fw-600); text-decoration: none; transition: opacity var(--dur-1) var(--ease); }
   .parent-request { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-12); margin-top: var(--sp-32); }
   .parent-request label { font-size: var(--fs-15); }
-  .parent-request input { width: 100%; box-sizing: border-box; min-height: 44px; padding: 0 var(--sp-12); border-radius: var(--r-12); font: inherit; }
+  .parent-request input { width: 100%; box-sizing: border-box; min-height: 44px; padding: 0 var(--sp-12); border: 1px solid var(--line); border-radius: var(--r-12); font: inherit; }
+  .parent-request input:focus-visible { border-color: var(--ink); outline: 2px solid var(--ink); outline-offset: 1px; }
   .parent-request .pill { margin-top: var(--sp-12); border: 0; font-family: inherit; cursor: pointer; }
   .pill:hover { opacity: 0.85; }
   @media (prefers-reduced-motion: reduce) { .pill { transition: none; } }
