@@ -42,7 +42,7 @@ test('fixture route covers every cohort state and the real page wires cohort', (
   const f = read('src/pages/portal/dev/result.astro');
   assert.match(f, /outcome === 'cohort'/);
   for (const st of ['signed', 'full', 'null', 'member']) assert.match(f, new RegExp(`'${st}'`));
-  const i = read('src/pages/portal/index.astro');
+  const i = read('src/pages/portal/result.astro');
   assert.match(i, /getCohortView/);
   assert.match(i, /<Cohort /);
 });

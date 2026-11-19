@@ -23,7 +23,7 @@ test('adapter: contact rides on getMyPeer only once both are down', async () => 
 });
 
 test('real /portal load never taps: no peerDown call on GET, contact comes from the get_my_peer row', () => {
-  const s = read('src/pages/portal/index.astro');
+  const s = read('src/pages/portal/result.astro');
   assert.doesNotMatch(s, /peerDown/);
   assert.match(s, /row\.contact/);
 });

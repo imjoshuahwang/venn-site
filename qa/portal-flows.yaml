@@ -95,3 +95,33 @@
   steps:
     - sign-in
     - expect-visible main
+- name: home
+  on: /portal/login
+  steps:
+    - sign-in
+    - goto /portal?state=waiting-on-parent
+    - expect-visible [data-next-step=waiting-on-parent]
+    - screenshot waiting-on-parent
+    - goto /portal?state=consent-missing
+    - expect-visible [data-next-step=consent-missing]
+    - screenshot consent
+    - goto /portal?state=sign-mou
+    - expect-visible [data-next-step=sign-mou]
+    - screenshot sign-mou
+    - goto /portal?state=guiding-questions
+    - expect-visible [data-next-step=guiding-questions]
+    - screenshot questions
+    - goto /portal?state=text-josh
+    - expect-visible [data-next-step=text-josh]
+    - expect-visible [data-text-josh]
+    - screenshot text-josh
+    - goto /portal?state=kickoff-countdown
+    - expect-visible [data-next-step=kickoff-countdown]
+    - screenshot countdown
+    - goto /portal?state=all-set
+    - expect-visible [data-next-step=all-set]
+    - expect-visible [data-pill][aria-disabled=false]
+    - screenshot all-set
+    - goto /portal?state=error
+    - expect-visible [data-home-error]
+    - screenshot error

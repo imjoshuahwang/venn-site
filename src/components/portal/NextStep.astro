@@ -1,0 +1,26 @@
+---
+// One calm next-step card (#131). Copy is keyed by the picker's kind; Venn is the one waiting on them.
+import type { NextStep } from '../../lib/portal/home';
+interface Props { step: NextStep }
+const { step } = Astro.props;
+const copy: Record<string, [string, string | null, string]> = {
+  'waiting-on-parent': ['Waiting on your parent', null, 'Your parent needs to sign before your cohort can move forward.'],
+  'consent-missing': ['Your consent is the next step', 'Give consent', 'It takes a minute and unlocks the rest of your cohort.'],
+  'sign-mou': ['Your cohort is waiting for your signature', 'Sign the MOU', 'Read the one-page agreement and sign to lock in your seat.'],
+  'guiding-questions': ['Answer a few guiding questions', 'Start', 'Three short questions help us match you with the right partner.'],
+  'text-josh': ['Say hi to Josh by text', null, 'Add your number below and send Josh a quick hello.'],
+  'kickoff-countdown': [step.days === 1 ? 'You have one day to prepare' : step.days === 7 ? 'You have one week to prepare' : `You have ${step.days} days to prepare`, null, 'Your kickoff is coming up, and Venn is ready for you.'],
+  'all-set': ['You are all set', null, 'Nothing is waiting on you right now. We will reach out with next steps.'],
+};
+const [title, cta, body] = copy[step.kind] ?? copy['all-set'];
+---
+<section class="next-step" data-next-step={step.kind} aria-labelledby="next-step-title">
+  <h2 id="next-step-title">{title}</h2>
+  <p>{body}</p>
+  {cta && step.href && <a class="pill" href={step.href}>{cta}</a>}
+</section>
+<style>
+  .next-step { display: grid; gap: var(--sp-16); justify-items: start; padding: var(--sp-24); border-radius: var(--r-20); background: var(--panel); border: 1px solid var(--line); min-height: 112px; }
+  .next-step h2 { margin: 0; font-size: var(--fs-22); font-weight: var(--fw-600); letter-spacing: var(--track-tight); color: var(--ink); }
+  .next-step p { margin: 0; font-size: var(--fs-15); color: var(--ink); }
+</style>

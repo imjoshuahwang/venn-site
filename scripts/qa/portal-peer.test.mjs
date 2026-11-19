@@ -79,7 +79,7 @@ test('peer page renders applicant text as text and keeps tokens', () => {
 });
 
 test('peer wiring: real /portal uses adapter, fixture route DEV-guarded, endpoint calls adapter', () => {
-  assert.match(read('src/pages/portal/index.astro'), /getMyPeer/);
+  assert.match(read('src/pages/portal/result.astro'), /getMyPeer/);
   assert.match(read('src/pages/portal/dev/result.astro'), /import\.meta\.env\.DEV/);
   assert.match(read('src/pages/portal/peer-down.ts'), /peerDown/);
   assert.match(read('src/pages/portal/dev/peer-down.ts'), /import\.meta\.env\.DEV/);

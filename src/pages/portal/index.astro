@@ -1,51 +1,76 @@
 ---
 export const prerender = false;
 import Portal from '../../layouts/Portal.astro';
-import CohortSlides from '../../components/portal/results/CohortSlides.astro';
-import GuidingQuestions from '../../components/portal/GuidingQuestions.astro';
-import { logoUrl } from '../../data/mou';
-import { getMyGuidingAnswers, guidingAccess } from '../../lib/portal/guiding';
-import { Waitlist, NotThisSeason, ResultState, Peer, Cohort } from '../../components/portal/results';
-import { pageFor } from '../../data/portal-copy';
-import { peerView, stateOf } from '../../data/portal-peer';
-import { getMyResult, getMyPeer, getCohortView, stubResult } from '../../lib/portal/rpc-adapter';
-import { getMyResult as getFullResult } from '../../lib/portal/api';
+import NextStep from '../../components/portal/NextStep.astro';
+import TextJosh from '../../components/portal/TextJosh.astro';
+import { pickNextStep, loadHome, type NextStepInput } from '../../lib/portal/home';
+import { joshPhone } from '../../scripts/portal/text-link';
+import { stubSavePhone } from '../../lib/portal/rpc-adapter';
 
+const dev = import.meta.env.DEV ? Astro.url.searchParams.get('state') : null;
+const stubs: Record<string, Partial<NextStepInput>> = {
+  'waiting-on-parent': { under18: true, parentSigned: false },
+  'consent-missing': { consentGiven: false },
+  'sign-mou': { outcome: 'cohort', mouSigned: false },
+  'guiding-questions': { guidingAnswered: false },
+  'text-josh': { phoneSaved: false },
+  'kickoff-countdown': { kickoffAt: new Date(Date.now() + 6.5 * 86_400_000).toISOString() },
+  'all-set': {},
+};
+const empty: NextStepInput = { under18: null, parentSigned: null, consentGiven: null, mouSigned: null, outcome: null, guidingAnswered: null, phoneSaved: null, kickoffAt: null };
+let input: NextStepInput = empty;
 let result = null;
-let peer = null;
-let cohort = null;
-let cohortView = null;
-let guiding = {};
 let failed = false;
+let team: { email_key: string }[] = [];
+let cohortName: string | null = null;
+let savedPhone: string | null = null;
+let savedCode: string | null = null;
 try {
-  const stub = import.meta.env.DEV ? Astro.url.searchParams.get('stub') : null;
-  result = stub ? stubResult(stub) : await getMyResult(Astro.locals.supabase);
-  if (result?.outcome === 'cohort' && !stub) {
-    const full = await getFullResult(Astro.locals.supabase);
-    if (full.error) throw new Error(full.error.message);
-    cohort = full.data;
-    guiding = cohort ? await getMyGuidingAnswers(Astro.locals.supabase, cohort.id) : {};
-    cohortView = cohort ? await getCohortView(Astro.locals.supabase, cohort.id) : null;
-  }
-  if (result?.outcome === 'peer') {
-    const row = await getMyPeer(Astro.locals.supabase);
-    // A load only reads: the tap is written by the explicit POST. get_my_peer carries the contact once both are down.
-    peer = row ? peerView(row, stateOf(row) === 'both' ? row.contact : null) : null;
+  if (dev === 'error') throw new Error('stub');
+  if (dev && stubs[dev]) {
+    input = { ...empty, ...stubs[dev] };
+    result = { outcome: input.outcome ?? 'cohort' };
+    if (input.phoneSaved !== false) { savedPhone = '+14155550123'; savedCode = stubSavePhone('', false); }
+  } else {
+    const h = await loadHome(Astro.locals.supabase);
+    input = h.input;
+    result = h.result;
+    team = h.team;
+    cohortName = h.cohortName;
+    savedPhone = h.phone;
+    savedCode = h.code;
   }
 } catch {
   failed = true;
 }
-const access = guidingAccess({ isLead: cohortView?.isLead ?? false, cutoff: cohort?.cohort?.guiding_cutoff });
-const page = result ? pageFor(result.outcome) : null;
+const step = pickNextStep(input);
+const locked = input.under18 === true;
 ---
-<Portal title="Your Result">
-  {failed ? <ResultState state="error" />
-    : result?.outcome === 'cohort' ? <Cohort result={cohort} view={cohortView}>
-      <CohortSlides slot="slides" cohort={cohort?.cohort} logo={logoUrl(cohort?.cohort?.logo_path, import.meta.env.PUBLIC_SUPABASE_URL)} />
-      {cohort && <GuidingQuestions slot="guidingQuestions" resultId={cohort.id} answers={guiding} closed={access === 'closed'} readonly={access === 'readonly'} />}
-    </Cohort>
-    : result?.outcome === 'peer' ? <Peer view={peer} />
-    : page === 'waitlist' ? <Waitlist outcome={result.outcome} letter={result.letter} />
-    : page === 'not_this_season' ? <NotThisSeason letter={result.letter} />
-    : <ResultState state="empty" />}
+<Portal title="Your Venn home">
+  {failed ? <p role="alert" data-home-error>We could not load your home page. Please refresh, or email contact@joinvenn.org.</p> : (
+    <>
+      <NextStep step={step} />
+      <section class="home-section" id="text-josh">
+        <TextJosh firstName="" code={savedCode ?? ''} phone={savedPhone ?? ''} josh={joshPhone(import.meta.env)} locked={locked} />
+      </section>
+      {result && <section class="home-section" data-result-summary>
+        <h2>Your Result</h2>
+        <a class="pill" href="/portal/result">View your Result</a>
+      </section>}
+      <section class="home-section" data-team>
+        <h2>Your team</h2>
+        {team.length ? <p>{team.length === 1 ? '1 teammate' : `${team.length} teammates`} on your team.</p> : <p data-empty>No teammates yet.</p>}
+      </section>
+      <section class="home-section" data-partner>
+        <h2>Your cohort</h2>
+        {cohortName ? <p>{cohortName}</p> : <p data-empty>Your cohort will show here once you are placed.</p>}
+      </section>
+    </>
+  )}
 </Portal>
+<style>
+  .home-section { display: grid; gap: var(--sp-16); justify-items: start; margin-top: var(--sp-32); }
+  .home-section h2 { margin: 0; font-size: var(--fs-22); font-weight: var(--fw-600); letter-spacing: var(--track-tight); }
+  .home-section p { margin: 0; font-size: var(--fs-17); color: var(--ink); }
+  [data-home-error] { font-size: var(--fs-17); color: var(--ink); }
+</style>
