@@ -62,6 +62,7 @@ export function createCeremony({ result, setup, reduced, api }) {
     kind: revealKind(result.outcome, reduced),
     viewedError: false,
     finishPending: false,
+    revealedOnce: false,
   };
   let before = steps.before.slice(1);
   let after = [...steps.after];

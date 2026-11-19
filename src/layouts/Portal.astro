@@ -30,8 +30,7 @@ const email = user?.email ?? 'Account';
   body { margin: 0; font-family: var(--font); font-size: var(--fs-17); line-height: 1.5; color: var(--ink); background: var(--white); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
   main { position: relative; max-width: 640px; margin: 0 auto; padding: var(--sp-24) var(--gutter) var(--sp-64); }
   .topbar { position: relative; max-width: 640px; margin: 0 auto; padding: env(safe-area-inset-top) max(var(--gutter), env(safe-area-inset-right)) 0 max(var(--gutter), env(safe-area-inset-left)); display: flex; justify-content: flex-end; }
-  .account { position: relative; }
-  .account { min-width: 0; max-width: 100%; }
+  .account { position: relative; min-width: 0; max-width: 100%; }
   .topbar .who { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .topbar summary { display: flex; align-items: center; min-height: 44px; min-width: 44px; max-width: 100%; padding: 0 var(--sp-12); font-size: var(--fs-15); color: var(--ink); cursor: pointer; list-style: none; }
   .topbar summary::-webkit-details-marker { display: none; }
