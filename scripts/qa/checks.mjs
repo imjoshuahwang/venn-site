@@ -205,7 +205,11 @@ export async function smallText(page) {
 }
 
 export async function consoleErrors(page, state) {
-  const all = [...state.console, ...state.pageErrors.map((e) => `pageerror: ${e}`)];
+  // WebKit logs 'WebKitBlobResource error 1' from the Cloudflare Turnstile iframe's blob worker.
+  // Harmless and not our code, so ignore that exact message only while the Turnstile iframe is on the page.
+  const turnstile = await page.locator('iframe[src*="challenges.cloudflare.com"]').count() > 0;
+  const msgs = turnstile ? state.console.filter((m) => m !== 'WebKitBlobResource error 1') : state.console;
+  const all = [...msgs, ...state.pageErrors.map((e) => `pageerror: ${e}`)];
   return result('console', all.length, list(all.map((s) => s.slice(0, 120))));
 }
 
