@@ -19,7 +19,7 @@ test('giveConsent maps args and errors', async () => {
   assert.deepEqual(await giveConsent(b.sb, {}, 'v1'), { data: null, error: { message: 'unknown clause x', code: '22023' } });
 });
 
-test('markViewed and finishCeremony map args',async () => {
+test('markViewed and finishCeremony map args', async () => {
   const { sb, calls } = stub({ data: '2026-11-18T00:00:00Z', error: null });
   assert.equal((await markViewed(sb, 7)).data, '2026-11-18T00:00:00Z');
   await finishCeremony(sb, 7);

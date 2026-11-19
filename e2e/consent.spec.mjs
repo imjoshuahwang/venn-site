@@ -5,7 +5,6 @@ import assert from 'node:assert/strict';
 import { execFileSync, spawn } from 'node:child_process';
 import { chromium, devices } from 'playwright';
 import { createClient } from '@supabase/supabase-js';
-import { clearRateLimits, portalLogin } from './local.mjs';
 
 const st = JSON.parse(execFileSync('supabase', ['status', '-o', 'json'], { stdio: ['ignore', 'pipe', 'ignore'] }).toString().replace(/^[^{]*/, ''));
 const API = st.API_URL;
@@ -59,8 +58,13 @@ after(async () => {
 });
 
 async function login(page, email) {
-  await clearRateLimits(admin, API);
-  await portalLogin(page, BASE, email, PASSWORD, '**/portal/ceremony');
+  await admin.from('portal_rate_hits').delete().gte('id', 0);
+  await page.goto(`${BASE}/portal/login`);
+  await page.fill('input[name=email]', email);
+  await page.fill('input[name=password]', PASSWORD);
+  await page.waitForFunction(() => document.querySelector('input[name="cf-turnstile-response"]')?.value);
+  await page.click('button[type=submit]');
+  await page.waitForURL('**/portal/ceremony');
 }
 const tick = (page, name) => page.locator(`label.clause:has(input[name=${name}])`).click();
 const consentRows = async (id) => Object.fromEntries((await admin.from('consents').select('clause,accepted').eq('user_id', id)).data.map((r) => [r.clause, r.accepted]));
@@ -156,8 +160,7 @@ for (const [slug, preset] of Object.entries(VIEWPORTS)) {
     const page = await ctx.newPage();
     await login(page, u.email);
     const psql = (sql) => execFileSync('psql', [st.DB_URL, '-X', '-q', '-t', '-A', '-v', 'ON_ERROR_STOP=1', '-c', sql]).toString();
-    const def = psql("select pg_get_functiondef('public.consent_state(text)'::regprocedure)");
-    psql('drop function public.consent_state(text)');
+    psql('revoke execute on function public.consent_state(text) from authenticated');
     try {
       await page.goto(`${BASE}/portal`);
       await page.locator('[role=alert]').waitFor({ state: 'visible' });
@@ -168,9 +171,7 @@ for (const [slug, preset] of Object.entries(VIEWPORTS)) {
       await checkLayout(page, 'home-consent-load-error');
       assert.equal(await page.locator('[data-retry]').count(), 1);
     } finally {
-      psql(def);
       psql('grant execute on function public.consent_state(text) to authenticated');
-      psql("notify pgrst, 'reload schema'");
     }
     // Retry after the function is back: the error clears and the signed-in user lands on the ceremony (consent not yet given).
     await page.click('[data-retry]');

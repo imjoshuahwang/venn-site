@@ -48,8 +48,7 @@ const checked = (c: { key: string; default: boolean }) => (c.key in answers ? an
   h1 { font-size: var(--fs-28); font-weight: var(--fw-800); letter-spacing: var(--track-tight); line-height: 1.2; margin: 0 0 var(--sp-8); }
   .clause { position: relative; display: grid; grid-template-columns: 44px 1fr; align-items: start; min-height: 44px; gap: var(--sp-8); padding: var(--sp-12); border-radius: var(--r-20); background: var(--panel); cursor: pointer; }
   .clause input { position: absolute; left: var(--sp-12); top: var(--sp-12); opacity: 0; width: 44px; height: 44px; margin: 0; }
-  .box { width: 28px; height: 28px; margin: var(--sp-8); border-radius: var(--r-12); box-shadow: inset 0 0 0 2px var(--ink); background: var(--white); }
-  .box { position: relative; flex: none; }
+  .box { width: 28px; height: 28px; margin: var(--sp-8); border-radius: var(--r-12); box-shadow: inset 0 0 0 2px var(--ink); background: var(--white); position: relative; flex: none; }
   input:checked + .box { background: var(--ink); }
   input:checked + .box::after { content: ''; position: absolute; left: 9px; top: 4px; width: 7px; height: 13px; border: solid var(--white); border-width: 0 3px 3px 0; transform: rotate(45deg); }
   input:focus-visible + .box { outline: 3px solid var(--ink); outline-offset: var(--sp-4); }
