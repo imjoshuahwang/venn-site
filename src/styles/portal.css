@@ -58,7 +58,7 @@
 .ceremony [hidden] { display: none !important; }
 .ceremony .card { background: var(--panel); border-radius: var(--r-20); padding: var(--sp-32) var(--sp-24); display: grid; gap: var(--sp-16); justify-items: start; position: relative; z-index: 1; }
 .ceremony .eyebrow { margin: 0; font-size: var(--fs-13); font-weight: var(--fw-600); color: var(--muted); }
-.ceremony .headline { margin: 0; font-size: var(--fs-28); font-weight: var(--fw-800); line-height: 1.15; color: var(--ink); }
+.ceremony .headline { margin: 0; font-size: var(--fs-28); font-weight: var(--fw-800); letter-spacing: -0.02em; line-height: 1.15; color: var(--ink); }
 .ceremony .muted { color: var(--muted); margin: 0; }
 .ceremony .body { display: grid; gap: var(--sp-12); } .ceremony .body p { margin: 0; }
 .ceremony .actions { display: flex; gap: var(--sp-12); flex-wrap: wrap; }

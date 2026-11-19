@@ -146,3 +146,11 @@ test('retryFinish reports failure for an inline error, and success once it works
   assert.equal(await c.retryFinish(), true);
   assert.equal(c.state.finishPending, false);
 });
+
+test('next during the reveal finishes it and moves on', async () => {
+  const c = createCeremony({ result, setup: doneSetup, reduced: false, api: mkApi() });
+  await c.reveal();
+  assert.equal(c.state.screen, 'revealing');
+  c.next();
+  assert.equal(c.state.screen, 'finishing');
+});

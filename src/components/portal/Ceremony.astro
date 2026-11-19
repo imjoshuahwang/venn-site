@@ -118,7 +118,6 @@ const config = JSON.stringify({ result, setup });
     c.revealed();
   });
   root.querySelectorAll('[data-next]').forEach((b) => b.addEventListener('click', () => {
-    if (c.state.screen === 'revealing') return;
     c.next();
     go();
   }));

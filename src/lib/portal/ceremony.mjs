@@ -74,7 +74,7 @@ export function createCeremony({ result, setup, reduced, api }) {
     state,
     next() {
       if (state.screen.startsWith('setup:') && !state.revealedOnce) { state.screen = before.length ? `setup:${before.shift().id}` : 'sealed'; return; }
-      if (state.screen === 'letter' || state.screen.startsWith('setup:')) afterSetupStart();
+      if (state.screen === 'revealing' || state.screen === 'letter' || state.screen.startsWith('setup:')) afterSetupStart();
     },
     reveal() {
       if (state.screen !== 'sealed') return viewing ?? Promise.resolve();

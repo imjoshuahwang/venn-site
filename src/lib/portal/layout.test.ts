@@ -24,3 +24,8 @@ test('top bar and footer pad for the safe area', () => {
   assert.match(src, /\.topbar\s*\{[^}]*env\(safe-area-inset-top\)/);
   assert.match(src, /\.data-line\s*\{[^}]*env\(safe-area-inset-bottom\)/);
 });
+
+test('headlines at 28px and up track at -0.02em', () => {
+  const css = readFileSync(new URL('../../styles/portal.css', import.meta.url), 'utf8');
+  assert.match(css, /\.ceremony \.headline\s*\{[^}]*letter-spacing:\s*-0\.02em/);
+});
