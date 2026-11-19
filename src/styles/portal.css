@@ -1,0 +1,42 @@
+:root {
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", system-ui, sans-serif;
+  --white: #fff;
+  --ink: #18181a;
+  --body: #444;
+  --muted: #5c5c60;
+  --line: #e6e6ea;
+  --panel: #f7f7f8;
+  --green: #bfe8d0;
+  --blue: #c3d8f5;
+
+  --fs-13: 13px;
+  --fs-15: 15px;
+  --fs-17: 17px;
+  --fs-22: 22px;
+  --fs-28: 28px;
+  --fs-40: 40px;
+  --fs-56: 56px;
+  --fw-400: 400;
+  --fw-600: 600;
+  --fw-800: 800;
+  --track-tight: -0.02em;
+
+  --sp-4: 4px;
+  --sp-8: 8px;
+  --sp-12: 12px;
+  --sp-16: 16px;
+  --sp-24: 24px;
+  --sp-32: 32px;
+  --sp-48: 48px;
+  --sp-64: 64px;
+  --gutter: var(--sp-16);
+
+  --r-12: 12px;
+  --r-20: 20px;
+  --r-pill: 999px;
+
+  --dur-1: 120ms;
+  --dur-2: 240ms;
+  --dur-3: 480ms;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}

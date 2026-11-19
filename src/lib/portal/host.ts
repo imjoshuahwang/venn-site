@@ -1,5 +1,5 @@
 const DEFAULT_PORTAL_HOST = 'portal.joinvenn.org';
-const PUBLIC = ['/portal/login', '/portal/set-password', '/portal/reset', '/portal/logout'];
+const PUBLIC = ['/portal/dev/result', '/portal/login', '/portal/set-password', '/portal/reset', '/portal/logout'];
 
 const bare = (h: string) => h.toLowerCase().replace(/:\d+$/, '');
 
