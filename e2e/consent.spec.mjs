@@ -239,6 +239,12 @@ for (const [slug, preset] of Object.entries(VIEWPORTS)) {
     await checkLayout(pp, 'parent-expired');
     await page.goto(`${BASE}/portal`);
     assert.equal(await page.locator('form.parent-request').count(), 1);
+    await page.goto(`${BASE}/portal?parent=invalid`);
+    await page.locator('[data-parent-error]').waitFor();
+    await page.goto(`${BASE}/portal?parent=error`);
+    await page.locator('[data-parent-error]').waitFor();
+    await page.goto(`${BASE}/portal`);
+    assert.equal(await page.locator('[data-parent-error]').count(), 0);
     // Resend goes through the RPC, not the form, so no mail is attempted.
     const second = (await admin.rpc('request_parent_consent', { p_user_id: u.id, p_parent_email: to })).data;
     await pp.goto(`${BASE}/portal/parent/${second}`);

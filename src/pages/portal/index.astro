@@ -59,6 +59,7 @@ if (!consentFailed && consent?.application && consent.done === false) return Ast
 const under18 = consent?.minor === true || input.under18 === true;
 const locked = under18 && input.parentSigned !== true;
 const showParentForm = !dev && consent?.minor === true && input.parentSigned !== true;
+const parentError = ({ invalid: 'Enter a valid email address.', error: 'We could not send that. Please try again.' } as Record<string, string>)[Astro.url.searchParams.get('parent') ?? ''];
 const step = pickNextStep({ ...input, under18 });
 
 ---
@@ -70,6 +71,7 @@ const step = pickNextStep({ ...input, under18 });
       {showParentForm && <form method="post" action="/portal/parent-request" class="parent-request">
         <label for="parent_email">Parent email</label>
         <input id="parent_email" name="parent_email" type="email" required autocomplete="off" />
+        {parentError && <p role="alert" data-parent-error>{parentError}</p>}
         <button class="pill" type="submit">Send to my parent</button>
       </form>}
       <section class="home-section" id="text-josh">

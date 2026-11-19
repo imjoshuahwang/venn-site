@@ -27,9 +27,6 @@ const { title = 'Portal' } = Astro.props;
   .blobs .b { background: var(--blue); bottom: -35vmax; right: -30vmax; }
   a:focus-visible, button:focus-visible { outline: 3px solid var(--ink); outline-offset: var(--sp-4); }
   .pill { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; padding: var(--sp-12) var(--sp-24); border-radius: var(--r-pill); background: var(--ink); color: var(--white); font-size: var(--fs-15); font-weight: var(--fw-600); text-decoration: none; transition: opacity var(--dur-1) var(--ease); }
-  .parent-request { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-12); margin-top: var(--sp-32); }
-  .parent-request label { font-size: var(--fs-15); }
-  .parent-request .pill { margin-top: var(--sp-12); border: 0; font-family: inherit; cursor: pointer; }
   .pill:hover { opacity: 0.85; }
   @media (prefers-reduced-motion: reduce) { .pill { transition: none; } }
 </style>
