@@ -73,6 +73,13 @@ begin
   if not ok then raise exception 'anon can insert consents'; end if;
   begin perform public.portal_owns_result(ra); ok := false; exception when insufficient_privilege then ok := true; end;
   if not ok then raise exception 'anon can run portal_owns_result'; end if;
+  declare tb text; begin
+    foreach tb in array array['team_members','consents','parent_consents','guiding_answers','portal_links'] loop
+      begin execute format('select count(*) from public.%I', tb) into n;
+        if n <> 0 then raise exception 'anon reads % rows of %', n, tb; end if;
+      exception when insufficient_privilege then null; end;
+    end loop;
+  end;
   reset role;
 
   -- user A (lead of ra): sees own approved result and its rows; nothing of B or drafts
@@ -86,6 +93,8 @@ begin
   select count(*) into n from public.parent_consents; if n <> 1 then raise exception 'A sees % parent_consents', n; end if;
   select count(*) into n from public.guiding_answers; if n <> 1 then raise exception 'A sees % guiding_answers', n; end if;
   select count(*) into n from public.portal_links; if n <> 1 then raise exception 'A sees % portal_links', n; end if;
+  select count(*) into n from public.results where id = rb; if n <> 0 then raise exception 'A selects B results row'; end if;
+  select count(*) into n from public.results where letter is not null and id <> ra; if n <> 0 then raise exception 'A reads another results letter'; end if;
   begin perform token_hash from public.portal_links; ok := false; exception when insufficient_privilege then ok := true; end;
   if not ok then raise exception 'A can read portal_links.token_hash'; end if;
   begin perform token_hash from public.parent_consents; ok := false; exception when insufficient_privilege then ok := true; end;
@@ -113,6 +122,7 @@ begin
   select count(*) into n from public.consents where user_id = ua; if n <> 0 then raise exception 'B reads A consents'; end if;
   select count(*) into n from public.parent_consents where user_id = ua; if n <> 0 then raise exception 'B reads A parent_consents'; end if;
   select count(*) into n from public.portal_links where user_id = ua; if n <> 0 then raise exception 'B reads A portal_links'; end if;
+  select count(*) into n from public.results where id = ra; if n <> 0 then raise exception 'B selects A results row'; end if;
   reset role;
 
   -- live team member m1 (by user_id) owns the lead result; a removed member does not
@@ -122,12 +132,16 @@ begin
   select count(*) into n from public.results where id = ra; if n <> 1 then raise exception 'live member cannot read lead result'; end if;
   select count(*) into n from public.team_members; if n <> 4 then raise exception 'member sees % team rows', n; end if;
   select count(*) into n from public.guiding_answers; if n <> 1 then raise exception 'member sees % guiding_answers', n; end if;
+  select count(*) into n from public.cohorts where id = coh; if n <> 1 then raise exception 'member cannot read lead cohort'; end if;
   reset role;
   update public.team_members set removed_at = now() where email_key = 'm1@example.com';
   set local role authenticated;
   perform pg_temp.as_user(um1, 'm1@example.com');
   if public.portal_owns_result(ra) then raise exception 'removed member still owns lead result'; end if;
   select count(*) into n from public.results where id = ra; if n <> 0 then raise exception 'removed member reads lead result'; end if;
+  select count(*) into n from public.team_members; if n <> 0 then raise exception 'removed member reads team_members'; end if;
+  select count(*) into n from public.guiding_answers; if n <> 0 then raise exception 'removed member reads guiding_answers'; end if;
+  select count(*) into n from public.cohorts where id = coh; if n <> 0 then raise exception 'removed member reads cohort'; end if;
   reset role;
 
   -- drafts invisible to owner and to team members; approved visible to both
@@ -141,6 +155,9 @@ begin
   select count(*) into n from public.team_members; if n <> 0 then raise exception 'owner reads team of a draft'; end if;
   perform pg_temp.as_user(um1, 'm1@example.com');
   select count(*) into n from public.results where id = ra; if n <> 0 then raise exception 'member reads draft result'; end if;
+  select count(*) into n from public.team_members; if n <> 0 then raise exception 'member reads team of a draft'; end if;
+  select count(*) into n from public.guiding_answers; if n <> 0 then raise exception 'member reads answers of a draft'; end if;
+  select count(*) into n from public.cohorts where id = coh; if n <> 0 then raise exception 'member reads cohort of a draft'; end if;
   reset role;
   update public.results set status = 'approved' where id = ra;
   set local role authenticated;
@@ -149,6 +166,16 @@ begin
   perform pg_temp.as_user(um1, 'm1@example.com');
   select count(*) into n from public.results where id = ra; if n <> 1 then raise exception 'member cannot read approved result'; end if;
   reset role;
+
+  -- cap is per lead: a second lead gets its own 3 seats while the first is full
+  insert into public.team_members (lead_result_id, email_key) values (rb, 'n1@example.com'), (rb, 'n2@example.com'), (rb, 'n3@example.com');
+  begin insert into public.team_members (lead_result_id, email_key) values (rb, 'n4@example.com'); ok := false;
+  exception when others then ok := true; end;
+  if not ok then raise exception '4th member of second lead accepted'; end if;
+  select count(*) into n from public.team_members where lead_result_id = ra and removed_at is null;
+  if n <> 3 then raise exception 'first lead has % live members, want 3', n; end if;
+  if pg_get_functiondef('public.team_members_cap()'::regprocedure) not like '%pg_advisory_xact_lock%' then
+    raise exception 'team_members_cap does not take an advisory lock'; end if;
 
   -- structural: RLS on, no write privileges, many null text_codes, link flags
   select count(*) into n from pg_class where oid in ('public.team_members'::regclass, 'public.consents'::regclass,
