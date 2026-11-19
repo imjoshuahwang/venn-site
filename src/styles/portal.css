@@ -1,5 +1,6 @@
 :root {
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", system-ui, sans-serif;
+  --white: #fff;
   --ink: #18181a;
   --body: #444;
   --muted: #5c5c60;

@@ -16,13 +16,13 @@ const { title = 'Portal' } = Astro.props;
 </html>
 <style is:global>
   *, *::before, *::after { box-sizing: border-box; }
-  body { margin: 0; font-family: var(--font); font-size: var(--fs-17); line-height: 1.5; color: var(--ink); background: #fff; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  body { margin: 0; font-family: var(--font); font-size: var(--fs-17); line-height: 1.5; color: var(--ink); background: var(--white); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
   main { position: relative; max-width: 640px; margin: 0 auto; padding: var(--sp-48) var(--gutter) var(--sp-64); }
   .blobs { position: fixed; inset: 0; z-index: -1; overflow: hidden; }
   .blobs i { position: absolute; width: 70vmax; height: 70vmax; border-radius: var(--r-pill); filter: blur(80px); opacity: 0.45; }
   .blobs .g { background: var(--green); top: -30vmax; left: -25vmax; }
   .blobs .b { background: var(--blue); bottom: -35vmax; right: -30vmax; }
   a:focus-visible, button:focus-visible { outline: 3px solid var(--ink); outline-offset: var(--sp-4); }
-  .pill { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; padding: var(--sp-12) var(--sp-24); border-radius: var(--r-pill); background: var(--ink); color: #fff; font-size: var(--fs-15); font-weight: var(--fw-600); text-decoration: none; transition: opacity var(--dur-1) var(--ease); }
+  .pill { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; padding: var(--sp-12) var(--sp-24); border-radius: var(--r-pill); background: var(--ink); color: var(--white); font-size: var(--fs-15); font-weight: var(--fw-600); text-decoration: none; transition: opacity var(--dur-1) var(--ease); }
   .pill:hover { opacity: 0.85; }
 </style>
