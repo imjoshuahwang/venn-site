@@ -14,6 +14,12 @@ site_url = "https://portal.joinvenn.org"
 additional_redirect_urls = ["https://portal.joinvenn.org/portal/auth/callback", "http://localhost:8000/portal/auth/callback"]
 minimum_password_length = 8
 
+[auth.email]
+otp_expiry = 259200
+
+[auth.sessions]
+timebox = "720h"
+
 [auth.email.template.invite]
 subject = "Set your Venn password"
 content_path = "./supabase/templates/invite.html"

@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { EmailOtpType, SupabaseClient } from '@supabase/supabase-js';
-import { safeRedirect } from '../../scripts/portal/auth-errors';
+import { safeRedirect } from '../../scripts/portal/auth-errors.ts';
 
 export const EXPIRED_PATH = '/portal/resend?expired=1';
 const TYPES = ['invite', 'recovery', 'signup', 'magiclink', 'email', 'email_change'];
