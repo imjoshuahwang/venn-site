@@ -62,16 +62,17 @@ for (const r of plan.results) {
 }
 
 for (const p of plan.pairs) {
-  ok(await sb.from('peer_matches').upsert({
+  const have = ok(await sb.from('peer_matches').select('id').eq('result_a', resId[p.a]).maybeSingle(), `find pair ${p.a}`);
+  if (!have) ok(await sb.from('peer_matches').insert({
     season: SEASON, result_a: resId[p.a], result_b: resId[p.b], why_matched: p.why_matched,
     a_down_at: p.a_down ? '2026-11-03T00:00:00Z' : null, b_down_at: p.b_down ? '2026-11-03T00:00:00Z' : null,
-  }, { onConflict: 'result_a' }), `pair ${p.a}`);
+  }), `pair ${p.a}`);
 }
 
 for (const m of plan.teamMembers) {
   const key = (await sb.rpc('email_key', { e: m.email })).data;
   const have = ok(await sb.from('team_members').select('id').eq('lead_result_id', resId[m.lead]).eq('email_key', key).is('removed_at', null).maybeSingle(), `find member ${m.slug}`);
-  if (!have) ok(await sb.from('team_members').insert({ lead_result_id: resId[m.lead], email_key: m.email }), `member ${m.slug}`);
+  if (!have) ok(await sb.from('team_members').insert({ lead_result_id: resId[m.lead], email_key: key }), `member ${m.slug}`);
 }
 
 ok(await sb.from('parent_consents').upsert({
@@ -81,7 +82,7 @@ ok(await sb.from('parent_consents').upsert({
 
 const n = async (table, f) => { const q = sb.from(table).select('*', { count: 'exact', head: true }); const r = await (f ? f(q) : q); if (r.error) throw new Error(r.error.message); return r.count; };
 const summary = {
-  auth_users: ids.size && [...ids.keys()].filter((e) => e.startsWith('contact+portal-')).length,
+  auth_users: SEEDED_USERS.filter((u) => ids.has(u.email)).length,
   applications: await n('applications', (q) => q.like('email', 'contact+portal-%')),
   results: await n('results', (q) => q.in('application_id', Object.values(appId))),
   peer_matches: await n('peer_matches', (q) => q.in('result_a', Object.values(resId))),
