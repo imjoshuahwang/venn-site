@@ -2,11 +2,11 @@
 // "Text Josh" stub (#132): phone with country code, one WhatsApp toggle, and a pill that opens a prefilled sms:/wa.me link.
 // The href is built client-side so QA can assert it without opening it. `code` is the minted VENN-XXXX from save_phone;
 // `locked` shows the disabled state for under-18 until the parent signs (#128). No verification, no opt-in recording.
-interface Props { firstName: string; code?: string; josh: string; locked?: boolean }
-const { firstName, code = '', josh, locked = false } = Astro.props;
+interface Props { firstName: string; code?: string; phone?: string; josh: string; locked?: boolean }
+const { firstName, code = '', phone = '', josh, locked = false } = Astro.props;
 ---
 <section class="text-josh" data-text-josh data-first-name={firstName} data-code={code} data-josh={josh}>
-  <label>Phone<input name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+1 415 555 0123" maxlength="24" disabled={locked}></label>
+  <label>Phone<input name="phone" type="tel" inputmode="tel" autocomplete="tel" value={phone} placeholder="+1 415 555 0123" maxlength="24" disabled={locked}></label>
   <label class="wa"><input type="checkbox" name="whatsapp" disabled={locked}> I use WhatsApp</label>
   <a class="pill" data-pill role="button" aria-disabled="true" href="#">Text Josh</a>
 </section>

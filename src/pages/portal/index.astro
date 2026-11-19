@@ -4,7 +4,7 @@ import Portal from '../../layouts/Portal.astro';
 import NextStep from '../../components/portal/NextStep.astro';
 import TextJosh from '../../components/portal/TextJosh.astro';
 import { pickNextStep, type NextStepInput } from '../../scripts/portal/next-step';
-import { joshPhone } from '../../scripts/portal/text-link';
+import { joshPhone, textJoshState } from '../../scripts/portal/text-link';
 import { stubSavePhone } from '../../lib/portal/rpc-adapter';
 import { loadHome } from '../../lib/portal/home';
 
@@ -25,30 +25,35 @@ let result = null;
 let failed = false;
 let team: { email_key: string }[] = [];
 let cohortName: string | null = null;
+let savedPhone: string | null = null;
+let savedCode: string | null = null;
 try {
   if (dev === 'error') throw new Error('stub');
   if (dev && stubs[dev]) {
     input = { ...empty, ...stubs[dev] };
     result = { outcome: input.outcome ?? 'cohort' };
+    if (input.phoneSaved !== false) { savedPhone = '+14155550123'; savedCode = stubSavePhone('', false); }
   } else {
     const h = await loadHome(Astro.locals.supabase);
     input = h.input;
     result = h.result;
     team = h.team;
     cohortName = h.cohortName;
+    savedPhone = h.phone;
+    savedCode = h.code;
   }
 } catch {
   failed = true;
 }
 const step = pickNextStep(input);
-const locked = input.under18 === true && input.parentSigned !== true;
+const tj = textJoshState({ under18: input.under18, parentSigned: input.parentSigned, phone: savedPhone, code: savedCode });
 ---
 <Portal title="Your Venn home">
   {failed ? <p role="alert" data-home-error>We could not load your home page. Please refresh, or email contact@joinvenn.org.</p> : (
     <>
       <NextStep step={step} />
       <section class="home-section" id="text-josh">
-        <TextJosh firstName="" code={dev && !locked ? stubSavePhone('', false) : ''} josh={joshPhone(import.meta.env)} locked={locked} />
+        <TextJosh firstName="" code={tj.code} phone={tj.phone} josh={joshPhone(import.meta.env)} locked={tj.locked} />
       </section>
       {result && <section class="home-section" data-result-summary>
         <h2>Your Result</h2>

@@ -72,7 +72,7 @@ const unq = (s) => s.trim().replace(/^(["'])(.*)\1$/, '$2');
 // Starts astro dev wired to the local stack; resolves { url, stop }.
 async function startDev(env) {
   const port = 4333, url = `http://127.0.0.1:${port}`;
-  const child = spawn('npx', ['astro', 'dev', '--host', '127.0.0.1', '--port', String(port)], { env: { ...process.env, ...env }, stdio: 'ignore' });
+  const child = spawn('npx', ['astro', 'dev', '--host', '127.0.0.1', '--port', String(port)], { env: { ...process.env, ...env, PORTAL_JOSH_PHONE: process.env.PORTAL_JOSH_PHONE || '+16505550100' }, stdio: 'ignore' });
   for (let i = 0; i < 120; i++) {
     if (await fetch(url).then(() => true, () => false)) return { url, stop: () => child.kill() };
     await new Promise((r) => setTimeout(r, 500));

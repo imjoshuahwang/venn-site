@@ -8,6 +8,8 @@ export type Home = {
   result: { id: number; outcome: string } | null;
   team: { email_key: string }[];
   cohortName: string | null;
+  phone: string | null;
+  code: string | null;
 };
 
 type Rows<T> = PromiseLike<{ data: T | null; error: { message: string } | null }>;
@@ -18,8 +20,8 @@ const read = async <T>(q: Rows<T>): Promise<T | null> => {
 };
 
 export async function loadHome(sb: SupabaseClient): Promise<Home> {
-  const res = await read<{ id: number; outcome: string; phone: string | null; cohort: { name: string; timeline: string | null } | null }>(
-    sb.from('results').select('id, outcome, phone, cohort:cohorts(name, timeline)').eq('status', 'approved').order('approved_at', { ascending: false }).limit(1).maybeSingle() as never);
+  const res = await read<{ id: number; outcome: string; phone: string | null; text_code: string | null; cohort: { name: string; timeline: string | null } | null }>(
+    sb.from('results').select('id, outcome, phone, text_code, cohort:cohorts(name, timeline)').eq('status', 'approved').order('approved_at', { ascending: false }).limit(1).maybeSingle() as never);
   const [parents, consents] = await Promise.all([
     read<{ signed_at: string | null }[]>(sb.from('parent_consents').select('signed_at').limit(1) as never),
     read<{ accepted: boolean }[]>(sb.from('consents').select('accepted') as never),
@@ -39,5 +41,5 @@ export async function loadHome(sb: SupabaseClient): Promise<Home> {
     outcome: res?.outcome ?? null, phone: res?.phone ?? null, timeline: res?.cohort?.timeline ?? null, mouSigned,
     parent: parents && parents.length ? { signed_at: parents[0].signed_at } : null, consents: consents ?? [], guidingCount,
   });
-  return { input, result: res ? { id: res.id, outcome: res.outcome } : null, team, cohortName: res?.cohort?.name ?? null };
+  return { input, result: res ? { id: res.id, outcome: res.outcome } : null, team, cohortName: res?.cohort?.name ?? null, phone: res?.phone ?? null, code: res?.text_code ?? null };
 }
