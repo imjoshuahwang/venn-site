@@ -16,7 +16,7 @@ export function portalRewrite(host: string, pathname: string, portalHost?: strin
 
 export function isPublicPortalPath(pathname: string): boolean {
   const p = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
-  return PUBLIC.includes(p) || p === '/portal/auth' || p.startsWith('/portal/auth/');
+  return PUBLIC.includes(p) || p === '/portal/auth' || p.startsWith('/portal/auth/') || p.startsWith('/portal/parent/');
 }
 
 /** `?next=` value for the login redirect: same-origin paths only, else null. */
