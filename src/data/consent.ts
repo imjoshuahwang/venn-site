@@ -41,7 +41,3 @@ export const CONSENT_CLAUSES: ConsentClause[] = [
     default: false,
   },
 ];
-
-export function consentDefaults(): Record<string, boolean> {
-  return Object.fromEntries(CONSENT_CLAUSES.map((c) => [c.key, c.default]));
-}
