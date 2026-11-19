@@ -1,15 +1,22 @@
 ---
 export const prerender = false;
 import Portal from '../../../layouts/Portal.astro';
-import { Waitlist, NotThisSeason, ResultState } from '../../../components/portal/results';
+import { Waitlist, NotThisSeason, ResultState, Peer } from '../../../components/portal/results';
+import { peerView } from '../../../data/portal-peer';
+import { stubPeer, STUB_CONTACT } from '../../../lib/portal/rpc-adapter';
 if (!import.meta.env.DEV) return new Response(null, { status: 404 });
 const q = Astro.url.searchParams;
 const outcome = q.get('outcome') ?? 'network_waitlist';
 const state = q.get('state') ?? 'ready';
 const letter = state === 'empty' ? null : `Dear Applicant,\n\nThank you for the care you put into your application. This fixture letter stands in for the one the team writes for you.\n\nThe Venn team`;
+// Peer states: not-tapped (default), waiting, both-down. `fail=1` makes the tap error; `mutual=1` makes the tap complete the pair.
+const peerState = state === 'waiting' ? 'waiting' : state === 'both-down' ? 'both' : 'none';
+const peerEndpoint = '/portal/dev/peer-down?' + (q.get('fail') ? 'fail=1' : q.get('mutual') ? 'mutual=1' : '');
+const peer = peerView(stubPeer(peerState), peerState === 'both' ? STUB_CONTACT : null);
 ---
 <Portal title="Result fixture">
   {state === 'loading' || state === 'error' ? <ResultState state={state} />
+    : outcome === 'peer' ? <Peer view={state === 'empty' ? null : peer} endpoint={peerEndpoint} />
     : outcome === 'not_this_season' ? <NotThisSeason letter={letter} />
     : <Waitlist outcome={outcome === 'track_waitlist' ? 'track_waitlist' : 'network_waitlist'} letter={letter} />}
 </Portal>

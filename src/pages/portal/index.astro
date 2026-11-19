@@ -1,15 +1,23 @@
 ---
 export const prerender = false;
 import Portal from '../../layouts/Portal.astro';
-import { Waitlist, NotThisSeason, ResultState } from '../../components/portal/results';
+import { Waitlist, NotThisSeason, ResultState, Peer } from '../../components/portal/results';
 import { pageFor } from '../../data/portal-copy';
-import { getMyResult, stubResult } from '../../lib/portal/rpc-adapter';
+import { peerView, stateOf } from '../../data/portal-peer';
+import { getMyResult, getMyPeer, peerDown, stubResult } from '../../lib/portal/rpc-adapter';
 
 let result = null;
+let peer = null;
 let failed = false;
 try {
   const stub = import.meta.env.DEV ? Astro.url.searchParams.get('stub') : null;
   result = stub ? stubResult(stub) : await getMyResult(Astro.locals.supabase);
+  if (result?.outcome === 'peer') {
+    const row = await getMyPeer(Astro.locals.supabase);
+    // Contact exists only in the peer_down return, and only once both are down.
+    const contact = row && stateOf(row) === 'both' ? await peerDown(Astro.locals.supabase, row.match_id) : null;
+    peer = row ? peerView(row, contact) : null;
+  }
 } catch {
   failed = true;
 }
@@ -17,6 +25,7 @@ const page = result ? pageFor(result.outcome) : null;
 ---
 <Portal title="Your Result">
   {failed ? <ResultState state="error" />
+    : result?.outcome === 'peer' ? <Peer view={peer} />
     : page === 'waitlist' ? <Waitlist outcome={result.outcome} letter={result.letter} />
     : page === 'not_this_season' ? <NotThisSeason letter={result.letter} />
     : <ResultState state="empty" />}
