@@ -67,6 +67,18 @@ begin
   t2 := public.request_parent_consent(hs, 'parent@example.com');
   reset role;
   if public.parent_consent_state(t2) <> 'ok' then raise exception 'resend after expiry failed'; end if;
+
+  -- the applicant sees own signed row with no approved result
+  delete from public.parent_consents where user_id = hs;
+  set local role service_role;
+  t1 := public.request_parent_consent(hs, 'parent@example.com');
+  reset role;
+  perform public.sign_parent_consent(t1);
+  perform set_config('request.jwt.claims', json_build_object('sub', hs)::text, true);
+  set local role authenticated;
+  select count(*) into n from public.parent_consents where signed_at is not null;
+  reset role;
+  if n <> 1 then raise exception 'applicant cannot see own signed parent row'; end if;
 end $$;
 
 rollback;
