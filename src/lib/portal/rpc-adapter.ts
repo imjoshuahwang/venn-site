@@ -25,18 +25,33 @@ export function stubResult(outcome: string | null): MyResult | null {
   return null;
 }
 
-/** The caller's Peer match (card fields and which sides are down). Name follows #116's get_my_peer. */
+/** Row shape of #116's get_my_peer and peer_down (table functions; partner_email is null until both are down). */
+type PeerRpcRow = {
+  match_id: number; partner_name: string | null; partner_org: string | null; partner_project: string | null;
+  why_matched: string | null; i_am_down: boolean; they_are_down: boolean; partner_email: string | null;
+};
+
+const one = (data: unknown): PeerRpcRow | null => (Array.isArray(data) ? data[0] : data) ?? null;
+
+/** The caller's Peer match (card fields and which sides are down). #116 returns org where the card wants a place. */
 export async function getMyPeer(supabase: Pick<SupabaseClient, 'rpc'>): Promise<PeerRow | null> {
   const { data, error } = await supabase.rpc('get_my_peer');
   if (error) throw error;
-  return (data as PeerRow | null) ?? null;
+  const r = one(data);
+  if (!r) return null;
+  return {
+    match_id: r.match_id, first_name: r.partner_name ?? undefined, project: r.partner_project ?? undefined,
+    place: r.partner_org ?? undefined, why_matched: r.why_matched ?? undefined, mine_down: r.i_am_down, theirs_down: r.they_are_down,
+  };
 }
 
 /** Taps "I'd be down". Returns the other Peer's contact only once both are down (peer_down is the sole source). */
 export async function peerDown(supabase: Pick<SupabaseClient, 'rpc'>, matchId: number): Promise<PeerContact | null> {
-  const { data, error } = await supabase.rpc('peer_down', { match_id: matchId });
+  const { data, error } = await supabase.rpc('peer_down', { p_match_id: matchId });
   if (error) throw error;
-  return (data as PeerContact | null) ?? null;
+  const r = one(data);
+  if (!r || !r.i_am_down || !r.they_are_down || !r.partner_email) return null;
+  return { name: r.partner_name ?? undefined, email: r.partner_email };
 }
 
 /** One in-flight call at a time: a second tap while sending shares the first call; a failure clears it so retry works. */

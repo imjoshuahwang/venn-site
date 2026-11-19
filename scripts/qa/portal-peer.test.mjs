@@ -47,10 +47,12 @@ test("copy is short and the pill says I'd be down", () => {
 
 test('adapter: getMyPeer and peerDown call the #116 RPC names', async () => {
   const calls = [];
-  const sb = { rpc: async (n, a) => { calls.push([n, a]); return { data: n === 'peer_down' ? { email: 'a@b.c' } : row, error: null }; } };
+  const sb = { rpc: async (n, a) => { calls.push([n, a]); return { data: [{ match_id: 7, partner_name: 'Maya Okafor', partner_org: 'Ohio, US', partner_project: 'p', why_matched: 'w', i_am_down: true, they_are_down: true, partner_email: 'a@b.c' }], error: null }; } };
   assert.equal((await getMyPeer(sb)).match_id, 7);
   assert.equal((await peerDown(sb, 7)).email, 'a@b.c');
-  assert.deepEqual(calls, [['get_my_peer', undefined], ['peer_down', { match_id: 7 }]]);
+  assert.deepEqual(calls, [['get_my_peer', undefined], ['peer_down', { p_match_id: 7 }]]);
+  const waiting = { rpc: async () => ({ data: [{ match_id: 7, partner_name: 'Maya', i_am_down: true, they_are_down: false, partner_email: null }], error: null }) };
+  assert.equal(await peerDown(waiting, 7), null);
   await assert.rejects(peerDown({ rpc: async () => ({ data: null, error: new Error('boom') }) }, 7));
 });
 

@@ -42,7 +42,7 @@ const c = view?.contact;
       inflight = true;
       q('[data-retry]').hidden = true;
       show('waiting');
-      fetch(root.dataset.endpoint!, { method: 'POST', headers: { 'content-type': 'application/json' }, body: `{"matchId":${Number(root.dataset.match)}}` })
+      fetch(root.dataset.endpoint!, { method: 'POST', body: `{"matchId":${Number(root.dataset.match)}}` })
         .then(async (r) => {
           if (!r.ok) throw new Error('rpc');
           const { contact } = await r.json();
