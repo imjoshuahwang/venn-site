@@ -1,0 +1,30 @@
+---
+import Base from '../../layouts/Base.astro';
+import AuthForm from '../../components/portal/AuthForm.astro';
+import { rpcStore } from '../../lib/portal/ratelimit';
+import { authGuard, guardStatus } from '../../scripts/portal/auth-errors';
+import { requestResend } from '../../lib/portal/resend';
+
+export const prerender = false;
+const expired = Astro.url.searchParams.get('expired') === '1';
+let error = '';
+let notice = '';
+
+if (Astro.request.method === 'POST') {
+  const f = await Astro.request.formData();
+  const email = String(f.get('email') ?? '').trim();
+  error = (await authGuard('resend', Astro.request, { form: f, store: rpcStore(Astro.locals.supabase) })) ?? '';
+  if (error) Astro.response.status = guardStatus(error);
+  if (!error) {
+    notice = await requestResend(email, {
+      send: (e) => Astro.locals.supabase.auth.resetPasswordForEmail(e, { redirectTo: `${Astro.url.origin}/portal/auth/callback?next=${encodeURIComponent('/portal/set-password')}` }),
+    });
+  }
+}
+---
+<Base title="Email me a new link | Venn" description="Get a new Venn portal link." bare noindex>
+  <AuthForm turnstile title={expired ? 'That link has expired' : 'Email me a new link'}
+    lede={expired ? 'Links work once and only for a short while. Enter your email and we will send a new one.' : ''}
+    fields={notice ? [] : ['email']} submit="Send link" error={error} notice={notice}
+    links={[{ href: '/portal/login', label: 'Back to sign in' }]} />
+</Base>

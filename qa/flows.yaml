@@ -30,3 +30,16 @@
     - tap .q-next:not(.off)
     - expect-visible #f-org
     - screenshot apply-school
+- name: portal-expired-link
+  on: /portal/resend?expired=1
+  steps:
+    - expect-visible h1
+    - expect-visible input[name=email]
+    - screenshot portal-expired-link
+- name: portal-resend
+  on: /portal/resend
+  steps:
+    - expect-visible input[name=email]
+    - fill "input[name=email]" contact+portal-qa@joinvenn.org
+    - expect-visible button[type=submit]
+    - screenshot portal-resend

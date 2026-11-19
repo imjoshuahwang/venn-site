@@ -1,7 +1,8 @@
 ---
 import Base from '../../layouts/Base.astro';
 import AuthForm from '../../components/portal/AuthForm.astro';
-import { authGuard } from '../../scripts/portal/auth-errors';
+import { rpcStore } from '../../lib/portal/ratelimit';
+import { authGuard, guardStatus } from '../../scripts/portal/auth-errors';
 
 export const prerender = false;
 // Sprint 1 only sends a reset email to the test address (#130 lifts this with Turnstile + rate limits + resend).
@@ -13,7 +14,8 @@ let notice = '';
 if (Astro.request.method === 'POST') {
   const f = await Astro.request.formData();
   const email = String(f.get('email') ?? '').trim().toLowerCase();
-  error = (await authGuard('reset', Astro.request)) ?? '';
+  error = (await authGuard('reset', Astro.request, { form: f, store: rpcStore(Astro.locals.supabase) })) ?? '';
+  if (error) Astro.response.status = guardStatus(error);
   if (!error) {
     if (RESET_ALLOWED.includes(email)) {
       await Astro.locals.supabase.auth.resetPasswordForEmail(email, { redirectTo: `${Astro.url.origin}/portal/auth/callback?next=${encodeURIComponent('/portal/set-password')}` });
@@ -24,7 +26,7 @@ if (Astro.request.method === 'POST') {
 }
 ---
 <Base title="Reset password | Venn" description="Reset your Venn portal password." bare noindex>
-  <AuthForm title={expired ? 'That link has expired' : 'Reset your password'}
+  <AuthForm turnstile title={expired ? 'That link has expired' : 'Reset your password'}
     lede={expired ? 'Links work once and only for a short while. Enter your email and we will send a new one.' : 'Enter your email and we will send you a link.'}
     fields={notice ? [] : ['email']} submit="Send link" error={error} notice={notice}
     links={[{ href: '/portal/login', label: 'Back to sign in' }]} />

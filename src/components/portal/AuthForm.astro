@@ -11,8 +11,10 @@ interface Props {
   next?: string;
   email?: string;
   links?: { href: string; label: string }[];
+  turnstile?: boolean;
 }
-const { title, lede, fields, submit, error = '', notice = '', next = '', email = '', links = [] } = Astro.props;
+const { title, lede, fields, submit, error = '', notice = '', next = '', email = '', links = [], turnstile = false } = Astro.props;
+const siteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'; // Cloudflare test key until the real one is unlocked
 ---
 <section class="auth">
   <h1>{title}</h1>
@@ -28,13 +30,15 @@ const { title, lede, fields, submit, error = '', notice = '', next = '', email =
         <label>Password<input name="password" type="password" autocomplete="current-password" enterkeyhint="go" required maxlength="200"></label>
       )}
       {fields.includes('new-password') && (
-        <label>New password<span class="hint">At least 8 characters.</span><input name="password" type="password" autocomplete="new-password" enterkeyhint="go" required minlength="8" maxlength="200"></label>
+        <label>New password<input name="password" type="password" autocomplete="new-password" enterkeyhint="go" required minlength="8" maxlength="200"></label>
       )}
+      {turnstile && <div class="cf-turnstile" data-sitekey={siteKey} data-appearance="interaction-only"></div>}
       <button class="btn" type="submit" data-working="Working...">{submit}</button>
     </form>
   )}
   {links.length > 0 && <nav class="auth-links">{links.map((l) => <a href={l.href}>{l.label}</a>)}</nav>}
 </section>
+{turnstile && <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>}
 <script>
   document.querySelectorAll<HTMLFormElement>('.auth-form').forEach((f) => {
     f.addEventListener('submit', () => {
@@ -52,7 +56,6 @@ const { title, lede, fields, submit, error = '', notice = '', next = '', email =
   .status.err { background: #fef2f2; color: #b91c1c; }
   .auth-form { display: grid; gap: 16px; }
   label { display: grid; gap: 6px; font-size: 15px; font-weight: 500; color: var(--black); }
-  .hint { font-weight: 400; color: var(--muted); font-size: 14px; }
   input:not([type=hidden]) {
     font: 17px/1.5 var(--font); color: var(--text); background: #fff; min-height: 52px; -webkit-appearance: none; appearance: none;
     border: 0; box-shadow: inset 0 0 0 1px #e5e5e5; border-radius: 14px; padding: 14px 16px; width: 100%;
