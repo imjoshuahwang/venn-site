@@ -125,3 +125,18 @@
     - goto /portal?state=error
     - expect-visible [data-home-error]
     - screenshot error
+- name: consent-ceremony
+  on: /portal/ceremony
+  steps:
+    - expect-visible form.consent
+- name: consent
+  on: /portal/consent
+  steps:
+    - expect-visible form.consent
+    - expect-visible button:disabled
+    - tap input[name=coordinator_groups] + .box
+    - tap input[name=data_use] + .box
+    - tap input[name=retention] + .box
+    - tap input[name=highlights] + .box
+    - screenshot consent-ready
+    - tap text=Continue

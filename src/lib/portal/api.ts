@@ -53,8 +53,17 @@ export async function savePhone(sb: SupabaseClient, phone: string, whatsapp: boo
   return wrap<string>(await sb.rpc('save_phone', { p_phone: phone, p_whatsapp: whatsapp }));
 }
 
+export async function giveConsent(sb: SupabaseClient, clauses: Record<string, boolean>, version: string): Promise<Api<number>> {
+  return wrap<number>(await sb.rpc('give_consent', { clauses, version }));
+}
+
 export async function signMou(sb: SupabaseClient, resultId: number, typedName: string, agreed: boolean): Promise<Api<MouSignature>> {
   return wrap<MouSignature>(await sb.rpc('sign_mou', { p_result_id: resultId, p_typed_name: typedName, p_agreed: agreed }));
+}
+
+export type ConsentState = { done: boolean; application: boolean; minor: boolean; answers: Record<string, boolean> };
+export async function getConsentState(sb: SupabaseClient, version: string): Promise<Api<ConsentState>> {
+  return wrap<ConsentState>(await sb.rpc("consent_state", { p_version: version }));
 }
 
 /** The caller's MOU signature for a result (RLS: own rows only); data null (no error) when unsigned. */

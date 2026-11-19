@@ -1,0 +1,16 @@
+---
+// Ceremony shell: #117 adds sealed card, reveal, letter, share
+import Portal from '../../layouts/Portal.astro';
+import ConsentForm from '../../components/portal/ConsentForm.astro';
+import { CONSENT_VERSION } from '../../data/consent';
+import { getConsentState } from '../../lib/portal/api';
+
+export const prerender = false;
+const { data: state, error } = await getConsentState(Astro.locals.supabase, CONSENT_VERSION);
+if (state?.done) return Astro.redirect('/portal', 303);
+---
+<Portal title="Welcome">
+  {error || !state ? <p role="alert">We could not load this page. Reload to try again.</p>
+    : !state.application ? <p>We could not find an application for this email.</p>
+    : <ConsentForm answers={state.answers} minor={state.minor} />}
+</Portal>

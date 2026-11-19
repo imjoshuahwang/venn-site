@@ -1,0 +1,22 @@
+---
+import Portal from '../../layouts/Portal.astro';
+import ConsentForm from '../../components/portal/ConsentForm.astro';
+import { CONSENT_VERSION } from '../../data/consent';
+import { getConsentState, giveConsent } from '../../lib/portal/api';
+
+export const prerender = false;
+const sb = Astro.locals.supabase;
+
+if (Astro.request.method === 'POST') {
+  const body = await Astro.request.json().catch(() => null);
+  const r = body && body.version === CONSENT_VERSION ? await giveConsent(sb, body.clauses, body.version) : { error: { message: 'bad request' } };
+  return new Response(null, { status: r.error ? 400 : 204 });
+}
+
+const { data: state, error } = await getConsentState(sb, CONSENT_VERSION);
+---
+<Portal title="Consent">
+  {error || !state ? <p role="alert">We could not load this page. Reload to try again.</p>
+    : !state.application ? <p>We could not find an application for this email.</p>
+    : <ConsentForm answers={state.answers} minor={state.minor} />}
+</Portal>
