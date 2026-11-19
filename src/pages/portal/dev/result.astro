@@ -1,6 +1,10 @@
 ---
 export const prerender = false;
 import Portal from '../../../layouts/Portal.astro';
+import CohortSlides from '../../../components/portal/results/CohortSlides.astro';
+import GuidingQuestions from '../../../components/portal/GuidingQuestions.astro';
+import { logoUrl } from '../../../data/mou';
+import { STUB_GUIDING } from '../../../lib/portal/guiding';
 import { Waitlist, NotThisSeason, ResultState, Peer, Cohort } from '../../../components/portal/results';
 import { peerView } from '../../../data/portal-peer';
 import { stubPeer, STUB_CONTACT } from '../../../lib/portal/rpc-adapter';
@@ -18,11 +22,15 @@ const cohortRow = state === 'null' ? { id: 1, name: 'Fall cohort', company: null
 const cohortResult = { id: 1, letter, cohort: cohortRow };
 const cohortView = { signature: state === 'signed' ? { typed_name: 'Maya Lee', signed_at: '2026-11-18T17:00:00Z' } : null, isLead: state !== 'member', orgCount: state === 'null' ? null : 4 };
 const mouEndpoint = '/portal/dev/mou' + (q.get('fail') ? `?fail=${encodeURIComponent(q.get('fail'))}` : '');
+const guidingEndpoint = '/portal/dev/guiding' + (q.get('gfail') ? `?fail=${encodeURIComponent(q.get('gfail'))}` : '');
 const peer = peerView(stubPeer(peerState), peerState === 'both' ? STUB_CONTACT : null);
 ---
 <Portal title="Result fixture">
   {state === 'loading' || state === 'error' ? <ResultState state={state} />
-    : outcome === 'cohort' ? <Cohort result={cohortResult} view={cohortView} full={state === 'full'} endpoint={mouEndpoint} />
+    : outcome === 'cohort' ? <Cohort result={cohortResult} view={cohortView} full={state === 'full'} endpoint={mouEndpoint}>
+      <CohortSlides slot="slides" cohort={cohortRow} logo={logoUrl(cohortRow.logo_path, import.meta.env.PUBLIC_SUPABASE_URL)} />
+      <GuidingQuestions slot="guidingQuestions" resultId={cohortResult.id} answers={state === 'empty-answers' ? {} : STUB_GUIDING} endpoint={guidingEndpoint} closed={q.get('gfail') === 'closed-load'} />
+    </Cohort>
     : outcome === 'peer' ? <Peer view={state === 'empty' ? null : peer} endpoint={peerEndpoint} />
     : outcome === 'not_this_season' ? <NotThisSeason letter={letter} />
     : <Waitlist outcome={outcome === 'track_waitlist' ? 'track_waitlist' : 'network_waitlist'} letter={letter} />}

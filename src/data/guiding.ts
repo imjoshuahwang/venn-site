@@ -34,6 +34,17 @@ export const GUIDING_ERRORS = {
 } as const;
 export type GuidingErrorCode = keyof typeof GUIDING_ERRORS;
 
+// Voice draft (recommended option, #133): warm, plain, second person.
+export const GUIDING_COPY = {
+  heading: 'Before you kick off',
+  intro: 'Your team and partner read these before the first session, so write them the way you would say them out loud.',
+  save: 'Save answers',
+  saving: 'Saving',
+  saved: 'Saved. You can change these until kickoff.',
+  closed: GUIDING_ERRORS.closed,
+  placeholder: 'A sentence or two is plenty.',
+} as const;
+
 /** Maps an error from save_guiding_answers to a code. 42501 = not the lead; 22023 = closed or invalid. */
 export function mapGuidingError(e: { code?: string; message?: string } | null | undefined): GuidingErrorCode {
   if (e?.code === '42501') return 'forbidden';
