@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { POST } from '../../pages/portal/peer-down.ts';
 
 const call = (locals: object, body = '{"matchId":1}') =>
-  (POST as any)({ locals, request: new Request('http://x/portal/peer-down', { method: 'POST', body }) });
+  (POST as any)({ locals, request: new Request('http://x/portal/peer-down', { method: 'POST', body, headers: { origin: 'http://x' } }) });
 
 test('no session user is 401 with no body', async () => {
   const res = await call({ user: null });

@@ -4,7 +4,7 @@ import Portal from '../../layouts/Portal.astro';
 import { Waitlist, NotThisSeason, ResultState, Peer } from '../../components/portal/results';
 import { pageFor } from '../../data/portal-copy';
 import { peerView, stateOf } from '../../data/portal-peer';
-import { getMyResult, getMyPeer, peerDown, stubResult } from '../../lib/portal/rpc-adapter';
+import { getMyResult, getMyPeer, stubResult } from '../../lib/portal/rpc-adapter';
 
 let result = null;
 let peer = null;
@@ -14,9 +14,8 @@ try {
   result = stub ? stubResult(stub) : await getMyResult(Astro.locals.supabase);
   if (result?.outcome === 'peer') {
     const row = await getMyPeer(Astro.locals.supabase);
-    // Contact exists only in the peer_down return, and only once both are down.
-    const contact = row && stateOf(row) === 'both' ? await peerDown(Astro.locals.supabase, row.match_id) : null;
-    peer = row ? peerView(row, contact) : null;
+    // A load only reads: the tap is written by the explicit POST. get_my_peer carries the contact once both are down.
+    peer = row ? peerView(row, stateOf(row) === 'both' ? row.contact : null) : null;
   }
 } catch {
   failed = true;
