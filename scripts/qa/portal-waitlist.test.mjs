@@ -77,7 +77,7 @@ test('portal.css holds the #112 token lists', () => {
 });
 
 test('result css/astro use no raw sizes, spacing or motion values', () => {
-  const files = ['src/layouts/Portal.astro', ...walk('src/components/portal').filter((f) => f.endsWith('.astro')), 'src/pages/portal/index.astro', 'src/pages/portal/dev/result.astro'].filter((f) => fs.existsSync(f));
+  const files = ['src/layouts/Portal.astro', ...walk('src/components/portal/results').filter((f) => f.endsWith('.astro')), 'src/pages/portal/index.astro', 'src/pages/portal/dev/result.astro'].filter((f) => fs.existsSync(f));
   const re = /(?:^|[;{\s])(font-size|padding(?:-[a-z]+)?|margin(?:-[a-z]+)?|gap|row-gap|column-gap|animation(?:-duration)?|transition(?:-duration)?|animation-timing-function|transition-timing-function|border-radius):\s*([^;}]+)/g;
   const bad = [];
   for (const f of [...files, 'src/styles/portal.css']) {
