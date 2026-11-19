@@ -48,7 +48,20 @@ export function localSupabaseEnv(text) {
   if (!o.API_URL) throw new Error('no API_URL in supabase status output; is the local stack up (supabase start)?');
   if (!/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(o.API_URL)) throw new Error(`refusing: Supabase API_URL ${o.API_URL} is not local`);
   if (!o.ANON_KEY) throw new Error('no ANON_KEY in supabase status output');
-  return { PUBLIC_SUPABASE_URL: o.API_URL, PUBLIC_SUPABASE_ANON_KEY: o.ANON_KEY };
+  return { PUBLIC_SUPABASE_URL: o.API_URL, PUBLIC_SUPABASE_ANON_KEY: o.ANON_KEY, ...TURNSTILE_LOCAL };
+}
+
+// Cloudflare's documented always-pass TEST keys. Local/dev harness only: they override any real key in the shell, and prod config never reads this file.
+export const TURNSTILE_LOCAL = {
+  PUBLIC_TURNSTILE_SITE_KEY: '1x00000000000000000000AA',
+  TURNSTILE_SECRET_KEY: '1x0000000000000000000000000000000AA',
+};
+
+// Local DB only: drops the rate-limit counters so one flow's sign-ins never lock out the next.
+export function clearRateLimits(execFile = execFileSync) {
+  try {
+    execFile('psql', ['postgresql://postgres:postgres@127.0.0.1:54322/postgres', '-qc', 'truncate public.portal_rate_hits'], { stdio: 'ignore' });
+  } catch { /* stack without the table or psql: the dev server's in-memory limiter is per run anyway */ }
 }
 
 // ---- runner ----
@@ -156,6 +169,7 @@ export async function main(argv = process.argv.slice(2)) {
   let failed = 0;
   try {
     for (const flow of run) for (const d of devices) {
+      clearRateLimits();
       const r = await runPortalFlow({ flow, device: d, browser: browsers[d.browser], base, login });
       if (!r.pass) failed++;
       console.log(`${r.pass ? 'PASS' : 'FAIL'}  ${flow.name}  ${d.name}  ${r.details}`);
