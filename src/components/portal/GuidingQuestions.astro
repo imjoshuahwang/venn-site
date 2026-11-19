@@ -1,0 +1,68 @@
+---
+import { GUIDING_QUESTIONS, GUIDING_COPY, GUIDING_ERRORS, GUIDING_MAX } from '../../data/guiding';
+const { resultId, answers = {}, endpoint = '/portal/guiding', closed = false, readonly = false } = Astro.props as {
+  resultId: number; answers?: Record<string, string>; endpoint?: string; closed?: boolean; readonly?: boolean;
+};
+---
+<section class="guiding" data-guiding data-result={resultId} data-endpoint={endpoint} aria-labelledby="guiding-h">
+  <h2 id="guiding-h">{GUIDING_COPY.heading}</h2>
+  <p class="intro">{GUIDING_COPY.intro}</p>
+  <form data-form novalidate>
+    {GUIDING_QUESTIONS.map((q) => (
+      <label class="field">
+        <span>{q.label}</span>
+        <textarea name={q.id} rows="3" maxlength={GUIDING_MAX} placeholder={GUIDING_COPY.placeholder} disabled={closed || readonly}>{answers[q.id] ?? ''}</textarea>
+      </label>
+    ))}
+    <button class="pill" type="submit" data-save hidden={closed || readonly}>{GUIDING_COPY.save}</button>
+    <p class="status" role="status" data-status>{closed ? GUIDING_COPY.closed : readonly ? GUIDING_ERRORS.forbidden : ''}</p>
+    <p class="err" role="alert" data-error hidden></p>
+  </form>
+</section>
+<script>
+  import { GUIDING_COPY, GUIDING_ERRORS, type GuidingErrorCode } from '../../data/guiding';
+  const root = document.querySelector<HTMLElement>('[data-guiding]');
+  if (root) {
+    const form = root.querySelector<HTMLFormElement>('[data-form]')!;
+    const btn = root.querySelector<HTMLButtonElement>('[data-save]')!;
+    const status = root.querySelector<HTMLElement>('[data-status]')!;
+    const err = root.querySelector<HTMLElement>('[data-error]')!;
+    let inflight = false;
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (inflight) return;
+      const answers: Record<string, string> = {};
+      form.querySelectorAll<HTMLTextAreaElement>('textarea').forEach((t) => { if (t.value.trim()) answers[t.name] = t.value.trim(); });
+      err.hidden = true; status.textContent = '';
+      if (!Object.keys(answers).length) { err.textContent = GUIDING_ERRORS.invalid; err.hidden = false; return; }
+      inflight = true; root.dataset.state = 'saving'; btn.textContent = GUIDING_COPY.saving; btn.setAttribute('aria-disabled', 'true');
+      try {
+        const r = await fetch(root.dataset.endpoint!, { method: 'POST', body: JSON.stringify({ resultId: Number(root.dataset.result), answers }) });
+        const body = await r.json().catch(() => ({}));
+        if (r.ok && body.answers) {
+          form.querySelectorAll<HTMLTextAreaElement>('textarea').forEach((t) => { if (body.answers[t.name] != null) t.value = body.answers[t.name]; });
+          status.textContent = GUIDING_COPY.saved;
+        } else {
+          const k = (body.error ?? 'failed') as GuidingErrorCode;
+          err.textContent = GUIDING_ERRORS[k] ?? GUIDING_ERRORS.failed; err.hidden = false;
+          if (k === 'closed') { form.querySelectorAll('textarea').forEach((t) => (t.disabled = true)); btn.hidden = true; }
+        }
+      } catch { err.textContent = GUIDING_ERRORS.failed; err.hidden = false; }
+      finally { inflight = false; root.dataset.state = 'idle'; btn.textContent = GUIDING_COPY.save; btn.removeAttribute('aria-disabled'); }
+    });
+  }
+</script>
+<style>
+  .guiding { display: grid; gap: var(--sp-12); width: 100%; padding: var(--sp-24); border: 1px solid var(--line); border-radius: var(--r-20); background: var(--panel); }
+  h2 { margin: 0; font-size: var(--fs-22); font-weight: var(--fw-800); letter-spacing: var(--track-tight); }
+  .intro, .status, .err { margin: 0; font-size: var(--fs-15); color: var(--body); }
+  form { display: grid; gap: var(--sp-16); }
+  .field { display: grid; gap: var(--sp-8); font-size: var(--fs-15); font-weight: var(--fw-600); color: var(--ink); }
+  textarea { box-sizing: border-box; width: 100%; min-height: 88px; padding: var(--sp-12); font: inherit; font-size: 16px; font-weight: var(--fw-400); color: var(--ink); background: var(--white); border: 1px solid var(--line); border-radius: var(--r-12); resize: vertical; }
+  textarea:focus-visible, button:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+  button { min-height: 44px; justify-self: start; cursor: pointer; }
+  button[aria-disabled='true'] { opacity: 0.5; }
+  .err { color: var(--err); }
+  [hidden] { display: none; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>

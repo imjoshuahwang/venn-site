@@ -1,6 +1,10 @@
 ---
 export const prerender = false;
 import Portal from '../../layouts/Portal.astro';
+import CohortSlides from '../../components/portal/results/CohortSlides.astro';
+import GuidingQuestions from '../../components/portal/GuidingQuestions.astro';
+import { logoUrl } from '../../data/mou';
+import { getMyGuidingAnswers, guidingAccess } from '../../lib/portal/guiding';
 import { Waitlist, NotThisSeason, ResultState, Peer, Cohort } from '../../components/portal/results';
 import { pageFor } from '../../data/portal-copy';
 import { peerView, stateOf } from '../../data/portal-peer';
@@ -11,6 +15,7 @@ let result = null;
 let peer = null;
 let cohort = null;
 let cohortView = null;
+let guiding = {};
 let failed = false;
 try {
   const stub = import.meta.env.DEV ? Astro.url.searchParams.get('stub') : null;
@@ -19,6 +24,7 @@ try {
     const full = await getFullResult(Astro.locals.supabase);
     if (full.error) throw new Error(full.error.message);
     cohort = full.data;
+    guiding = cohort ? await getMyGuidingAnswers(Astro.locals.supabase, cohort.id) : {};
     cohortView = cohort ? await getCohortView(Astro.locals.supabase, cohort.id) : null;
   }
   if (result?.outcome === 'peer') {
@@ -29,11 +35,15 @@ try {
 } catch {
   failed = true;
 }
+const access = guidingAccess({ isLead: cohortView?.isLead ?? false, cutoff: cohort?.cohort?.guiding_cutoff });
 const page = result ? pageFor(result.outcome) : null;
 ---
 <Portal title="Your Result">
   {failed ? <ResultState state="error" />
-    : result?.outcome === 'cohort' ? <Cohort result={cohort} view={cohortView} />
+    : result?.outcome === 'cohort' ? <Cohort result={cohort} view={cohortView}>
+      <CohortSlides slot="slides" cohort={cohort?.cohort} logo={logoUrl(cohort?.cohort?.logo_path, import.meta.env.PUBLIC_SUPABASE_URL)} />
+      {cohort && <GuidingQuestions slot="guidingQuestions" resultId={cohort.id} answers={guiding} closed={access === 'closed'} readonly={access === 'readonly'} />}
+    </Cohort>
     : result?.outcome === 'peer' ? <Peer view={peer} />
     : page === 'waitlist' ? <Waitlist outcome={result.outcome} letter={result.letter} />
     : page === 'not_this_season' ? <NotThisSeason letter={result.letter} />

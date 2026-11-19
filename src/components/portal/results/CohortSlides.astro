@@ -1,0 +1,62 @@
+---
+import { buildSlides, SLIDE_COPY } from '../../../scripts/portal/slides';
+import { COHORT_COPY } from '../../../data/mou';
+const { cohort, logo = null } = Astro.props as { cohort: any; logo?: string | null };
+const slides = buildSlides(cohort, logo);
+---
+{slides.length > 0 && (
+  <section class="deck" data-slides role="region" aria-roledescription="carousel" aria-label={SLIDE_COPY.region}>
+    <div class="track" data-track tabindex="0">
+      {slides.map((s, i) => (
+        <article class="slide" data-slide={s.id} aria-label={SLIDE_COPY.counter(i + 1, slides.length)}>
+          {s.logo && <img src={s.logo} alt={COHORT_COPY.logoAlt(s.body || 'Partner')} width="64" height="64" />}
+          <p class="kicker">{s.title}</p>
+          {s.body && <p class="body">{s.body}</p>}
+        </article>
+      ))}
+    </div>
+    {slides.length > 1 && (
+      <div class="bar">
+        <button type="button" class="pill ctl" data-prev aria-label={SLIDE_COPY.prev}>&larr;</button>
+        <span class="count" data-count aria-live="polite">{SLIDE_COPY.counter(1, slides.length)}</span>
+        <button type="button" class="pill ctl" data-next aria-label={SLIDE_COPY.next}>&rarr;</button>
+      </div>
+    )}
+  </section>
+)}
+<script>
+  import { stepIndex, SLIDE_COPY } from '../../../scripts/portal/slides';
+  const root = document.querySelector<HTMLElement>('[data-slides]');
+  if (root) {
+    const track = root.querySelector<HTMLElement>('[data-track]')!;
+    const n = track.children.length;
+    const count = root.querySelector<HTMLElement>('[data-count]');
+    const current = () => Math.round(track.scrollLeft / Math.max(track.clientWidth, 1));
+    const go = (dir: 1 | -1) => {
+      const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      track.scrollTo({ left: stepIndex(current(), n, dir) * track.clientWidth, behavior: reduce ? 'auto' : 'smooth' });
+    };
+    const sync = () => { if (count) count.textContent = SLIDE_COPY.counter(current() + 1, n); };
+    track.addEventListener('scroll', sync, { passive: true });
+    track.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
+    });
+    root.querySelector('[data-next]')?.addEventListener('click', () => go(1));
+    root.querySelector('[data-prev]')?.addEventListener('click', () => go(-1));
+  }
+</script>
+<style>
+  .deck { display: grid; gap: var(--sp-12); }
+  .track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; scrollbar-width: none; border-radius: var(--r-20); border: 1px solid var(--line); background: var(--panel); }
+  .track::-webkit-scrollbar { display: none; }
+  .track:focus-visible, .ctl:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+  .slide { flex: 0 0 100%; scroll-snap-align: start; box-sizing: border-box; min-height: 240px; padding: var(--sp-24); display: grid; align-content: center; justify-items: start; gap: var(--sp-12); }
+  img { border-radius: var(--r-12); object-fit: contain; }
+  .kicker { margin: 0; font-size: var(--fs-13); font-weight: var(--fw-600); color: var(--muted); }
+  .body { margin: 0; font-size: var(--fs-28); font-weight: var(--fw-800); letter-spacing: var(--track-tight); line-height: 1.15; color: var(--ink); overflow-wrap: anywhere; }
+  .bar { display: flex; align-items: center; justify-content: space-between; }
+  .ctl { min-height: 44px; min-width: 44px; padding: 0 var(--sp-16); cursor: pointer; font-size: var(--fs-17); }
+  .count { font-size: var(--fs-15); color: var(--muted); }
+  @media (prefers-reduced-motion: reduce) { .track { scroll-behavior: auto; } .slide, .ctl { transition: none; } }
+</style>
