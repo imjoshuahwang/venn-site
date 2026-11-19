@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import AuthForm from '../../components/portal/AuthForm.astro';
+import { rpcStore } from '../../lib/portal/ratelimit';
 import { authGuard } from '../../scripts/portal/auth-errors';
 
 export const prerender = false;
@@ -13,7 +14,7 @@ let notice = '';
 if (Astro.request.method === 'POST') {
   const f = await Astro.request.formData();
   const email = String(f.get('email') ?? '').trim().toLowerCase();
-  error = (await authGuard('reset', Astro.request)) ?? '';
+  error = (await authGuard('reset', Astro.request, { form: f, store: rpcStore(Astro.locals.supabase) })) ?? '';
   if (!error) {
     if (RESET_ALLOWED.includes(email)) {
       await Astro.locals.supabase.auth.resetPasswordForEmail(email, { redirectTo: `${Astro.url.origin}/portal/auth/callback?next=${encodeURIComponent('/portal/set-password')}` });

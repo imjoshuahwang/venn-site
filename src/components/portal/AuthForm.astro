@@ -11,8 +11,10 @@ interface Props {
   next?: string;
   email?: string;
   links?: { href: string; label: string }[];
+  turnstile?: boolean;
 }
-const { title, lede, fields, submit, error = '', notice = '', next = '', email = '', links = [] } = Astro.props;
+const { title, lede, fields, submit, error = '', notice = '', next = '', email = '', links = [], turnstile = false } = Astro.props;
+const siteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'; // Cloudflare test key until the real one is unlocked
 ---
 <section class="auth">
   <h1>{title}</h1>
@@ -30,11 +32,13 @@ const { title, lede, fields, submit, error = '', notice = '', next = '', email =
       {fields.includes('new-password') && (
         <label>New password<span class="hint">At least 8 characters.</span><input name="password" type="password" autocomplete="new-password" enterkeyhint="go" required minlength="8" maxlength="200"></label>
       )}
+      {turnstile && <div class="cf-turnstile" data-sitekey={siteKey} data-appearance="interaction-only"></div>}
       <button class="btn" type="submit" data-working="Working...">{submit}</button>
     </form>
   )}
   {links.length > 0 && <nav class="auth-links">{links.map((l) => <a href={l.href}>{l.label}</a>)}</nav>}
 </section>
+{turnstile && <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>}
 <script>
   document.querySelectorAll<HTMLFormElement>('.auth-form').forEach((f) => {
     f.addEventListener('submit', () => {

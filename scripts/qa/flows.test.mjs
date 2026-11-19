@@ -51,7 +51,7 @@ test('parseFlows reads names, pages and steps; the shipped flows.yaml parses', (
   assert.deepEqual(f.map((x) => [x.name, x.on, x.steps.length]), [['a', '/x', 2], ['b', '/', 1]]);
   assert.throws(() => parseFlows('- name: a\n  steps:\n'), /needs a name and steps/);
   const real = loadFlows();
-  assert.deepEqual(real.map((x) => x.on), ['/', '/apply']);
+  assert.deepEqual(real.map((x) => x.on), ['/', '/apply', '/portal/resend?expired=1', '/portal/resend']);
 });
 
 test('a 3-step flow passes: tap, goto, expect-visible, fill, screenshot', async () => {
