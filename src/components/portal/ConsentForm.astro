@@ -1,0 +1,61 @@
+---
+import { CONSENT_CLAUSES, CONSENT_VERSION } from '../../data/consent';
+interface Props { answers?: Record<string, boolean>; minor?: boolean }
+const { answers = {}, minor = false } = Astro.props;
+const checked = (c: { key: string; default: boolean }) => (c.key in answers ? answers[c.key] : c.default);
+---
+<form class="consent" data-version={CONSENT_VERSION} data-minor={minor ? '1' : '0'} novalidate>
+  <h1>Before we start</h1>
+  {CONSENT_CLAUSES.map((c) => (
+    <label class="clause">
+      <input type="checkbox" name={c.key} data-required={c.required ? '1' : '0'} checked={checked(c)}>
+      <span class="box" aria-hidden="true"></span>
+      <span class="copy"><strong>{c.label}</strong><span>{c.text}</span></span>
+    </label>
+  ))}
+  <p class="err" role="alert" hidden></p>
+  <button class="pill" type="submit" disabled>Continue</button>
+</form>
+<script>
+  const form = document.querySelector<HTMLFormElement>('form.consent')!;
+  const btn = form.querySelector<HTMLButtonElement>('button')!;
+  const err = form.querySelector<HTMLElement>('.err')!;
+  const boxes = [...form.querySelectorAll<HTMLInputElement>('input[type=checkbox]')];
+  const sync = () => { btn.disabled = boxes.some((b) => b.dataset.required === '1' && !b.checked); };
+  boxes.forEach((b) => b.addEventListener('change', sync));
+  sync();
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    err.hidden = true;
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+    boxes.forEach((b) => (b.disabled = true));
+    const res = await fetch('/portal/consent', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ version: form.dataset.version, clauses: Object.fromEntries(boxes.map((b) => [b.name, b.checked])) }),
+    }).catch(() => null);
+    if (res && res.ok) { location.assign(form.dataset.minor === '1' ? '/portal/cosign' : '/portal'); return; }
+    err.textContent = 'That did not save. Check your connection and try again.';
+    err.hidden = false;
+    btn.textContent = 'Continue';
+    boxes.forEach((b) => (b.disabled = false));
+    sync();
+  });
+</script>
+<style>
+  .consent { display: grid; gap: var(--sp-16); }
+  h1 { font-size: var(--fs-28); font-weight: var(--fw-800); letter-spacing: var(--track-tight); line-height: 1.2; margin: 0 0 var(--sp-8); }
+  .clause { position: relative; display: grid; grid-template-columns: 44px 1fr; align-items: start; min-height: 44px; gap: var(--sp-8); padding: var(--sp-12); border-radius: var(--r-20); background: var(--panel); cursor: pointer; }
+  .clause input { position: absolute; left: var(--sp-12); top: var(--sp-12); opacity: 0; width: 44px; height: 44px; margin: 0; }
+  .box { width: 28px; height: 28px; margin: var(--sp-8); border-radius: var(--r-12); box-shadow: inset 0 0 0 2px var(--ink); background: var(--white); position: relative; flex: none; }
+  input:checked + .box { background: var(--ink); }
+  input:checked + .box::after { content: ''; position: absolute; left: 9px; top: 4px; width: 7px; height: 13px; border: solid var(--white); border-width: 0 3px 3px 0; transform: rotate(45deg); }
+  input:focus-visible + .box { outline: 3px solid var(--ink); outline-offset: var(--sp-4); }
+  .copy { display: grid; gap: var(--sp-4); font-size: var(--fs-15); color: var(--body); line-height: 1.45; padding-top: var(--sp-8); }
+  .copy strong { color: var(--ink); font-size: var(--fs-17); }
+  .err { margin: 0; padding: var(--sp-12); border-radius: var(--r-12); background: var(--white); color: var(--ink); box-shadow: inset 0 0 0 2px var(--ink); font-size: var(--fs-15); font-weight: var(--fw-600); }
+  .err[hidden] { display: none; }
+  button.pill { border: 0; width: 100%; min-height: 52px; cursor: pointer; font-family: inherit; }
+  button.pill:disabled { opacity: .4; cursor: default; }
+</style>

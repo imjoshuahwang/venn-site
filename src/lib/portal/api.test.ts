@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getMyPeer, getMyResult, markViewed, peerDown, signMou, finishCeremony, savePhone } from './api.ts';
+import { giveConsent, getMyPeer, getMyResult, markViewed, peerDown, signMou, finishCeremony, savePhone } from './api.ts';
 
 // Stub client: records rpc calls; no network.
 function stub(rpcResult: { data: unknown; error: unknown }, row: unknown = null) {
@@ -9,6 +9,15 @@ function stub(rpcResult: { data: unknown; error: unknown }, row: unknown = null)
   const sb: any = { rpc: async (fn: string, args: unknown) => (calls.push({ fn, args }), rpcResult), from: (t: string) => (calls.push({ fn: 'from:' + t, args: null }), chain) };
   return { sb, calls };
 }
+
+test('giveConsent maps args and errors', async () => {
+  const a = stub({ data: 5, error: null });
+  const clauses = { coordinator_groups: true, highlights: false };
+  assert.deepEqual(await giveConsent(a.sb, clauses, 'v1'), { data: 5, error: null });
+  assert.deepEqual(a.calls[0], { fn: 'give_consent', args: { clauses, version: 'v1' } });
+  const b = stub({ data: null, error: { message: 'unknown clause x', code: '22023' } });
+  assert.deepEqual(await giveConsent(b.sb, {}, 'v1'), { data: null, error: { message: 'unknown clause x', code: '22023' } });
+});
 
 test('markViewed and finishCeremony map args', async () => {
   const { sb, calls } = stub({ data: '2026-11-18T00:00:00Z', error: null });

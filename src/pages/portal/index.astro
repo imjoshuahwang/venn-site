@@ -6,6 +6,8 @@ import TextJosh from '../../components/portal/TextJosh.astro';
 import { pickNextStep, loadHome, type NextStepInput } from '../../lib/portal/home';
 import { joshPhone } from '../../scripts/portal/text-link';
 import { stubSavePhone } from '../../lib/portal/rpc-adapter';
+import { getConsentState } from '../../lib/portal/api';
+import { CONSENT_VERSION } from '../../data/consent';
 
 const dev = import.meta.env.DEV ? Astro.url.searchParams.get('state') : null;
 const stubs: Record<string, Partial<NextStepInput>> = {
@@ -43,13 +45,25 @@ try {
 } catch {
   failed = true;
 }
+// A missing or failing consent_state must be visible, never a silent skip of the consent redirect.
+let consent = null;
+let consentFailed = false;
+try {
+  const r = await getConsentState(Astro.locals.supabase, CONSENT_VERSION);
+  consent = r.data;
+  consentFailed = !!r.error || !r.data;
+} catch {
+  consentFailed = true;
+}
+if (!consentFailed && consent?.application && consent.done === false) return Astro.redirect('/portal/ceremony', 303);
 const step = pickNextStep(input);
 const locked = input.under18 === true;
 ---
 <Portal title="Your Venn home">
-  {failed ? <p role="alert" data-home-error>We could not load your home page. Please refresh, or email contact@joinvenn.org.</p> : (
+  {consentFailed ? <><p role="alert">We could not load this page.</p><form method="get" action="/portal"><button class="pill" type="submit" data-retry>Retry</button></form></> : failed ? <p role="alert" data-home-error>We could not load your home page. Please refresh, or email contact@joinvenn.org.</p> : (
     <>
       <NextStep step={step} />
+      <a class="pill" href="/portal/consent">Review consent</a>
       <section class="home-section" id="text-josh">
         <TextJosh firstName="" code={savedCode ?? ''} phone={savedPhone ?? ''} josh={joshPhone(import.meta.env)} locked={locked} />
       </section>
