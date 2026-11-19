@@ -209,11 +209,12 @@ export async function consoleErrors(page, state) {
   return result('console', all.length, list(all.map((s) => s.slice(0, 120))));
 }
 
-export async function cls(page) {
+export async function cls(page, state = {}) {
+  const max = state.clsMax ?? CLS_MAX;
   const r = await page.evaluate(() => ({ v: window.__cls || 0, unsupported: !!window.__clsUnsupported }));
   if (r.unsupported) return { check: 'cls', pass: true, details: 'layout-shift unsupported in this browser; skipped' };
   const v = Math.round(r.v * 1000) / 1000;
-  return v > CLS_MAX ? { check: 'cls', pass: false, details: `CLS ${v} > ${CLS_MAX}` } : { check: 'cls', pass: true, details: `CLS ${v}` };
+  return v > max ? { check: 'cls', pass: false, details: `CLS ${v} > ${max}` } : { check: 'cls', pass: true, details: `CLS ${v}` };
 }
 
 export async function brokenImages(page) {

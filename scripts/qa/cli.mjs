@@ -17,6 +17,8 @@ export function parseHeaders(lines) {
 
 export function parseCli(argv, registry = modes, env = process.env) {
   const options = {
+    'base-url': { type: 'string' },
+    flow: { type: 'string' },
     pages: { type: 'string' },
     only: { type: 'string' },
     devices: { type: 'string' },
@@ -30,9 +32,10 @@ export function parseCli(argv, registry = modes, env = process.env) {
   };
   const { values, positionals } = parseArgs({ args: argv, options, allowPositionals: true });
   return {
-    base: (positionals[0] || 'http://127.0.0.1:4321').replace(/\/+$/, ''),
+    base: (values['base-url'] || positionals[0] || 'http://127.0.0.1:4321').replace(/\/+$/, ''),
     pages: csv(values.pages),
     only: values.only,
+    flow: values.flow,
     devices: csv(values.devices),
     browsers: csv(values.browsers),
     workers: Math.max(1, parseInt(values.workers, 10) || 4),
