@@ -27,7 +27,7 @@
 - name: auth-callback-bad-link
   on: /portal/auth/callback?code=bad
   steps:
-    - expect-url /portal/reset?expired=1
+    - expect-url /portal/resend?expired=1
     - expect-visible input[name=email]
     - screenshot expired
 - name: auth-sign-in-sign-out
