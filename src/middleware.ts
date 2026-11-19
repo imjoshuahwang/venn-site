@@ -13,6 +13,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return res;
   };
 
+  // Portal host short paths (/login, /auth/callback?code=...) move to their /portal path, as the vercel.json
+  // redirect does in production. rewrite() dropped the query string and the POST body.
+  if (target !== pathname) {
+    return done(new Response(null, { status: 307, headers: { Location: target + context.url.search } }));
+  }
+
   context.locals.supabase = createServerClient(context);
   context.locals.user = await getUser(context);
 
@@ -20,6 +26,5 @@ export const onRequest = defineMiddleware(async (context, next) => {
     const n = safeNext(pathname + context.url.search);
     return done(context.redirect(n ? `/portal/login?next=${encodeURIComponent(n)}` : '/portal/login', 302));
   }
-  const res = target === pathname ? await next() : await context.rewrite(target);
-  return done(res);
+  return done(await next());
 });

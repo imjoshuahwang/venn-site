@@ -2,7 +2,8 @@
   "redirects": [
     { "source": "/boost", "destination": "/refer", "permanent": true },
     { "source": "/pricing", "destination": "/startups", "permanent": true },
-    { "source": "/", "has": [{ "type": "host", "value": "portal.joinvenn.org" }], "destination": "/portal", "permanent": false }
+    { "source": "/", "has": [{ "type": "host", "value": "portal.joinvenn.org" }], "destination": "/portal", "permanent": false },
+    { "source": "/:path((?!portal(?:/|$)|_astro/|_vercel/|_image)[^.]*)", "has": [{ "type": "host", "value": "portal.joinvenn.org" }], "destination": "/portal/:path", "permanent": false }
   ],
   "rewrites": [
     { "source": "/u", "destination": "https://wirjadichvbmrqzamwtp.supabase.co/functions/v1/unsubscribe" }

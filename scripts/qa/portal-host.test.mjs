@@ -54,6 +54,7 @@ test('redirects and rewrites match the expected list', () => {
     { source: '/boost', destination: '/refer', permanent: true },
     { source: '/pricing', destination: '/startups', permanent: true },
     { source: '/', has: [{ type: 'host', value: 'portal.joinvenn.org' }], destination: '/portal', permanent: false },
+    { source: '/:path((?!portal(?:/|$)|_astro/|_vercel/|_image)[^.]*)', has: [{ type: 'host', value: 'portal.joinvenn.org' }], destination: '/portal/:path', permanent: false },
   ]);
   assert.deepStrictEqual(vercel.rewrites, [
     { source: '/u', destination: 'https://wirjadichvbmrqzamwtp.supabase.co/functions/v1/unsubscribe' },
@@ -68,4 +69,9 @@ test('header rules keep their sources and header names', () => {
 test('portal layout drops pill transition under reduced motion', () => {
   const css = readFileSync(new URL('../../src/layouts/Portal.astro', import.meta.url), 'utf8');
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)\s*\{[^}]*\.pill\s*\{\s*transition:\s*none/);
+});
+test('portal host leaves build assets and public files at the root', () => {
+  assert.equal(portalRewrite('portal.joinvenn.org', '/_astro/Portal.abc123.css'), null);
+  assert.equal(portalRewrite('portal.joinvenn.org', '/favicon-32.png'), null);
+  assert.equal(portalRewrite('portal.joinvenn.org', '/auth/callback'), '/portal/auth/callback');
 });
