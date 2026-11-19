@@ -9,6 +9,7 @@
     "qa:mobile": "node scripts/mobile-qa.mjs",
     "delete-request": "node scripts/portal/delete.mjs",
     "test": "node --test scripts/qa/*.test.mjs scripts/portal/*.test.mjs src/scripts/portal/*.test.ts src/lib/portal/*.test.ts",
+    "qa:portal": "node scripts/qa/portal.mjs",
     "seed:portal": "node scripts/portal/seed.mjs"
   },
   "dependencies": {

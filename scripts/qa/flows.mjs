@@ -21,10 +21,10 @@ export function parseFlows(text) {
     if (indent === 0 && body.startsWith('- ')) { flow = { name: '', on: '/', steps: [] }; flows.push(flow); inSteps = false; body = body.slice(2); }
     else if (inSteps && body.startsWith('- ')) { flow.steps.push(unquote(body.slice(2))); continue; }
     if (!flow) throw new Error(`flows.yaml: line outside a flow: ${line}`);
-    const m = body.match(/^(name|on|steps):\s*(.*)$/);
+    const m = body.match(/^(name|on|pending|steps):\s*(.*)$/);
     if (!m) throw new Error(`flows.yaml: cannot read line: ${line}`);
     inSteps = m[1] === 'steps';
-    if (!inSteps) flow[m[1]] = unquote(m[2]);
+    if (!inSteps) flow[m[1]] = m[1] === 'pending' ? Number(unquote(m[2])) : unquote(m[2]);
   }
   for (const f of flows) if (!f.name || !f.steps.length) throw new Error(`flows.yaml: flow "${f.name}" needs a name and steps`);
   return flows;
@@ -35,7 +35,9 @@ export const loadFlows = (file = FLOWS_FILE) => parseFlows(fs.readFileSync(file,
 // Split on spaces, keeping "quoted strings" together.
 const tokens = (s) => [...s.matchAll(/"([^"]*)"|'([^']*)'|(\S+)/g)].map((m) => m[1] ?? m[2] ?? m[3]);
 
-async function runStep(page, step, ctx) {
+export const SUPABASE_BLOCK = /^https?:\/\/[^/]*\.supabase\.co(:\d+)?\//;
+
+export async function runStep(page, step, ctx) {
   const [verb, ...restTokens] = tokens(step);
   const rest = step.trim().slice(verb.length).trim();
   const loc = (sel) => page.locator(unquote(sel)).filter({ visible: true }).first();
@@ -75,7 +77,7 @@ export async function runFlows(page, device, opts = {}) {
     const ctx = { shot, timeout: stepTimeout, afterLoad: async () => { for (const m of modes) await m.afterLoad?.(fp); } };
     let step = '';
     try {
-      await fp.route(/^https?:\/\/[^/]*\.supabase\.co(:\d+)?\//, (r) => r.abort());
+      await fp.route(SUPABASE_BLOCK, (r) => r.abort());
       for (const m of modes) await m.beforePage?.(fp);
       await fp.goto(here.href, { waitUntil: 'load', timeout: 45000 });
       await ctx.afterLoad();

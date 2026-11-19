@@ -1,0 +1,97 @@
+# Portal auth + ceremony flows for `npm run qa:portal`. Same syntax as flows.yaml, plus:
+#   pending: <issue#>  skipped (never a pass) while that issue is open; remove when it merges. QA_PENDING=run overrides.
+#   sign-in [email] | sign-out | new-context <name> | as <name> | expect-url <fragment>; {email} = the seeded test address.
+# Email fields only accept contact+portal-<slug>@joinvenn.org. Local Supabase only.
+- name: auth-unauthenticated-redirect
+  on: /portal
+  steps:
+    - expect-url /portal/login
+    - expect-visible input[name=email]
+    - screenshot login
+- name: auth-wrong-password
+  on: /portal/login
+  steps:
+    - fill "input[name=email]" {email}
+    - fill "input[name=password]" definitely-wrong-password
+    - tap button[type=submit]
+    - expect-visible [role=alert]
+    - expect-visible input[name=email]
+    - screenshot error
+- name: auth-reset
+  on: /portal/reset
+  steps:
+    - fill "input[name=email]" {email}
+    - tap button[type=submit]
+    - expect-visible .status
+    - screenshot sent
+- name: auth-callback-bad-link
+  on: /portal/auth/callback?code=bad
+  steps:
+    - expect-url /portal/reset?expired=1
+    - expect-visible input[name=email]
+    - screenshot expired
+- name: auth-sign-in-sign-out
+  on: /portal/login
+  steps:
+    - sign-in
+    - expect-url /portal
+    - screenshot signed-in
+    - sign-out
+    - goto /portal
+    - expect-url /portal/login
+- name: auth-set-password-first-visit
+  on: /portal/set-password
+  steps:
+    - sign-in
+    - goto /portal/set-password
+    - fill "input[name=password]" {password}
+    - tap button[type=submit]
+    - expect-url /portal
+    - screenshot ceremony
+- name: auth-reused-expired-link
+  on: /portal/auth/callback
+  pending: 130
+  steps:
+    - expect-visible main
+- name: auth-resend-always-answers
+  on: /portal/login
+  pending: 130
+  steps:
+    - expect-visible main
+- name: auth-password-change-kills-other-device
+  on: /portal/login
+  pending: 130
+  steps:
+    - sign-in
+    - new-context b
+    - as default
+    - expect-visible main
+- name: auth-turnstile-and-429
+  on: /portal/login
+  pending: 130
+  steps:
+    - expect-visible main
+- name: ceremony-cohort-first-visit
+  on: /portal
+  pending: 117
+  steps:
+    - sign-in
+    - expect-visible main
+- name: ceremony-not-this-season
+  on: /portal
+  pending: 117
+  steps:
+    - sign-in
+    - expect-visible main
+- name: ceremony-reduced-motion
+  on: /portal
+  pending: 117
+  steps:
+    - sign-in
+    - expect-visible main
+- name: ceremony-second-visit-home
+  on: /portal
+  pending: 117
+  steps:
+    - sign-in
+    - expect-visible main
