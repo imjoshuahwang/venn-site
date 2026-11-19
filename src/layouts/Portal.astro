@@ -1,27 +1,43 @@
 ---
 import '../styles/portal.css';
 const { title = 'Portal' } = Astro.props;
+const user = Astro.locals.user;
+const email = user?.email ?? 'Account';
 ---
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="robots" content="noindex" />
     <title>{title}</title>
   </head>
   <body>
     <div class="blobs" aria-hidden="true"><i class="g"></i><i class="b"></i></div>
+    {user && (
+      <header class="topbar">
+        <details class="account">
+          <summary aria-label="Account menu">{email}</summary>
+          <form method="post" action="/portal/logout"><button type="submit">Sign out</button></form>
+        </details>
+      </header>
+    )}
     <main><slot /></main>
     <footer class="data-line">Want your data deleted? <a href="mailto:contact@joinvenn.org">Email contact@joinvenn.org</a></footer>
   </body>
 </html>
 <style is:global>
   *, *::before, *::after { box-sizing: border-box; }
-  body { margin: 0; font-family: var(--font); font-size: var(--fs-17); line-height: 1.5; color: var(--ink); background: var(--white); -webkit-font-smoothing: antialiased; overflow-x: hidden; position: relative; min-height: 100vh; }
-  main { position: relative; max-width: 640px; margin: 0 auto; padding: var(--sp-48) var(--gutter) var(--sp-64); }
-  .data-line { max-width: 640px; margin: 0 auto; padding: 0 var(--gutter) var(--sp-48); font-size: var(--fs-13); color: var(--muted); }
-  .data-line a { color: inherit; text-underline-offset: 3px; display: inline-flex; align-items: center; min-height: 44px; }
-  .blobs { position: absolute; inset: 0; z-index: -1; overflow: hidden; }
+  body { margin: 0; font-family: var(--font); font-size: var(--fs-17); line-height: 1.5; color: var(--ink); background: var(--white); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  main { position: relative; max-width: 640px; margin: 0 auto; padding: var(--sp-24) var(--gutter) var(--sp-64); }
+  .topbar { position: relative; max-width: 640px; margin: 0 auto; padding: env(safe-area-inset-top) max(var(--gutter), env(safe-area-inset-right)) 0 max(var(--gutter), env(safe-area-inset-left)); display: flex; justify-content: flex-end; }
+  .account { position: relative; }
+  .topbar summary { display: flex; align-items: center; min-height: 44px; min-width: 44px; max-width: 70vw; padding: 0 var(--sp-12); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-15); color: var(--ink); cursor: pointer; list-style: none; }
+  .topbar summary::-webkit-details-marker { display: none; }
+  .topbar form { position: absolute; right: 0; top: 100%; z-index: 1; background: var(--white); border-radius: var(--r-12); box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12); }
+  .topbar button { min-height: 44px; min-width: 44px; padding: 0 var(--sp-24); border: 0; background: none; font: inherit; font-size: var(--fs-15); color: var(--ink); cursor: pointer; white-space: nowrap; }
+  .data-line { max-width: 640px; margin: 0 auto; padding: 0 max(var(--gutter), env(safe-area-inset-right)) calc(var(--sp-48) + env(safe-area-inset-bottom)) max(var(--gutter), env(safe-area-inset-left)); font-size: var(--fs-13); color: var(--muted); }
+  .data-line a { display: inline-flex; align-items: center; min-height: 44px; color: inherit; text-underline-offset: 3px; }
+  .blobs { position: fixed; inset: 0; z-index: -1; overflow: hidden; }
   .blobs i { position: absolute; width: 70vmax; height: 70vmax; border-radius: var(--r-pill); filter: blur(80px); opacity: 0.45; }
   .blobs .g { background: var(--green); top: -30vmax; left: -25vmax; }
   .blobs .b { background: var(--blue); bottom: -35vmax; right: -30vmax; }
