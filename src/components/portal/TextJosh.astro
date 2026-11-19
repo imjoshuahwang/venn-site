@@ -1,0 +1,39 @@
+---
+// "Text Josh" stub (#132): phone with country code, one WhatsApp toggle, and a pill that opens a prefilled sms:/wa.me link.
+// The href is built client-side so QA can assert it without opening it. `code` is the minted VENN-XXXX from save_phone;
+// `locked` shows the disabled state for under-18 until the parent signs (#128). No verification, no opt-in recording.
+interface Props { firstName: string; code?: string; josh: string; locked?: boolean }
+const { firstName, code = '', josh, locked = false } = Astro.props;
+---
+<section class="text-josh" data-text-josh data-first-name={firstName} data-code={code} data-josh={josh}>
+  <label>Phone<input name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+1 415 555 0123" maxlength="24" disabled={locked}></label>
+  <label class="wa"><input type="checkbox" name="whatsapp" disabled={locked}> I use WhatsApp</label>
+  <a class="pill" data-pill role="button" aria-disabled="true" href="#">Text Josh</a>
+</section>
+<style>
+  .text-josh { display: grid; gap: 12px; }
+  .text-josh input[type='tel'] { min-height: 44px; font: inherit; }
+  .wa { display: flex; align-items: center; gap: 8px; min-height: 44px; }
+  .pill { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 24px; border-radius: 999px; background: var(--ink, #111); color: var(--bg, #fff); text-decoration: none; }
+  .pill[aria-disabled='true'] { opacity: 0.4; pointer-events: none; }
+</style>
+<script>
+  import { pillHref } from '../../scripts/portal/text-link';
+  document.querySelectorAll<HTMLElement>('[data-text-josh]').forEach((root) => {
+    const phone = root.querySelector<HTMLInputElement>('input[name=phone]')!;
+    const wa = root.querySelector<HTMLInputElement>('input[name=whatsapp]')!;
+    const pill = root.querySelector<HTMLAnchorElement>('[data-pill]')!;
+    const render = () => {
+      const href = phone.disabled ? null : pillHref({
+        firstName: root.dataset.firstName ?? '', code: root.dataset.code ?? '', phone: phone.value, whatsapp: wa.checked,
+        josh: root.dataset.josh ?? '', ua: navigator.userAgent,
+      });
+      pill.href = href ?? '#';
+      pill.dataset.href = href ?? '';
+      pill.setAttribute('aria-disabled', href ? 'false' : 'true');
+    };
+    phone.addEventListener('input', render);
+    wa.addEventListener('change', render);
+    render();
+  });
+</script>

@@ -88,3 +88,6 @@ export function stubPeer(state: 'none' | 'waiting' | 'both') {
   };
 }
 export const STUB_CONTACT: PeerContact = { name: 'Maya', email: 'maya.fixture@example.com', phone: '+1 555 010 0199' };
+
+/** Dev-only save_phone stand-in: one fixed code per session, whatever the phone, like the real RPC (#132). */
+export const stubSavePhone = (_phone: string, _whatsapp: boolean): string => 'VENN-4F2K';
