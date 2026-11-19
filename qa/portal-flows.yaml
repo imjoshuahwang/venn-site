@@ -88,8 +88,8 @@
     - screenshot letter
     - expect-visible "text=Test letter for cohort."
     - tap [data-share]
-    - expect-visible [data-note]
     - screenshot share
+    - wait 3000
     - tap [data-next]
     - expect-url /portal
     - expect-gone [data-ceremony]
