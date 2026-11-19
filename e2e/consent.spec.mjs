@@ -53,6 +53,7 @@ after(async () => {
   server?.kill();
   for (const u of created) {
     await admin.from('consents').delete().eq('user_id', u.id);
+    await admin.from('results').delete().eq('application_id', u.appId);
     await admin.from('applications').delete().eq('id', u.appId);
     await admin.auth.admin.deleteUser(u.id);
   }
