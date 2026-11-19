@@ -12,6 +12,8 @@ export const emailFor = (slug) => `contact+portal-${slug}@joinvenn.org`;
 const LANDING = '/portal';
 const DONE = '2026-11-02T00:00:00Z';
 const DAY = '2026-11-01T00:00:00Z';
+const PHONE = '+14155550123';
+const plusDays = (n) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
 // slug, outcome label, extra result fields. `members` have an auth user but no applications/results row.
 const RESULT_SPECS = [
@@ -30,6 +32,12 @@ const RESULT_SPECS = [
   { slug: 'draft', outcome: 'cohort', cohort: 'test-cohort', status: 'draft' },
   { slug: 'minor', outcome: 'cohort', cohort: 'test-cohort', minor: true },
   { slug: 'lead', outcome: 'cohort', cohort: 'test-cohort' },
+  // Home next-step states (#131): each user lacks exactly one thing, in picker order after consent.
+  { slug: 'home-consent', outcome: 'peer', noConsent: true },
+  { slug: 'home-questions', outcome: 'cohort', cohort: 'test-cohort', mou: true, phone: PHONE },
+  { slug: 'home-phone', outcome: 'peer' },
+  { slug: 'home-kickoff', outcome: 'cohort', cohort: 'test-cohort-kickoff', mou: true, answers: true, phone: PHONE },
+  { slug: 'home-allset', outcome: 'peer', phone: PHONE },
 ];
 const MEMBERS = ['member-1', 'member-2'];
 
@@ -45,6 +53,7 @@ export function buildPlan() {
   const cohorts = [
     { slug: 'test-cohort', name: 'Test Cohort', season: SEASON, seat_cap: 6 },
     { slug: 'test-cohort-full', name: 'Test Cohort (full)', season: SEASON, seat_cap: 1 },
+    { slug: 'test-cohort-kickoff', name: 'Test Cohort (kickoff)', season: SEASON, seat_cap: 6, timeline: plusDays(6) },
   ];
   const results = RESULT_SPECS.map((s) => ({
     slug: s.slug, email: emailFor(s.slug), season: SEASON, outcome: s.outcome,
@@ -53,6 +62,7 @@ export function buildPlan() {
     approved_at: (s.status ?? 'approved') === 'approved' ? DAY : null,
     letter: `Test letter for ${s.slug}.`,
     ceremony_done_at: s.ceremony_done_at ?? null,
+    phone: s.phone ?? null,
     why_matched: s.minor ? 'Under 18: parent co-sign pending.' : null,
   }));
   const pairs = [
@@ -65,7 +75,10 @@ export function buildPlan() {
     token_hash: hashToken(PARENT_TOKEN), signed_at: null,
   };
   const teamMembers = MEMBERS.map((m) => ({ lead: 'lead', slug: m, email: emailFor(m) }));
-  return { cohorts, results, pairs, parent, teamMembers };
+  const consents = RESULT_SPECS.filter((s) => !s.noConsent).map((s) => ({ slug: s.slug, clause: 'terms', version: 'v1', accepted: true }));
+  const mouSignatures = RESULT_SPECS.filter((s) => s.mou).map((s) => ({ slug: s.slug, cohort: s.cohort, typed_name: `Portal Test ${s.slug}` }));
+  const guidingAnswers = RESULT_SPECS.filter((s) => s.answers).map((s) => ({ slug: s.slug, question: 'q1', answer: 'Seeded answer.' }));
+  return { cohorts, results, pairs, parent, teamMembers, consents, mouSignatures, guidingAnswers };
 }
 
 const PROD_REF = 'wirjadichvbmrqzamwtp';
