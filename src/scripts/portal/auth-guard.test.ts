@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { authGuard, guardStatus, RATE_MESSAGE, TURNSTILE_MESSAGE, changePassword } from './auth-errors.ts';
+import { authGuard, guardStatus, RATE_MESSAGE, TURNSTILE_MESSAGE, UNAVAILABLE_MESSAGE, changePassword } from './auth-errors.ts';
 import { memoryStore, LIMIT } from '../../lib/portal/ratelimit.ts';
 import { TURNSTILE_TEST } from '../../lib/portal/turnstile.ts';
 
@@ -61,4 +61,18 @@ test('guardStatus: the rate-limit message is HTTP 429, everything else 200', () 
   assert.equal(guardStatus(RATE_MESSAGE), 429);
   assert.equal(guardStatus(TURNSTILE_MESSAGE), 200);
   assert.equal(guardStatus(''), 200);
+});
+
+test('authGuard: production with no Turnstile secret fails closed with a friendly message', async () => {
+  const saved = process.env.TURNSTILE_SECRET_KEY;
+  delete process.env.TURNSTILE_SECRET_KEY;
+  let called = false;
+  const spy = (async () => { called = true; return { ok: true, json: async () => ({ success: true }) }; }) as never;
+  try {
+    const f = () => form({ email: 'a@x.org', 'cf-turnstile-response': 'tok' });
+    assert.equal(await authGuard('login', req(), { form: f(), store: memoryStore(), fetch: spy }), UNAVAILABLE_MESSAGE);
+    assert.equal(called, false);
+  } finally {
+    if (saved !== undefined) process.env.TURNSTILE_SECRET_KEY = saved;
+  }
 });

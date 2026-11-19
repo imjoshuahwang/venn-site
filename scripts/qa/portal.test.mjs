@@ -65,7 +65,7 @@ test('loadSeedLogin uses the #118 cohort seed user and its default password', as
 const STATUS = JSON.stringify({ API_URL: 'http://127.0.0.1:54321', ANON_KEY: 'anon-local', SERVICE_ROLE_KEY: 'svc' });
 
 test('localSupabaseEnv takes URL and anon key from supabase status output, never the service key', () => {
-  assert.deepEqual(localSupabaseEnv(STATUS), { PUBLIC_SUPABASE_URL: 'http://127.0.0.1:54321', PUBLIC_SUPABASE_ANON_KEY: 'anon-local' });
+  assert.deepEqual(localSupabaseEnv(STATUS), { PUBLIC_SUPABASE_URL: 'http://127.0.0.1:54321', PUBLIC_SUPABASE_ANON_KEY: 'anon-local', PUBLIC_TURNSTILE_SITE_KEY: '1x00000000000000000000AA', TURNSTILE_SECRET_KEY: '1x0000000000000000000000000000000AA' });
 });
 
 test('localSupabaseEnv reads the KEY=value env format too', () => {

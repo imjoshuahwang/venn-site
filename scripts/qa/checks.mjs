@@ -7,7 +7,11 @@ const CLS_MAX = 0.1;
 const LIST_CAP = 8;
 
 export async function prepare(page) {
-  const state = { console: [], pageErrors: [] };
+  const state = { console: [], pageErrors: [], turnstileSeen: false };
+  // Latch: the iframe may be gone (e.g. after sign-out navigates) by the time the console check runs.
+  const seen = (f) => { if (f.url().includes('challenges.cloudflare.com')) state.turnstileSeen = true; };
+  page.on('frameattached', seen);
+  page.on('framenavigated', seen);
   page.on('console', (m) => { if (m.type() === 'error') state.console.push(m.text()); });
   page.on('pageerror', (e) => state.pageErrors.push(String(e)));
   await page.addInitScript(() => {
@@ -204,8 +208,19 @@ export async function smallText(page) {
   return result('text', bad.length, list(bad));
 }
 
+// WebKit emits this from the Cloudflare Turnstile iframe's blob worker; harmless and not our code.
+// Real text: "Failed to load resource: The operation couldn't be completed. (WebKitBlobResource error 1.)"
+// (apostrophe varies), so match the stable substring, only when a Turnstile iframe was present.
+export const TURNSTILE_NOISE = 'WebKitBlobResource error 1';
+export function isTurnstileNoise(text, turnstileSeen) {
+  return Boolean(turnstileSeen) && String(text).includes(TURNSTILE_NOISE);
+}
+
 export async function consoleErrors(page, state) {
-  const all = [...state.console, ...state.pageErrors.map((e) => `pageerror: ${e}`)];
+  const frameNow = await page.evaluate(() => !!document.querySelector('iframe[src*="challenges.cloudflare.com"]')).catch(() => false);
+  const seen = state.turnstileSeen || frameNow;
+  const msgs = state.console.filter((m) => !isTurnstileNoise(m, seen));
+  const all = [...msgs, ...state.pageErrors.map((e) => `pageerror: ${e}`)];
   return result('console', all.length, list(all.map((s) => s.slice(0, 120))));
 }
 
