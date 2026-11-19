@@ -34,7 +34,7 @@ async function authIdByEmail() {
 
 const ids = await authIdByEmail();
 for (const u of SEEDED_USERS) {
-  if (ids.has(u.email)) continue;
+  if (ids.has(u.email)) { ok(await sb.auth.admin.updateUserById(ids.get(u.email), { password }), `reset ${u.slug}`); continue; }
   const d = ok(await sb.auth.admin.createUser({ email: u.email, password, email_confirm: true }), `createUser ${u.slug}`);
   ids.set(u.email, d.user.id);
 }
