@@ -20,7 +20,7 @@ begin
   select count(*) into n from information_schema.role_table_grants
     where table_schema = 'public' and grantee in ('anon', 'authenticated')
       and not (grantee = 'authenticated' and privilege_type = 'SELECT'
-               and table_name in ('cohorts', 'results', 'peer_matches', 'mou_signatures'));  -- portal (#113): RLS-gated reads
+               and table_name in ('cohorts', 'results', 'peer_matches', 'mou_signatures', 'team_members', 'consents', 'guiding_answers'));  -- portal (#113, #126): RLS-gated reads
   if n <> 0 then raise exception 'anon/authenticated still hold % table grants', n; end if;
   select count(*) into n from pg_class c join pg_namespace s on s.oid = c.relnamespace
     where s.nspname = 'public' and case when c.relkind = 'S' then has_sequence_privilege('anon', c.oid, 'USAGE,SELECT,UPDATE') else false end;
