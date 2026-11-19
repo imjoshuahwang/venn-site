@@ -7,7 +7,11 @@ const CLS_MAX = 0.1;
 const LIST_CAP = 8;
 
 export async function prepare(page) {
-  const state = { console: [], pageErrors: [] };
+  const state = { console: [], pageErrors: [], turnstileSeen: false };
+  // Latch: the iframe may be gone (e.g. after sign-out navigates) by the time the console check runs.
+  const seen = (f) => { if (f.url().includes('challenges.cloudflare.com')) state.turnstileSeen = true; };
+  page.on('frameattached', seen);
+  page.on('framenavigated', seen);
   page.on('console', (m) => { if (m.type() === 'error') state.console.push(m.text()); });
   page.on('pageerror', (e) => state.pageErrors.push(String(e)));
   await page.addInitScript(() => {
@@ -204,11 +208,15 @@ export async function smallText(page) {
   return result('text', bad.length, list(bad));
 }
 
+// WebKit emits this from the Cloudflare Turnstile iframe's blob worker; harmless and not our code.
+// Exact full message only, and only when a Turnstile iframe was present during the page/flow.
+export const TURNSTILE_NOISE = 'Failed to load resource: WebKitBlobResource error 1';
+export function isTurnstileNoise(text, turnstileSeen) {
+  return Boolean(turnstileSeen) && text === TURNSTILE_NOISE;
+}
+
 export async function consoleErrors(page, state) {
-  // WebKit logs 'WebKitBlobResource error 1' from the Cloudflare Turnstile iframe's blob worker.
-  // Harmless and not our code, so ignore that exact message only while the Turnstile iframe is on the page.
-  const turnstile = await page.locator('iframe[src*="challenges.cloudflare.com"]').count() > 0;
-  const msgs = turnstile ? state.console.filter((m) => m !== 'WebKitBlobResource error 1') : state.console;
+  const msgs = state.console.filter((m) => !isTurnstileNoise(m, state.turnstileSeen));
   const all = [...msgs, ...state.pageErrors.map((e) => `pageerror: ${e}`)];
   return result('console', all.length, list(all.map((s) => s.slice(0, 120))));
 }
