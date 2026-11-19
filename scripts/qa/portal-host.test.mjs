@@ -26,7 +26,7 @@ test('PORTAL_HOST override', () => {
   assert.equal(portalRewrite('portal.joinvenn.org', '/x', 'p.example.test'), null);
 });
 test('public portal paths', () => {
-  for (const p of ['/portal/login', '/portal/set-password', '/portal/reset', '/portal/auth/callback', '/portal/logout']) {
+  for (const p of ['/portal/login', '/portal/set-password', '/portal/reset', '/portal/auth/callback', '/portal/logout', '/portal/dev/result', '/portal/dev/peer-down']) {
     assert.ok(isPublicPortalPath(p), p);
   }
   assert.ok(!isPublicPortalPath('/portal'));
@@ -64,4 +64,8 @@ test('header rules keep their sources and header names', () => {
   assert.deepStrictEqual(vercel.headers[0].headers.map((h) => h.key), [
     'Content-Security-Policy', 'Referrer-Policy', 'X-Frame-Options', 'X-Content-Type-Options', 'Permissions-Policy',
   ]);
+});
+test('portal layout drops pill transition under reduced motion', () => {
+  const css = readFileSync(new URL('../../src/layouts/Portal.astro', import.meta.url), 'utf8');
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)\s*\{[^}]*\.pill\s*\{\s*transition:\s*none/);
 });
