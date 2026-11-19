@@ -1,0 +1,23 @@
+---
+import Portal from '../../../layouts/Portal.astro';
+import { CONSENT_CLAUSES } from '../../../data/consent';
+
+export const prerender = false;
+const sb = Astro.locals.supabase;
+const token = Astro.params.token ?? '';
+if (Astro.request.method === 'POST' && Astro.request.headers.get('origin') === Astro.url.origin) {
+  await sb.rpc('sign_parent_consent', { p_token: token });
+}
+const { data } = await sb.rpc('parent_consent_state', { p_token: token });
+const state = data ?? 'unknown';
+---
+<Portal title="Parent consent">
+  {state === 'ok' ? (
+    <form method="post">
+      <h1>Parent consent</h1>
+      {CONSENT_CLAUSES.map((c) => <p><strong>{c.label}</strong> {c.text}</p>)}
+      <button class="pill" type="submit">I agree</button>
+    </form>
+  ) : state === 'used' ? <p>Thank you, this has been signed.</p>
+    : <p>This link has expired or is not valid. Ask your child to send a new one.</p>}
+</Portal>

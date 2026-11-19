@@ -79,7 +79,7 @@ export async function loadHome(sb: SupabaseClient): Promise<Home> {
   const res = await read<{ id: number; outcome: string; phone: string | null; text_code: string | null; cohort: { name: string; timeline: string | null } | null }>(
     sb.from('results').select('id, outcome, phone, text_code, cohort:cohorts(name, timeline)').eq('status', 'approved').order('approved_at', { ascending: false }).limit(1).maybeSingle() as never);
   const [parents, consents] = await Promise.all([
-    read<{ signed_at: string | null }[]>(sb.from('parent_consents').select('signed_at').limit(1) as never),
+    read<{ signed_at: string | null }[]>(sb.from('parent_consents').select('signed_at') as never),
     read<{ accepted: boolean }[]>(sb.from('consents').select('accepted') as never),
   ]);
   let guidingCount = 0, mouSigned: boolean | null = null, team: { email_key: string }[] = [];
@@ -95,7 +95,7 @@ export async function loadHome(sb: SupabaseClient): Promise<Home> {
   }
   const input = deriveNextStepInput({
     outcome: res?.outcome ?? null, phone: res?.phone ?? null, timeline: res?.cohort?.timeline ?? null, mouSigned,
-    parent: parents && parents.length ? { signed_at: parents[0].signed_at } : null, consents: consents ?? [], guidingCount,
+    parent: parents && parents.length ? { signed_at: parents.find((p) => p.signed_at)?.signed_at ?? null } : null, consents: consents ?? [], guidingCount,
   });
   return { input, result: res ? { id: res.id, outcome: res.outcome } : null, team, cohortName: res?.cohort?.name ?? null, phone: res?.phone ?? null, code: res?.text_code ?? null };
 }
