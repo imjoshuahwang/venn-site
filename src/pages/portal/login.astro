@@ -1,5 +1,27 @@
 ---
+import Base from '../../layouts/Base.astro';
+import AuthForm from '../../components/portal/AuthForm.astro';
+import { authGuard, authMessage, safeRedirect } from '../../scripts/portal/auth-errors';
+
 export const prerender = false;
+const next = safeRedirect(Astro.url.searchParams.get('next'));
+let error = '';
+let email = '';
+if (Astro.locals.user && Astro.request.method === 'GET') return Astro.redirect(next, 303);
+
+if (Astro.request.method === 'POST') {
+  const f = await Astro.request.formData();
+  email = String(f.get('email') ?? '').trim();
+  const target = safeRedirect(String(f.get('next') ?? next));
+  error = (await authGuard('login', Astro.request)) ?? '';
+  if (!error) {
+    const { error: e } = await Astro.locals.supabase.auth.signInWithPassword({ email, password: String(f.get('password') ?? '') });
+    if (!e) return Astro.redirect(target, 303);
+    error = authMessage(e);
+  }
+}
 ---
-<html lang="en"><head><meta charset="utf-8" /><meta name="robots" content="noindex" /><title>Sign in</title></head>
-<body><p>Sign in (built in #115)</p></body></html>
+<Base title="Sign in | Venn" description="Sign in to your Venn portal." bare noindex>
+  <AuthForm title="Sign in" fields={['email', 'current-password']} submit="Sign in" error={error} next={next === '/portal' ? '' : next} email={email}
+    links={[{ href: '/portal/reset', label: 'Forgot your password?' }]} />
+</Base>
