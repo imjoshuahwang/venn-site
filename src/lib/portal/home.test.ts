@@ -76,9 +76,9 @@ test('guiding-questions links to /portal/result', () => {
   const s = pick({ guidingAnswered: false });
   assert.deepEqual([s.kind, s.href], ['guiding-questions', '/portal/result']);
 });
-test('text-josh when phone not saved, anchored on the home page', () => {
+test('text-josh when phone not saved, no card link (the form sits below)', () => {
   const s = pick({ phoneSaved: false });
-  assert.deepEqual([s.kind, s.href], ['text-josh', '#text-josh']);
+  assert.deepEqual([s.kind, s.href], ['text-josh', null]);
 });
 test('kickoff-countdown reports whole days left, rounded up', () => {
   const s = pick({ kickoffAt: '2026-09-08T00:00:00Z' });

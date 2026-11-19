@@ -8,7 +8,6 @@ import { joshPhone } from '../../scripts/portal/text-link';
 import { stubSavePhone } from '../../lib/portal/rpc-adapter';
 
 const dev = import.meta.env.DEV ? Astro.url.searchParams.get('state') : null;
-// Dev ?state= stubs: one per picker kind (QA home flow). Fields not loaded stay null and are skipped by the picker.
 const stubs: Record<string, Partial<NextStepInput>> = {
   'waiting-on-parent': { under18: true, parentSigned: false },
   'consent-missing': { consentGiven: false },

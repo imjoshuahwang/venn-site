@@ -46,19 +46,6 @@ test('target guard refuses before any write', () => {
   assert.match(resolveTarget({ target: 'local', env: {} }).url, /127\.0\.0\.1/);
 });
 
-test('home-state seed users reach every next-step state (#131)', () => {
-  const by = (s) => plan.results.find((r) => r.slug === s);
-  const has = (list, s) => list.some((x) => (x.slug ?? x) === s);
-  for (const s of ['home-consent', 'home-questions', 'home-phone', 'home-kickoff', 'home-allset']) assert.ok(by(s), s);
-  assert.ok(!has(plan.consents, 'home-consent'));
-  assert.ok(has(plan.consents, 'cohort') && has(plan.consents, 'peer-a'));
-  assert.ok(has(plan.mouSignatures, 'home-questions') && !has(plan.guidingAnswers, 'home-questions'));
-  assert.ok(!by('home-phone').phone && by('home-allset').phone && by('home-kickoff').phone);
-  assert.ok(has(plan.guidingAnswers, 'home-kickoff'));
-  const k = plan.cohorts.find((c) => c.slug === by('home-kickoff').cohort);
-  assert.equal(k.timeline, new Date(Date.now() + 6 * 86_400_000).toISOString().slice(0, 10));
-});
-
 test('seeder never sends mail', () => {
   const dir = new URL('.', import.meta.url);
   for (const f of readdirSync(dir).filter((f) => f.endsWith('.mjs') && !f.endsWith('.test.mjs'))) {

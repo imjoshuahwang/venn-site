@@ -1,4 +1,3 @@
-// Portal home (#131): the pure next-step picker, the row-to-input derivation, and the loader that reads the signed-in Applicant's rows.
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 // Next-step card, picked by a pure function. Order follows #131 (waiting on parent, consent,
@@ -25,7 +24,7 @@ export function pickNextStep(input: NextStepInput | null | undefined, now: numbe
   if (i.consentGiven === false) return step('consent-missing', '/portal/result');
   if (i.outcome === 'cohort' && i.mouSigned === false) return step('sign-mou', '/portal/result');
   if (i.guidingAnswered === false) return step('guiding-questions', '/portal/result');
-  if (i.phoneSaved === false) return step('text-josh', '#text-josh');
+  if (i.phoneSaved === false) return step('text-josh');
   const at = i.kickoffAt ? Date.parse(i.kickoffAt) : NaN;
   if (Number.isFinite(at) && at > now) return step('kickoff-countdown', null, Math.ceil((at - now) / DAY));
   return step('all-set');

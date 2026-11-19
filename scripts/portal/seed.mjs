@@ -57,7 +57,7 @@ for (const r of plan.results) {
   appId[r.slug] = app.id;
   resId[r.slug] = ok(await sb.from('results').upsert({
     application_id: app.id, season: SEASON, outcome: r.outcome, cohort_id: r.cohort ? cohortId[r.cohort] : null,
-    status: r.status, approved_at: r.approved_at, letter: r.letter, ceremony_done_at: r.ceremony_done_at, phone: r.phone, why_matched: r.why_matched,
+    status: r.status, approved_at: r.approved_at, letter: r.letter, ceremony_done_at: r.ceremony_done_at, why_matched: r.why_matched,
   }, { onConflict: 'application_id,season' }).select('id').single(), `result ${r.slug}`).id;
 }
 
@@ -73,17 +73,6 @@ for (const m of plan.teamMembers) {
   const key = (await sb.rpc('email_key', { e: m.email })).data;
   const have = ok(await sb.from('team_members').select('id').eq('lead_result_id', resId[m.lead]).eq('email_key', key).is('removed_at', null).maybeSingle(), `find member ${m.slug}`);
   if (!have) ok(await sb.from('team_members').insert({ lead_result_id: resId[m.lead], email_key: key }), `member ${m.slug}`);
-}
-
-const uid = (slug) => ids.get(emailFor(slug));
-for (const c of plan.consents) {
-  ok(await sb.from('consents').upsert({ user_id: uid(c.slug), clause: c.clause, version: c.version, accepted: c.accepted }, { onConflict: 'user_id,clause,version' }), `consent ${c.slug}`);
-}
-for (const m of plan.mouSignatures) {
-  ok(await sb.from('mou_signatures').upsert({ result_id: resId[m.slug], cohort_id: cohortId[m.cohort], typed_name: m.typed_name, agreed: true, user_id: uid(m.slug) }, { onConflict: 'result_id' }), `mou ${m.slug}`);
-}
-for (const a of plan.guidingAnswers) {
-  ok(await sb.from('guiding_answers').upsert({ result_id: resId[a.slug], question: a.question, answer: a.answer }, { onConflict: 'result_id,question' }), `answer ${a.slug}`);
 }
 
 ok(await sb.from('parent_consents').upsert({

@@ -13,8 +13,7 @@ const { firstName, code = '', phone = '', josh, locked = false } = Astro.props;
 <style>
   .text-josh { display: grid; gap: 12px; justify-self: stretch; }
   .text-josh label:not(.wa) { display: grid; gap: 8px; font-size: 15px; }
-  .text-josh input[type='tel'] { width: 100%; box-sizing: border-box; padding: 0 12px; border-radius: 12px; }
-  .text-josh input[type='tel'] { min-height: 44px; font: inherit; }
+  .text-josh input[type='tel'] { width: 100%; box-sizing: border-box; padding: 0 12px; border-radius: 12px; min-height: 44px; font: inherit; }
   .wa { display: flex; align-items: center; gap: 8px; min-height: 44px; }
   .pill { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 24px; border-radius: 999px; background: var(--ink, #111); color: var(--bg, #fff); text-decoration: none; }
   .pill[aria-disabled='true'] { opacity: 0.4; pointer-events: none; }
