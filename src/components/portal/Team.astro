@@ -1,0 +1,67 @@
+---
+// Team section: co-founders with state words, an add form for the lead, and visible empty and error states.
+// Plain server-posted forms; the button flips to a working state on submit.
+import type { TeamViewModel } from '../../lib/portal/team';
+interface Props { view: TeamViewModel | null; error?: string; notice?: string; failed?: boolean }
+const { view, error = '', notice = '', failed = false } = Astro.props;
+const msg = failed ? 'We could not load your team. Reload to try again.' : error;
+---
+<section class="team">
+  <h1>Your team</h1>
+  <p class:list={['status', { err: !!msg }]} role={msg ? 'alert' : 'status'} hidden={!msg && !notice}>{msg || notice}</p>
+  {view && view.stage === 'empty' && <p class="lede">No co-founders yet. Add up to 3 by email and each gets their own login.</p>}
+  {view && view.members.length > 0 && (
+    <ul class="list">
+      {view.members.map((m) => (
+        <li>
+          <span class="who">{m.email}{m.isMe ? ' (you)' : ''}</span>
+          <span class="state">{m.label}</span>
+          {view.canRemove && !m.isMe && (
+            <form method="post" action="/portal/team/remove" class="x">
+              <input type="hidden" name="member_id" value={m.id}>
+              <button type="submit" class="link" data-working="Removing...">Remove</button>
+            </form>
+          )}
+        </li>
+      ))}
+    </ul>
+  )}
+  {view && view.canAdd && (
+    <form method="post" action="/portal/team/add" class="add">
+      <label>Co-founder email<input name="email" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" required maxlength="320"></label>
+      <button class="pill" type="submit" data-working="Adding...">Add co-founder</button>
+      <p class="hint">{view.seatsLeft} {view.seatsLeft === 1 ? 'seat' : 'seats'} left.</p>
+    </form>
+  )}
+  {view && !view.canAdd && view.seatsLeft === 0 && <p class="hint">Your team is full.</p>}
+  <a class="back" href="/portal">Back to your result</a>
+</section>
+<script>
+  document.querySelectorAll<HTMLFormElement>('.team form').forEach((f) => {
+    f.addEventListener('submit', () => {
+      const b = f.querySelector<HTMLButtonElement>('button[type=submit]');
+      if (b && f.checkValidity()) { b.textContent = b.dataset.working || 'Working...'; b.setAttribute('aria-busy', 'true'); setTimeout(() => (b.disabled = true), 0); }
+    });
+  });
+</script>
+<style>
+  .team { display: grid; gap: 16px; }
+  h1 { font-size: clamp(1.75rem, 7vw, 2.25rem); letter-spacing: -.035em; line-height: 1.1; margin: 0; }
+  .lede { color: var(--muted); font-size: 17px; line-height: 1.5; margin: 0; }
+  .status { font-size: 16px; line-height: 1.45; padding: 12px 14px; border-radius: 14px; background: var(--panel); margin: 0; overflow-wrap: anywhere; }
+  .status[hidden] { display: none; }
+  .status.err { background: #fef2f2; color: #b91c1c; }
+  .list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .list li { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; padding: 14px 16px; border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px #e5e5e5; }
+  .who { overflow-wrap: anywhere; font-weight: 500; }
+  .state { color: var(--muted); font-size: 15px; grid-column: 1; }
+  .x { grid-column: 2; grid-row: 1 / span 2; }
+  .link { font: inherit; font-size: 15px; background: none; border: 0; color: #b91c1c; min-height: 44px; min-width: 44px; padding: 0 4px; cursor: pointer; }
+  .add { display: grid; gap: 12px; }
+  label { display: grid; gap: 6px; font-size: 15px; font-weight: 500; }
+  input:not([type=hidden]) { font: 17px/1.5 var(--font); min-height: 52px; -webkit-appearance: none; appearance: none; border: 0; box-shadow: inset 0 0 0 1px #e5e5e5; border-radius: 14px; padding: 14px 16px; width: 100%; background: #fff; }
+  input:focus { outline: none; box-shadow: inset 0 0 0 2px #000; }
+  .add .pill { border: 0; cursor: pointer; font-family: inherit; }
+  .hint { color: var(--muted); font-size: 14px; margin: 0; }
+  .back { color: var(--muted); font-size: 15px; }
+</style>

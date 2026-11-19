@@ -74,6 +74,7 @@ const locked = input.under18 === true;
       <section class="home-section" data-team>
         <h2>Your team</h2>
         {team.length ? <p>{team.length === 1 ? '1 teammate' : `${team.length} teammates`} on your team.</p> : <p data-empty>No teammates yet.</p>}
+        <a class="pill" href="/portal/team">Manage team</a>
       </section>
       <section class="home-section" data-partner>
         <h2>Your cohort</h2>
