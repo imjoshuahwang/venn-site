@@ -3,10 +3,9 @@ export const prerender = false;
 import Portal from '../../layouts/Portal.astro';
 import NextStep from '../../components/portal/NextStep.astro';
 import TextJosh from '../../components/portal/TextJosh.astro';
-import { pickNextStep, type NextStepInput } from '../../scripts/portal/next-step';
+import { pickNextStep, loadHome, type NextStepInput } from '../../lib/portal/home';
 import { joshPhone } from '../../scripts/portal/text-link';
 import { stubSavePhone } from '../../lib/portal/rpc-adapter';
-import { loadHome } from '../../lib/portal/home';
 
 const dev = import.meta.env.DEV ? Astro.url.searchParams.get('state') : null;
 // Dev ?state= stubs: one per picker kind (QA home flow). Fields not loaded stay null and are skipped by the picker.

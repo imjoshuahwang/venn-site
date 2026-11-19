@@ -8,10 +8,10 @@ const { firstName, code = '', phone = '', josh, locked = false } = Astro.props;
 <section class="text-josh" data-text-josh data-first-name={firstName} data-code={code} data-josh={josh}>
   <label>Phone<input name="phone" type="tel" inputmode="tel" autocomplete="tel" value={phone} placeholder="+1 415 555 0123" maxlength="24" disabled={locked}></label>
   <label class="wa"><input type="checkbox" name="whatsapp" disabled={locked}> I use WhatsApp</label>
-  <a class="pill" data-pill role="button" aria-disabled="true" href="#">Text Josh</a>
+  <a class="pill" data-pill role="button" aria-disabled={locked || !phone ? 'true' : 'false'} href="#">Text Josh</a>
 </section>
 <style>
-  .text-josh { display: grid; gap: 12px; }
+  .text-josh { display: grid; gap: 12px; justify-self: stretch; }
   .text-josh label:not(.wa) { display: grid; gap: 8px; font-size: 15px; }
   .text-josh input[type='tel'] { width: 100%; box-sizing: border-box; padding: 0 12px; border-radius: 12px; }
   .text-josh input[type='tel'] { min-height: 44px; font: inherit; }

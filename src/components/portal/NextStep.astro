@@ -1,6 +1,6 @@
 ---
 // One calm next-step card (#131). Copy is keyed by the picker's kind; Venn is the one waiting on them.
-import type { NextStep } from '../../scripts/portal/next-step';
+import type { NextStep } from '../../lib/portal/home';
 interface Props { step: NextStep }
 const { step } = Astro.props;
 const copy: Record<string, [string, string | null, string]> = {

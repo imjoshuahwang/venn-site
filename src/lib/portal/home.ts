@@ -1,7 +1,64 @@
-// Live home loader (#131): reads the rows the signed-in Applicant can see and hands them to the pure derivation.
+// Portal home (#131): the pure next-step picker, the row-to-input derivation, and the loader that reads the signed-in Applicant's rows.
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { deriveNextStepInput } from '../../scripts/portal/home-state.ts';
-import type { NextStepInput } from '../../scripts/portal/next-step.ts';
+
+// Next-step card, picked by a pure function. Order follows #131 (waiting on parent, consent,
+// MOU, guiding questions, Text Josh, kickoff countdown, all set). A null input field means "no data": that state is skipped.
+export type NextStepInput = {
+  under18: boolean | null;
+  parentSigned: boolean | null;
+  consentGiven: boolean | null;
+  mouSigned: boolean | null;
+  outcome: string | null;
+  guidingAnswered: boolean | null;
+  phoneSaved: boolean | null;
+  kickoffAt: string | null;
+};
+export type NextStepKind = 'waiting-on-parent' | 'consent-missing' | 'sign-mou' | 'guiding-questions' | 'text-josh' | 'kickoff-countdown' | 'all-set';
+export type NextStep = { kind: NextStepKind; href: string | null; days: number | null };
+
+const DAY = 86_400_000;
+const step = (kind: NextStepKind, href: string | null = null, days: number | null = null): NextStep => ({ kind, href, days });
+
+export function pickNextStep(input: NextStepInput | null | undefined, now: number = Date.now()): NextStep {
+  const i = input ?? ({} as Partial<NextStepInput>);
+  if (i.under18 === true && i.parentSigned !== true) return step('waiting-on-parent');
+  if (i.consentGiven === false) return step('consent-missing', '/portal/result');
+  if (i.outcome === 'cohort' && i.mouSigned === false) return step('sign-mou', '/portal/result');
+  if (i.guidingAnswered === false) return step('guiding-questions', '/portal/result');
+  if (i.phoneSaved === false) return step('text-josh', '#text-josh');
+  const at = i.kickoffAt ? Date.parse(i.kickoffAt) : NaN;
+  if (Number.isFinite(at) && at > now) return step('kickoff-countdown', null, Math.ceil((at - now) / DAY));
+  return step('all-set');
+}
+
+export type HomeRaw = {
+  outcome: string | null;
+  phone: string | null;
+  timeline: string | null; // cohorts.timeline; the first ISO date in it is the kickoff
+  mouSigned: boolean | null;
+  parent: { signed_at: string | null } | null; // parent_consents row for this user; present means under 18
+  consents: { accepted: boolean }[];
+  guidingCount: number;
+};
+
+export function kickoffFromTimeline(timeline: string | null): string | null {
+  const m = timeline?.match(/\d{4}-\d{2}-\d{2}/);
+  return m ? `${m[0]}T00:00:00Z` : null;
+}
+
+export function deriveNextStepInput(raw: HomeRaw): NextStepInput {
+  const cohort = raw.outcome === 'cohort';
+  return {
+    under18: raw.parent !== null,
+    parentSigned: raw.parent ? raw.parent.signed_at !== null : null,
+    consentGiven: raw.consents.some((c) => c.accepted),
+    mouSigned: cohort ? raw.mouSigned : null,
+    outcome: raw.outcome,
+    guidingAnswered: cohort ? raw.guidingCount > 0 : null,
+    phoneSaved: !!raw.phone,
+    kickoffAt: kickoffFromTimeline(raw.timeline),
+  };
+}
 
 export type Home = {
   input: NextStepInput;
