@@ -1,0 +1,66 @@
+---
+// Shared shell for the portal auth pages: a plain server-posted form (works without JS), a status line for errors and notices,
+// and a loading state on submit. `fields` picks the inputs; `next` rides along as a hidden field.
+interface Props {
+  title: string;
+  lede?: string;
+  fields: ('email' | 'current-password' | 'new-password')[];
+  submit: string;
+  error?: string;
+  notice?: string;
+  next?: string;
+  email?: string;
+  links?: { href: string; label: string }[];
+}
+const { title, lede, fields, submit, error = '', notice = '', next = '', email = '', links = [] } = Astro.props;
+---
+<section class="auth">
+  <h1>{title}</h1>
+  {lede && <p class="lede">{lede}</p>}
+  <p class:list={['status', { err: !!error }]} role={error ? 'alert' : 'status'} hidden={!error && !notice}>{error || notice}</p>
+  {fields.length > 0 && (
+    <form method="post" class="auth-form" novalidate>
+      {next && <input type="hidden" name="next" value={next}>}
+      {fields.includes('email') && (
+        <label>Email<input name="email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="next" required maxlength="320" value={email}></label>
+      )}
+      {fields.includes('current-password') && (
+        <label>Password<input name="password" type="password" autocomplete="current-password" enterkeyhint="go" required maxlength="200"></label>
+      )}
+      {fields.includes('new-password') && (
+        <label>New password<span class="hint">At least 8 characters.</span><input name="password" type="password" autocomplete="new-password" enterkeyhint="go" required minlength="8" maxlength="200"></label>
+      )}
+      <button class="btn" type="submit" data-working="Working...">{submit}</button>
+    </form>
+  )}
+  {links.length > 0 && <nav class="auth-links">{links.map((l) => <a href={l.href}>{l.label}</a>)}</nav>}
+</section>
+<script>
+  document.querySelectorAll<HTMLFormElement>('.auth-form').forEach((f) => {
+    f.addEventListener('submit', () => {
+      const b = f.querySelector<HTMLButtonElement>('button[type=submit]');
+      if (b && f.checkValidity()) { b.textContent = b.dataset.working || 'Working...'; b.setAttribute('aria-busy', 'true'); setTimeout(() => (b.disabled = true), 0); }
+    });
+  });
+</script>
+<style>
+  .auth { max-width: 26rem; margin: 0 auto; padding: calc(56px + env(safe-area-inset-top)) 16px 48px; display: grid; gap: 16px; }
+  h1 { font-size: clamp(1.75rem, 7vw, 2.25rem); letter-spacing: -.035em; line-height: 1.1; }
+  .lede { color: var(--muted); font-size: 17px; line-height: 1.5; margin: -4px 0 0; }
+  .status { font-size: 16px; line-height: 1.45; padding: 12px 14px; border-radius: 14px; background: var(--panel); color: var(--text); margin: 0; overflow-wrap: anywhere; }
+  .status[hidden] { display: none; }
+  .status.err { background: #fef2f2; color: #b91c1c; }
+  .auth-form { display: grid; gap: 16px; }
+  label { display: grid; gap: 6px; font-size: 15px; font-weight: 500; color: var(--black); }
+  .hint { font-weight: 400; color: var(--muted); font-size: 14px; }
+  input:not([type=hidden]) {
+    font: 17px/1.5 var(--font); color: var(--text); background: #fff; min-height: 52px; -webkit-appearance: none; appearance: none;
+    border: 0; box-shadow: inset 0 0 0 1px #e5e5e5; border-radius: 14px; padding: 14px 16px; width: 100%;
+  }
+  input:focus { outline: none; box-shadow: inset 0 0 0 2px #000; }
+  .btn { min-height: 52px; width: 100%; }
+  .btn:disabled { opacity: .6; cursor: default; }
+  .auth-links { display: grid; }
+  .auth-links a { display: flex; align-items: center; min-height: 44px; color: var(--muted); font-size: 16px; text-underline-offset: 3px; }
+  .auth-links a:hover { color: var(--black); }
+</style>
