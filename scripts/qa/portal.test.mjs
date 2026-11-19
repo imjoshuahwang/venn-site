@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseFlows, SUPABASE_BLOCK } from './flows.mjs';
 import { parseCli } from './cli.mjs';
-import { splitPending, assertTestAddress, shotPath, loadSeedLogin } from './portal.mjs';
+import { splitPending, assertTestAddress, shotPath, loadSeedLogin, localSupabaseEnv } from './portal.mjs';
 
 const FLOWS = parseFlows('- name: a\n  on: /x\n  steps:\n    - goto /x\n- name: b\n  pending: 117\n  steps:\n    - goto /y\n- name: c\n  pending: 118\n  steps:\n    - goto /z\n');
 
@@ -55,7 +55,27 @@ test('shotPath is qa/portal-shots/<device>/<flow>-<step>.png', () => {
   assert.equal(shotPath('iPhone SE', 'auth-login', 'done'), 'qa/portal-shots/iphone-se/auth-login-done.png');
 });
 
-test('loadSeedLogin falls back to env when the #118 module is absent', async () => {
-  const l = await loadSeedLogin({ env: { PORTAL_TEST_PASSWORD: 'pw' }, importer: async () => { throw new Error('nope'); } });
-  assert.deepEqual(l, { email: 'contact+portal-t1@joinvenn.org', password: 'pw' });
+test('loadSeedLogin uses the #118 cohort seed user and its default password', async () => {
+  const l = await loadSeedLogin({ env: {} });
+  assert.equal(l.email, 'contact+portal-cohort@joinvenn.org');
+  assert.equal(l.password, 'portal-test-local-only-1');
+  assert.equal((await loadSeedLogin({ env: { PORTAL_TEST_PASSWORD: 'pw' } })).password, 'pw');
+});
+
+const STATUS = JSON.stringify({ API_URL: 'http://127.0.0.1:54321', ANON_KEY: 'anon-local', SERVICE_ROLE_KEY: 'svc' });
+
+test('localSupabaseEnv takes URL and anon key from supabase status output, never the service key', () => {
+  assert.deepEqual(localSupabaseEnv(STATUS), { PUBLIC_SUPABASE_URL: 'http://127.0.0.1:54321', PUBLIC_SUPABASE_ANON_KEY: 'anon-local' });
+});
+
+test('localSupabaseEnv reads the KEY=value env format too', () => {
+  const env = localSupabaseEnv('API_URL="http://localhost:54321"\nANON_KEY="k"\n');
+  assert.equal(env.PUBLIC_SUPABASE_URL, 'http://localhost:54321');
+  assert.equal(env.PUBLIC_SUPABASE_ANON_KEY, 'k');
+});
+
+test('localSupabaseEnv refuses a non-local URL and missing keys', () => {
+  assert.throws(() => localSupabaseEnv(JSON.stringify({ API_URL: 'https://abc.supabase.co', ANON_KEY: 'k' })), /not local/);
+  assert.throws(() => localSupabaseEnv(JSON.stringify({ API_URL: 'http://127.0.0.1:54321' })), /ANON_KEY/);
+  assert.throws(() => localSupabaseEnv(''), /supabase status/);
 });

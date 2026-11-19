@@ -32,7 +32,6 @@
     - screenshot expired
 - name: auth-sign-in-sign-out
   on: /portal/login
-  pending: 118
   steps:
     - sign-in
     - expect-url /portal
@@ -42,11 +41,10 @@
     - expect-url /portal/login
 - name: auth-set-password-first-visit
   on: /portal/set-password
-  pending: 118
   steps:
     - sign-in
     - goto /portal/set-password
-    - fill "input[name=password]" qa-portal-local-pass-1
+    - fill "input[name=password]" {password}
     - tap button[type=submit]
     - expect-url /portal
     - screenshot ceremony

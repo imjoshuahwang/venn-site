@@ -2,7 +2,7 @@
 // is skipped while issue N is open (offline = stays pending, never PASS). QA_PENDING=run overrides. Local Supabase only.
 import fs from 'node:fs';
 import path from 'node:path';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { slug } from './devices.mjs';
 import { SUPABASE_BLOCK } from './flows.mjs';
@@ -32,38 +32,40 @@ export function assertTestAddress(addr) {
 
 export const shotPath = (device, flow, step) => `qa/portal-shots/${slug(device)}/${flow}-${step}.png`;
 
-// One adapter for seeded logins: the #118 module when it exists, else env. Wire #118 by fixing SEED_MODULE.
-const SEED_MODULE = '../portal/seed-users.mjs';
+// Login for {email} / sign-in: the #118 seed user "cohort" (fresh ceremony), password as seeded.
 export async function loadSeedLogin({ env = process.env, importer = (m) => import(m) } = {}) {
-  try {
-    const mod = await importer(SEED_MODULE);
-    const u = (mod.SEEDED_USERS || mod.users || [])[0];
-    if (u?.email) return { email: u.email, password: env.PORTAL_TEST_PASSWORD || u.password };
-  } catch { /* #118 not merged yet */ }
-  return { email: 'contact+portal-t1@joinvenn.org', password: env.PORTAL_TEST_PASSWORD };
+  const mod = await importer('../portal/users.mjs');
+  const u = mod.SEEDED_USERS.find((x) => x.slug === 'cohort');
+  return { email: u.email, password: env.PORTAL_TEST_PASSWORD || mod.TEST_PASSWORD_DEFAULT };
+}
+
+// `supabase status -o json|env` text -> the browser-safe env for astro dev. Local stack only, anon key only.
+export function localSupabaseEnv(text) {
+  let o;
+  try { o = JSON.parse(text); } catch {
+    o = Object.fromEntries([...String(text).matchAll(/^([A-Z_]+)="?([^"\n]*)"?$/gm)].map((m) => [m[1], m[2]]));
+  }
+  if (!o.API_URL) throw new Error('no API_URL in supabase status output; is the local stack up (supabase start)?');
+  if (!/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(o.API_URL)) throw new Error(`refusing: Supabase API_URL ${o.API_URL} is not local`);
+  if (!o.ANON_KEY) throw new Error('no ANON_KEY in supabase status output');
+  return { PUBLIC_SUPABASE_URL: o.API_URL, PUBLIC_SUPABASE_ANON_KEY: o.ANON_KEY };
 }
 
 // ---- runner ----
-const LOCAL_SUPABASE = 'http://127.0.0.1:54321';
 const DEVICES = ['iPhone SE', 'iPhone 15', 'Pixel 7'];
 const CLS_PORTAL = 0.05;
 const unq = (s) => s.trim().replace(/^(["'])(.*)\1$/, '$2');
 
-// Creates the login user on the local stack (Node only, admin API, no invite mail). Local URL only.
-export async function ensureSeedUser({ email, password }, { env = process.env, fetchImpl = fetch } = {}) {
-  assertTestAddress(email);
-  const url = env.SUPABASE_URL || LOCAL_SUPABASE;
-  if (!/^http:\/\/(127\.0\.0\.1|localhost):54321$/.test(url)) throw new Error(`refusing non-local Supabase ${url}`);
-  let key = env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!key) key = JSON.parse(execFileSync('supabase', ['status', '-o', 'json'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })).SERVICE_ROLE_KEY;
-  const h = { apikey: key, authorization: `Bearer ${key}`, 'content-type': 'application/json' };
-  const r = await fetchImpl(`${url}/auth/v1/admin/users`, { method: 'POST', headers: h, body: JSON.stringify({ email, password, email_confirm: true }) });
-  if (r.ok) return 'created';
-  const list = await (await fetchImpl(`${url}/auth/v1/admin/users?per_page=1000`, { headers: h })).json();
-  const u = (list.users || []).find((x) => x.email === email);
-  if (!u) throw new Error(`seed user ${email}: ${r.status}`);
-  await fetchImpl(`${url}/auth/v1/admin/users/${u.id}`, { method: 'PUT', headers: h, body: JSON.stringify({ password, email_confirm: true }) });
-  return 'updated';
+// Starts astro dev wired to the local stack; resolves { url, stop }.
+async function startDev(env) {
+  const port = 4333, url = `http://127.0.0.1:${port}`;
+  const child = spawn('npx', ['astro', 'dev', '--host', '127.0.0.1', '--port', String(port)], { env: { ...process.env, ...env }, stdio: 'ignore' });
+  for (let i = 0; i < 120; i++) {
+    if (await fetch(url).then(() => true, () => false)) return { url, stop: () => child.kill() };
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  child.kill();
+  throw new Error('astro dev did not start');
 }
 
 async function runPortalFlow({ flow, device, browser, base, login }) {
@@ -136,15 +138,18 @@ export async function main(argv = process.argv.slice(2)) {
   const { resolveDevices } = await import('./devices.mjs');
   const { chromium, webkit } = await import('playwright');
   const cli = parseCli(argv);
-  const base = process.argv.slice(2).some((a) => a.startsWith('--base-url')) || cli.base !== 'http://127.0.0.1:4321' ? cli.base : 'http://localhost:8000';
+  let base = cli.explicitBase ?? (process.argv.slice(2).some((a) => a.startsWith('--base-url')) ? cli.base : null), dev;
   const devices = resolveDevices({ names: cli.devices || DEVICES });
   const { run, skipped } = await splitPending(loadFlows(PORTAL_FILE), { only: cli.flow });
   if (cli.flow && !run.length && !skipped.length) { console.error(`no flow named ${cli.flow}`); return 2; }
   const login = await loadSeedLogin();
-  login.password ||= 'qa-portal-local-pass-1';
-  if (run.some((f) => f.steps.some((s) => s.includes('{email}') || s.startsWith('sign-in')))) {
-    try { await ensureSeedUser(login); } catch (e) { console.error(`seed user: ${e.message}`); return 2; }
-  }
+  try {
+    const sbEnv = localSupabaseEnv(execFileSync('supabase', ['status', '-o', 'json'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }));
+    if (!base) { dev = await startDev(sbEnv); base = dev.url; }
+    if (run.some((f) => f.steps.some((s) => s.includes('{email}') || s.startsWith('sign-in')))) {
+      execFileSync('node', ['scripts/portal/seed.mjs', '--yes'], { stdio: 'ignore', env: { ...process.env, PORTAL_TEST_PASSWORD: login.password } });
+    }
+  } catch (e) { dev?.stop(); console.error(`setup: ${e.message}`); return 1; }
   console.log(`qa:portal ${base}: ${run.length} live + ${skipped.length} pending flows x ${devices.length} devices`);
   const browsers = {};
   for (const n of new Set(devices.map((d) => d.browser))) browsers[n] = await { chromium, webkit }[n].launch();
@@ -157,6 +162,7 @@ export async function main(argv = process.argv.slice(2)) {
     }
   } finally {
     await Promise.all(Object.values(browsers).map((b) => b.close()));
+    dev?.stop();
   }
   for (const f of skipped) for (const d of devices) console.log(`PENDING  ${f.name}  ${d.name}  ${f.reason}`);
   console.log(`\n${run.length * devices.length - failed} pass, ${failed} fail, ${skipped.length * devices.length} pending`);
