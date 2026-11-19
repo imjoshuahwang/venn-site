@@ -28,3 +28,9 @@ export async function saveGuidingAnswers(sb: Pick<SupabaseClient, 'rpc'>, result
 
 /** Dev fixture for the fixture route. */
 export const STUB_GUIDING: GuidingAnswers = { goal: 'Ship a pilot with a real partner.', skills: 'Design and React.', availability: 'Weekday evenings.' };
+
+/** What the form may do: team members read, the lead edits until the cutoff (null = always open). */
+export function guidingAccess({ isLead, cutoff, now = new Date() }: { isLead: boolean; cutoff: string | null | undefined; now?: Date }): 'edit' | 'closed' | 'readonly' {
+  if (!isLead) return 'readonly';
+  return cutoff && now.getTime() >= new Date(cutoff).getTime() ? 'closed' : 'edit';
+}

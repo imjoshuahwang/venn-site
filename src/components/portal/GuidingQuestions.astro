@@ -1,7 +1,7 @@
 ---
-import { GUIDING_QUESTIONS, GUIDING_COPY, GUIDING_MAX } from '../../data/guiding';
-const { resultId, answers = {}, endpoint = '/portal/guiding', closed = false } = Astro.props as {
-  resultId: number; answers?: Record<string, string>; endpoint?: string; closed?: boolean;
+import { GUIDING_QUESTIONS, GUIDING_COPY, GUIDING_ERRORS, GUIDING_MAX } from '../../data/guiding';
+const { resultId, answers = {}, endpoint = '/portal/guiding', closed = false, readonly = false } = Astro.props as {
+  resultId: number; answers?: Record<string, string>; endpoint?: string; closed?: boolean; readonly?: boolean;
 };
 ---
 <section class="guiding" data-guiding data-result={resultId} data-endpoint={endpoint} aria-labelledby="guiding-h">
@@ -11,11 +11,11 @@ const { resultId, answers = {}, endpoint = '/portal/guiding', closed = false } =
     {GUIDING_QUESTIONS.map((q) => (
       <label class="field">
         <span>{q.label}</span>
-        <textarea name={q.id} rows="3" maxlength={GUIDING_MAX} placeholder={GUIDING_COPY.placeholder} disabled={closed}>{answers[q.id] ?? ''}</textarea>
+        <textarea name={q.id} rows="3" maxlength={GUIDING_MAX} placeholder={GUIDING_COPY.placeholder} disabled={closed || readonly}>{answers[q.id] ?? ''}</textarea>
       </label>
     ))}
-    <button class="pill" type="submit" data-save hidden={closed}>{GUIDING_COPY.save}</button>
-    <p class="status" role="status" data-status>{closed ? GUIDING_COPY.closed : ''}</p>
+    <button class="pill" type="submit" data-save hidden={closed || readonly}>{GUIDING_COPY.save}</button>
+    <p class="status" role="status" data-status>{closed ? GUIDING_COPY.closed : readonly ? GUIDING_ERRORS.forbidden : ''}</p>
     <p class="err" role="alert" data-error hidden></p>
   </form>
 </section>

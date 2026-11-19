@@ -60,3 +60,14 @@ test('endpoint: validates, saves via the client, maps errors', async () => {
   assert.equal((await closed.json()).error, 'closed');
   assert.equal((await failWith({ code: '500', message: 'x' })).status, 502);
 });
+
+import { guidingAccess } from '../../src/lib/portal/guiding.ts';
+test('access: lead edits before cutoff, closed after, team read-only, null cutoff open', () => {
+  const now = new Date('2026-11-20T00:00:00Z');
+  assert.equal(guidingAccess({ isLead: true, cutoff: null, now }), 'edit');
+  assert.equal(guidingAccess({ isLead: true, cutoff: '2026-12-01T00:00:00Z', now }), 'edit');
+  assert.equal(guidingAccess({ isLead: true, cutoff: '2026-11-20T00:00:00Z', now }), 'closed');
+  assert.equal(guidingAccess({ isLead: true, cutoff: '2026-11-01T00:00:00Z', now }), 'closed');
+  assert.equal(guidingAccess({ isLead: false, cutoff: null, now }), 'readonly');
+  assert.equal(guidingAccess({ isLead: false, cutoff: '2026-11-01T00:00:00Z', now }), 'readonly');
+});
