@@ -53,7 +53,7 @@
 .parent-request input:focus-visible, .text-josh input[type='tel']:focus-visible { border-color: var(--ink); outline: 2px solid var(--ink); outline-offset: 1px; }
 .parent-request input:disabled, .text-josh input[type='tel']:disabled { color: var(--muted); }
 /* Ceremony (#117). Scoped under .ceremony so it never touches the result pages' own .card styles. */
-@media (prefers-reduced-motion: reduce) { .ceremony * { transition-duration: 0ms !important; animation-duration: 0ms !important; } }
+@media (prefers-reduced-motion: reduce) { .ceremony * { transition: none !important; animation: none !important; } }
 .ceremony, .reveal { display: grid; position: relative; }
 .ceremony [hidden] { display: none !important; }
 .ceremony .card { background: var(--panel); border-radius: var(--r-20); padding: var(--sp-32) var(--sp-24); display: grid; gap: var(--sp-16); justify-items: start; position: relative; z-index: 1; }

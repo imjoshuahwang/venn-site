@@ -47,9 +47,11 @@ test('AA contrast for text pairs', () => {
 });
 
 test('visible focus ring, 44px tap target and reduced-motion rule exist', () => {
-  assert.match(css, /focus-visible\s*{[^}]*outline:\s*\d+px solid/);
-  assert.match(css, /min-height:\s*44px/);
-  assert.match(css, /prefers-reduced-motion:\s*reduce/);
+  const layout = readFileSync(new URL('src/layouts/Portal.astro', root), 'utf8');
+  const all = `${css}\n${layout}`;
+  assert.match(all, /focus-visible\s*{[^}]*outline:\s*\d+px solid/);
+  assert.match(all, /min-height:\s*44px/);
+  assert.match(all, /prefers-reduced-motion:\s*reduce/);
 });
 
 test('no status dots', () => {
