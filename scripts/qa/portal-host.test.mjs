@@ -26,7 +26,7 @@ test('PORTAL_HOST override', () => {
   assert.equal(portalRewrite('portal.joinvenn.org', '/x', 'p.example.test'), null);
 });
 test('public portal paths', () => {
-  for (const p of ['/portal/login', '/portal/set-password', '/portal/reset', '/portal/auth/callback', '/portal/logout', '/portal/dev/result', '/portal/dev/peer-down']) {
+  for (const p of ['/portal/login', '/portal/set-password', '/portal/reset', '/portal/auth/callback', '/portal/logout', '/portal/dev/result', '/portal/dev/peer-down', '/portal/dev/mou']) {
     assert.ok(isPublicPortalPath(p), p);
   }
   assert.ok(!isPublicPortalPath('/portal'));
