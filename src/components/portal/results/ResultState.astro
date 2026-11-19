@@ -1,0 +1,28 @@
+---
+import { CONTACT } from '../../../data/portal-copy';
+const { state } = Astro.props as { state: 'loading' | 'empty' | 'error' };
+---
+{state === 'loading' && (
+  <section class="state" aria-busy="true" aria-label="Loading your Result">
+    <div class="sk h"></div><div class="sk l"></div><div class="sk l"></div><div class="sk l s"></div>
+  </section>
+)}
+{state === 'empty' && (
+  <section class="state">
+    <h1>Your letter is not ready yet</h1>
+    <a class="pill" href={`mailto:${CONTACT}`}>{CONTACT}</a>
+  </section>
+)}
+{state === 'error' && (
+  <section class="state" role="alert">
+    <h1>We could not load your Result</h1>
+    <a class="pill" href={`mailto:${CONTACT}`}>{CONTACT}</a>
+  </section>
+)}
+<style>
+  .state { display: grid; gap: var(--sp-16); justify-items: start; align-content: start; }
+  h1 { margin: 0; font-size: var(--fs-28); font-weight: var(--fw-800); letter-spacing: var(--track-tight); line-height: 1.15; }
+  .sk { height: var(--sp-16); width: 100%; border-radius: var(--r-12); background: var(--panel); }
+  .sk.h { height: var(--sp-32); width: 70%; }
+  .sk.s { width: 50%; }
+</style>

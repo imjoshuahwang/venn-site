@@ -1,6 +1,23 @@
 ---
 export const prerender = false;
-const { user } = Astro.locals;
+import Portal from '../../layouts/Portal.astro';
+import { Waitlist, NotThisSeason, ResultState } from '../../components/portal/results';
+import { pageFor } from '../../data/portal-copy';
+import { getMyResult, stubResult } from '../../lib/portal/rpc-adapter';
+
+let result = null;
+let failed = false;
+try {
+  const stub = import.meta.env.DEV ? Astro.url.searchParams.get('stub') : null;
+  result = stub ? stubResult(stub) : await getMyResult(Astro.locals.supabase);
+} catch {
+  failed = true;
+}
+const page = result ? pageFor(result.outcome) : null;
 ---
-<html lang="en"><head><meta charset="utf-8" /><meta name="robots" content="noindex" /><title>Portal</title></head>
-<body><p>Signed in as {user?.email}</p></body></html>
+<Portal title="Your Result">
+  {failed ? <ResultState state="error" />
+    : page === 'waitlist' ? <Waitlist outcome={result.outcome} letter={result.letter} />
+    : page === 'not_this_season' ? <NotThisSeason letter={result.letter} />
+    : <ResultState state="empty" />}
+</Portal>

@@ -1,0 +1,15 @@
+---
+export const prerender = false;
+import Portal from '../../../layouts/Portal.astro';
+import { Waitlist, NotThisSeason, ResultState } from '../../../components/portal/results';
+if (!import.meta.env.DEV) return new Response(null, { status: 404 });
+const q = Astro.url.searchParams;
+const outcome = q.get('outcome') ?? 'network_waitlist';
+const state = q.get('state') ?? 'ready';
+const letter = state === 'empty' ? null : `Dear Applicant,\n\nThank you for the care you put into your application. This fixture letter stands in for the one the team writes for you.\n\nThe Venn team`;
+---
+<Portal title="Result fixture">
+  {state === 'loading' || state === 'error' ? <ResultState state={state} />
+    : outcome === 'not_this_season' ? <NotThisSeason letter={letter} />
+    : <Waitlist outcome={outcome === 'track_waitlist' ? 'track_waitlist' : 'network_waitlist'} letter={letter} />}
+</Portal>

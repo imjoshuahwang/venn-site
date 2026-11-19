@@ -1,0 +1,24 @@
+---
+import { CONTACT, viewFor } from '../../../data/portal-copy';
+import ResultState from './ResultState.astro';
+const { letter } = Astro.props as { letter: unknown };
+const v = viewFor('not_this_season', letter);
+---
+{v.letter === null ? <ResultState state="empty" /> : (
+  <article class="result">
+    <h1>{v.heading}</h1>
+    <p class="letter">{v.letter}</p>
+    <p class="note">{v.note}</p>
+    <ul>{v.tips.map((t) => <li>{t}</li>)}</ul>
+    <a class="pill" href={`mailto:${CONTACT}`}>{CONTACT}</a>
+  </article>
+)}
+<style>
+  .result { display: grid; gap: var(--sp-24); justify-items: start; animation: rise var(--dur-3) var(--ease) both; }
+  h1 { margin: 0; font-size: var(--fs-28); font-weight: var(--fw-800); letter-spacing: var(--track-tight); line-height: 1.15; }
+  .letter { margin: 0; white-space: pre-line; font-size: var(--fs-17); color: var(--ink); }
+  .note { margin: 0; font-size: var(--fs-15); color: var(--muted); }
+  ul { margin: 0; padding: var(--sp-16) var(--sp-24); list-style: none; display: grid; gap: var(--sp-8); width: 100%; border: 1px solid var(--line); border-radius: var(--r-20); background: var(--panel); font-size: var(--fs-15); }
+  @keyframes rise { from { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .result { animation: none; } }
+</style>
