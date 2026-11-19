@@ -135,7 +135,7 @@
 - name: home
   on: /portal/login
   steps:
-    - sign-in
+    - sign-in contact+portal-cohort-done@joinvenn.org
     - goto /portal?state=waiting-on-parent
     - expect-visible [data-next-step=waiting-on-parent]
     - screenshot waiting-on-parent
