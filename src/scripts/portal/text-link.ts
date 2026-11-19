@@ -20,3 +20,15 @@ export function textHref(o: { channel: Channel; josh: string; line: string; ua: 
   if (o.channel === 'whatsapp') return `https://wa.me/${digits}?text=${body}`;
   return `sms:+${digits}${/iPhone|iPad|iPod/.test(o.ua) ? '&' : '?'}body=${body}`;
 }
+
+/** Josh's number from env PORTAL_JOSH_PHONE; empty (pill stays disabled) when unset or not a phone. Never hardcoded. */
+export function joshPhone(env: Record<string, string | undefined>): string {
+  return normalizePhone((env.PORTAL_JOSH_PHONE ?? '').trim()) ?? '';
+}
+
+/** Everything the pill needs from raw field values; QA reads this as data-href. Null keeps the pill disabled. */
+export function pillHref(o: { firstName: string; code: string; phone: string; whatsapp: boolean; josh: string; ua: string }): string | null {
+  const p = normalizePhone(o.phone);
+  if (!p || !o.code) return null;
+  return textHref({ channel: channelFor(p, o.whatsapp), josh: o.josh, line: textLine(o.firstName, o.code), ua: o.ua });
+}

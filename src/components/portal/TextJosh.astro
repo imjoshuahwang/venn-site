@@ -18,18 +18,18 @@ const { firstName, code = '', josh, locked = false } = Astro.props;
   .pill[aria-disabled='true'] { opacity: 0.4; pointer-events: none; }
 </style>
 <script>
-  import { normalizePhone, channelFor, textLine, textHref } from '../../scripts/portal/text-link';
+  import { pillHref } from '../../scripts/portal/text-link';
   document.querySelectorAll<HTMLElement>('[data-text-josh]').forEach((root) => {
     const phone = root.querySelector<HTMLInputElement>('input[name=phone]')!;
     const wa = root.querySelector<HTMLInputElement>('input[name=whatsapp]')!;
     const pill = root.querySelector<HTMLAnchorElement>('[data-pill]')!;
     const render = () => {
-      const p = normalizePhone(phone.value);
-      const code = root.dataset.code ?? '';
-      const href = p && code && !phone.disabled
-        ? textHref({ channel: channelFor(p, wa.checked), josh: root.dataset.josh ?? '', line: textLine(root.dataset.firstName ?? '', code), ua: navigator.userAgent })
-        : null;
+      const href = phone.disabled ? null : pillHref({
+        firstName: root.dataset.firstName ?? '', code: root.dataset.code ?? '', phone: phone.value, whatsapp: wa.checked,
+        josh: root.dataset.josh ?? '', ua: navigator.userAgent,
+      });
       pill.href = href ?? '#';
+      pill.dataset.href = href ?? '';
       pill.setAttribute('aria-disabled', href ? 'false' : 'true');
     };
     phone.addEventListener('input', render);
