@@ -19,9 +19,9 @@ const step = (kind: NextStepKind, href: string | null = null, days: number | nul
 export function pickNextStep(input: NextStepInput | null | undefined, now: number = Date.now()): NextStep {
   const i = input ?? ({} as Partial<NextStepInput>);
   if (i.under18 === true && i.parentSigned !== true) return step('waiting-on-parent');
-  if (i.consentGiven === false) return step('consent-missing', '/portal/consent');
+  if (i.consentGiven === false) return step('consent-missing', '/portal/result');
   if (i.outcome === 'cohort' && i.mouSigned === false) return step('sign-mou', '/portal/result');
-  if (i.guidingAnswered === false) return step('guiding-questions', '/portal/questions');
+  if (i.guidingAnswered === false) return step('guiding-questions', '/portal/result');
   if (i.phoneSaved === false) return step('text-josh', '#text-josh');
   const at = i.kickoffAt ? Date.parse(i.kickoffAt) : NaN;
   if (Number.isFinite(at) && at > now) return step('kickoff-countdown', null, Math.ceil((at - now) / DAY));

@@ -2,6 +2,19 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { pickNextStep, type NextStepInput } from './next-step.ts';
 
+import { existsSync } from 'node:fs';
+
+test('every next-step href resolves to an existing page or in-page anchor', () => {
+  const none = { under18: null, parentSigned: null, consentGiven: null, mouSigned: null, outcome: null, guidingAnswered: null, phoneSaved: null, kickoffAt: null };
+  const states = [{ under18: true, parentSigned: false }, { consentGiven: false }, { outcome: 'cohort', mouSigned: false }, { guidingAnswered: false }, { phoneSaved: false }, {}];
+  for (const s of states) {
+    const href = pickNextStep({ ...none, ...s } as NextStepInput).href;
+    if (!href || href.startsWith('#')) continue;
+    const p = new URL(`../../pages${href}`, import.meta.url).pathname;
+    assert.ok(existsSync(`${p}.astro`) || existsSync(`${p}.ts`) || existsSync(`${p}/index.astro`), href);
+  }
+});
+
 const NOW = Date.parse('2026-09-01T00:00:00Z');
 // A null field means "no data, skip that state"; this baseline skips everything and lands on all-set.
 const base: NextStepInput = { under18: null, parentSigned: null, consentGiven: null, mouSigned: null, outcome: 'cohort', guidingAnswered: null, phoneSaved: null, kickoffAt: null };
@@ -12,9 +25,9 @@ test('waiting-on-parent: under 18 and parent not signed, no link', () => {
   assert.equal(s.kind, 'waiting-on-parent');
   assert.equal(s.href, null);
 });
-test('consent-missing links to /portal/consent', () => {
+test('consent-missing links to /portal/result', () => {
   const s = pick({ consentGiven: false });
-  assert.deepEqual([s.kind, s.href], ['consent-missing', '/portal/consent']);
+  assert.deepEqual([s.kind, s.href], ['consent-missing', '/portal/result']);
 });
 test('sign-mou: cohort outcome with unsigned MOU links to /portal/result', () => {
   const s = pick({ mouSigned: false });
@@ -23,9 +36,9 @@ test('sign-mou: cohort outcome with unsigned MOU links to /portal/result', () =>
 test('sign-mou is never asked of non-cohort outcomes', () => {
   assert.equal(pick({ outcome: 'peer', mouSigned: false }).kind, 'all-set');
 });
-test('guiding-questions links to /portal/questions', () => {
+test('guiding-questions links to /portal/result', () => {
   const s = pick({ guidingAnswered: false });
-  assert.deepEqual([s.kind, s.href], ['guiding-questions', '/portal/questions']);
+  assert.deepEqual([s.kind, s.href], ['guiding-questions', '/portal/result']);
 });
 test('text-josh when phone not saved, anchored on the home page', () => {
   const s = pick({ phoneSaved: false });
