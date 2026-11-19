@@ -179,4 +179,53 @@ for (const [slug, preset] of Object.entries(VIEWPORTS)) {
     assert.equal(await page.locator("[role=alert]:visible").count(), 0);
     await ctx.close();
   });
+  test(`parent co-sign clears the home wait, a reused link is calm, an adult never sees it (${slug})`, async () => {
+    const u = await makeUser(`parent-${slug}`, 'high_school');
+    const ctx = await browser.newContext(ctxOpts());
+    const page = await ctx.newPage();
+    await login(page, u.email);
+    for (const n of ['coordinator_groups', 'data_use', 'retention']) await tick(page, n);
+    await page.click('button[type=submit]');
+    await page.waitForURL(`${BASE}/portal/cosign`);
+    await page.goto(`${BASE}/portal`);
+    assert.equal(await page.locator('[data-next-step=waiting-on-parent]').count(), 1);
+    assert.equal(await page.locator('[data-pill]').getAttribute('aria-disabled'), 'true');
+    await page.waitForSelector('form.parent-request');
+    await shot(page, 'parent-waiting');
+    await checkLayout(page, 'parent-waiting');
+    // Mint the link the form would email, so the e2e never sends mail.
+    const { data: token, error } = await admin.rpc('request_parent_consent', { p_user_id: u.id, p_parent_email: `contact+portal-e2e-${run}-p-${slug}@joinvenn.org` });
+    assert.ifError(error);
+    const parent = await browser.newContext(ctxOpts());
+    const pp = await parent.newPage();
+    await pp.goto(`${BASE}/portal/parent/${token}`);
+    await pp.getByRole('button', { name: 'I agree' }).waitFor();
+    await shot(pp, 'parent-link');
+    await checkLayout(pp, 'parent-link');
+    await pp.getByRole('button', { name: 'I agree' }).click();
+    await pp.getByText('this has been signed').waitFor();
+    await pp.goto(`${BASE}/portal/parent/${token}`);
+    await pp.getByText('this has been signed').waitFor();
+    await shot(pp, 'parent-reused');
+    await parent.close();
+    await page.goto(`${BASE}/portal`);
+    assert.equal(await page.locator('[data-next-step=waiting-on-parent]').count(), 0);
+    assert.equal(await page.locator('form.parent-request').count(), 0);
+    await shot(page, 'parent-signed');
+    await ctx.close();
+  });
+
+  test(`an adult never sees the parent route (${slug})`, async () => {
+    const u = await makeUser(`noparent-${slug}`, 'college');
+    const ctx = await browser.newContext(ctxOpts());
+    const page = await ctx.newPage();
+    await login(page, u.email);
+    for (const n of ['coordinator_groups', 'data_use', 'retention']) await tick(page, n);
+    await page.click('button[type=submit]');
+    await page.waitForURL(`${BASE}/portal`);
+    assert.equal(await page.locator('form.parent-request').count(), 0);
+    const res = await page.request.post(`${BASE}/portal/parent-request`, { form: { parent_email: 'p@example.org' }, headers: { origin: BASE } });
+    assert.equal(res.status(), 403);
+    await ctx.close();
+  });
 }
