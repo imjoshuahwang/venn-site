@@ -44,7 +44,7 @@ const c = view?.contact;
       show('waiting');
       fetch(root.dataset.endpoint!, { method: 'POST', body: `{"matchId":${Number(root.dataset.match)}}` })
         .then(async (r) => {
-          if (!r.ok) throw new Error('rpc');
+          if (!r.ok) throw new Error(String(r.status)); // 401 and 5xx share the retry state
           const { contact } = await r.json();
           if (contact?.email || contact?.name) {
             q('[data-name]').textContent = contact.name ?? '';
