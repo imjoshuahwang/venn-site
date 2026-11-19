@@ -2,7 +2,7 @@
 import Base from '../../layouts/Base.astro';
 import AuthForm from '../../components/portal/AuthForm.astro';
 import { rpcStore } from '../../lib/portal/ratelimit';
-import { authGuard, authMessage, safeRedirect } from '../../scripts/portal/auth-errors';
+import { authGuard, guardStatus, authMessage, safeRedirect } from '../../scripts/portal/auth-errors';
 
 export const prerender = false;
 const next = safeRedirect(Astro.url.searchParams.get('next'));
@@ -15,6 +15,7 @@ if (Astro.request.method === 'POST') {
   email = String(f.get('email') ?? '').trim();
   const target = safeRedirect(String(f.get('next') ?? next));
   error = (await authGuard('login', Astro.request, { form: f, store: rpcStore(Astro.locals.supabase) })) ?? '';
+  if (error) Astro.response.status = guardStatus(error);
   if (!error) {
     const { error: e } = await Astro.locals.supabase.auth.signInWithPassword({ email, password: String(f.get('password') ?? '') });
     if (!e) return Astro.redirect(target, 303);

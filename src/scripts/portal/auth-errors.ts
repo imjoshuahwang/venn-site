@@ -63,3 +63,8 @@ export function safeRedirect(next: string | null | undefined): string {
   if (!n.startsWith('/') || n.startsWith('//') || /[\\\u0000-\u001f\u007f]/.test(n)) return '/portal';
   return n;
 }
+
+/** Status for a page that shows the guard's message: a rate limit is a 429, the rest render as usual. */
+export function guardStatus(message: string): number {
+  return message === RATE_MESSAGE ? 429 : 200;
+}

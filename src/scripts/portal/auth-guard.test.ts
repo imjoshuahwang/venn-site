@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { authGuard, RATE_MESSAGE, TURNSTILE_MESSAGE, changePassword } from './auth-errors.ts';
+import { authGuard, guardStatus, RATE_MESSAGE, TURNSTILE_MESSAGE, changePassword } from './auth-errors.ts';
 import { memoryStore, LIMIT } from '../../lib/portal/ratelimit.ts';
 import { TURNSTILE_TEST } from '../../lib/portal/turnstile.ts';
 
@@ -55,4 +55,10 @@ test('authGuard: reset is refused without a valid Turnstile token and accepted w
   assert.equal(await authGuard('reset', req(), { form: form({ email: 'a@x.org' }), ...bad }), TURNSTILE_MESSAGE);
   const ok = { store: memoryStore(), fetch: cfOk, secret: TURNSTILE_TEST.secretPass };
   assert.equal(await authGuard('reset', req(), { form: form({ email: 'a@x.org', 'cf-turnstile-response': 'tok' }), ...ok }), null);
+});
+
+test('guardStatus: the rate-limit message is HTTP 429, everything else 200', () => {
+  assert.equal(guardStatus(RATE_MESSAGE), 429);
+  assert.equal(guardStatus(TURNSTILE_MESSAGE), 200);
+  assert.equal(guardStatus(''), 200);
 });
