@@ -57,7 +57,7 @@ export async function giveConsent(sb: SupabaseClient, clauses: Record<string, bo
   return wrap<number>(await sb.rpc('give_consent', { clauses, version }));
 }
 
-export type TeamRow = { member_id: number; email: string; state: string; is_me: boolean; lead_is_me: boolean };
+export type TeamRow = { member_id: number | null; email: string; state: string; is_me: boolean; lead_is_me: boolean };
 
 export async function getMyTeam(sb: SupabaseClient): Promise<Api<TeamRow[]>> {
   return wrap<TeamRow[]>(await sb.rpc('get_my_team'));

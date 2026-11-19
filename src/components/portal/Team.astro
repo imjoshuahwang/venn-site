@@ -1,15 +1,16 @@
 ---
 // Team section: co-founders with state words, an add form for the lead, and visible empty and error states.
 // Plain server-posted forms; the button flips to a working state on submit.
-import type { TeamViewModel } from '../../lib/portal/team';
+import { TEAM_MAX, type TeamViewModel } from '../../lib/portal/team';
 interface Props { view: TeamViewModel | null; error?: string; notice?: string; failed?: boolean }
 const { view, error = '', notice = '', failed = false } = Astro.props;
+const seatsLeft = view ? TEAM_MAX - view.members.length : 0;
 const msg = failed ? 'We could not load your team. Reload to try again.' : error;
 ---
 <section class="team">
   <h1>Your team</h1>
   <p class:list={['status', { err: !!msg }]} role={msg ? 'alert' : 'status'} hidden={!msg && !notice}>{msg || notice}</p>
-  {view && view.stage === 'empty' && <p class="lede">No co-founders yet. Add up to 3 by email and each gets their own login.</p>}
+  {view && view.members.length === 0 && <p class="lede">No co-founders yet. Add up to 3 by email and each gets their own login.</p>}
   {view && view.members.length > 0 && (
     <ul class="list">
       {view.members.map((m) => (
@@ -30,10 +31,10 @@ const msg = failed ? 'We could not load your team. Reload to try again.' : error
     <form method="post" action="/portal/team/add" class="add">
       <label>Co-founder email<input name="email" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" required maxlength="320"></label>
       <button class="pill" type="submit" data-working="Adding...">Add co-founder</button>
-      <p class="hint">{view.seatsLeft} {view.seatsLeft === 1 ? 'seat' : 'seats'} left.</p>
+      <p class="hint">{seatsLeft} {seatsLeft === 1 ? 'seat' : 'seats'} left.</p>
     </form>
   )}
-  {view && !view.canAdd && view.seatsLeft === 0 && <p class="hint">Your team is full.</p>}
+  {view && !view.canAdd && seatsLeft === 0 && <p class="hint">Your team is full.</p>}
   <a class="back" href="/portal">Back to your result</a>
 </section>
 <script>

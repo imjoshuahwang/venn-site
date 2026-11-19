@@ -27,7 +27,7 @@ begin
   return v;
 end $$;
 
--- Team of the caller's result (lead or live member). State: invited, signed in, consented, waiting on parent.
+-- Team of the caller's result (lead or live member). A lead with no members still gets one row with a null member_id, so lead_is_me never depends on member rows. State: invited, signed in, consented, waiting on parent.
 create function public.get_my_team()
 returns table (member_id bigint, email text, state text, is_me boolean, lead_is_me boolean)
 language sql stable security definer set search_path = '' as $$
@@ -36,7 +36,7 @@ language sql stable security definer set search_path = '' as $$
   ), tm as (
     select t.id, t.email_key, coalesce(t.user_id, (select u.id from auth.users u
              where public.email_key(u.email) = t.email_key and u.email_confirmed_at is not null limit 1)) as uid
-    from public.team_members t, mine where t.lead_result_id = mine.id and t.removed_at is null
+    from public.team_members t join mine on t.lead_result_id = mine.id where t.removed_at is null
   )
   select tm.id, tm.email_key,
     case when tm.uid is null then 'invited'
@@ -44,8 +44,8 @@ language sql stable security definer set search_path = '' as $$
          when exists (select 1 from public.consents c where c.user_id = tm.uid and c.accepted) then 'consented'
          else 'signed in' end,
     tm.email_key = public.email_key(auth.jwt() ->> 'email'),
-    (select public.portal_is_lead(mine.id) from mine)
-  from tm order by tm.id
+    public.portal_is_lead(mine.id)
+  from mine left join tm on true order by tm.id
 $$;
 
 revoke execute on function public.add_team_member(text), public.remove_team_member(bigint), public.get_my_team() from public, anon;

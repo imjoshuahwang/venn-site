@@ -1,19 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { teamView, TEAM_MAX, STATE_WORDS } from './team.ts';
+import { teamView, TEAM_MAX } from './team.ts';
 import { getMyTeam, addTeamMember, removeTeamMember } from './api.ts';
 
 const row = (o: object) => ({ member_id: 1, email: 'a@x.org', state: 'invited', is_me: false, lead_is_me: true, ...o });
 
 test('teamView: empty, seats left, full, state words', () => {
-  assert.equal(teamView([]).stage, 'empty');
+  assert.equal(teamView([]).members.length, 0);
   const v = teamView([row({}), row({ member_id: 2, state: 'waiting on parent' })] as any);
-  assert.equal(v.stage, 'list'); assert.equal(v.canAdd, true); assert.equal(v.canRemove, true);
+  assert.equal(v.canAdd, true); assert.equal(v.canRemove, true);
   assert.equal(v.members[1].label, 'waiting on parent');
   const full = teamView([1, 2, 3].map((n) => row({ member_id: n })) as any);
   assert.equal(full.canAdd, false); assert.equal(TEAM_MAX, 3);
   assert.equal(teamView([row({ lead_is_me: false })] as any).canAdd, false);
-  assert.ok(STATE_WORDS.includes('consented'));
+  // a lead with zero members arrives as one null-member row and can still add
+  const zero = teamView([row({ member_id: null, email: null, state: null })] as any);
+  assert.equal(zero.members.length, 0); assert.equal(zero.canAdd, true); assert.equal(zero.canRemove, true);
 });
 
 function stub(res: { data: unknown; error: unknown }) {

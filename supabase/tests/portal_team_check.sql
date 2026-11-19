@@ -24,6 +24,9 @@ begin
      or has_function_privilege('anon', 'public.get_my_team()', 'execute') then raise exception 'anon can execute a team RPC'; end if;
 
   perform pg_temp.as_user(ul, 'lead@example.com');
+  -- a lead with zero members still sees lead_is_me
+  select count(*) into n from public.get_my_team() where lead_is_me and member_id is null;
+  if n <> 1 then raise exception 'zero-member lead lost lead_is_me'; end if;
   m1 := public.add_team_member('m1@example.com');
   m2 := public.add_team_member('m2@example.com');
   m3 := public.add_team_member('m3@example.com');
@@ -52,7 +55,7 @@ begin
   begin perform public.remove_team_member(m2.id); raise exception 'member removed';
   exception when insufficient_privilege then null; end;
   -- but a member sees the team and the lead's result
-  select count(*) into n from public.get_my_team();
+  select count(*) into n from public.get_my_team() where member_id is not null;
   if n <> 3 then raise exception 'member should see 3 rows, saw %', n; end if;
   select count(*) into n from public.results where id = rl;
   if n <> 1 then raise exception 'member cannot read lead result'; end if;
