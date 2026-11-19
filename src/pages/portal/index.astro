@@ -1,0 +1,64 @@
+---
+export const prerender = false;
+import Portal from '../../layouts/Portal.astro';
+import NextStep from '../../components/portal/NextStep.astro';
+import TextJosh from '../../components/portal/TextJosh.astro';
+import { pickNextStep, type NextStepInput } from '../../scripts/portal/next-step';
+import { joshPhone } from '../../scripts/portal/text-link';
+import { getMyResult, getCohortView, stubSavePhone } from '../../lib/portal/rpc-adapter';
+import { getMyResult as getFullResult } from '../../lib/portal/api';
+
+const dev = import.meta.env.DEV ? Astro.url.searchParams.get('state') : null;
+// Dev ?state= stubs: one per picker kind (QA home flow). Fields not loaded stay null and are skipped by the picker.
+const stubs: Record<string, Partial<NextStepInput>> = {
+  'waiting-on-parent': { under18: true, parentSigned: false },
+  'consent-missing': { consentGiven: false },
+  'sign-mou': { outcome: 'cohort', mouSigned: false },
+  'guiding-questions': { guidingAnswered: false },
+  'text-josh': { phoneSaved: false },
+  'kickoff-countdown': { kickoffAt: new Date(Date.now() + 6.5 * 86_400_000).toISOString() },
+  'all-set': {},
+};
+const empty: NextStepInput = { under18: null, parentSigned: null, consentGiven: null, mouSigned: null, outcome: null, guidingAnswered: null, phoneSaved: null, kickoffAt: null };
+let input: NextStepInput = empty;
+let result = null;
+let failed = false;
+try {
+  if (dev === 'error') throw new Error('stub');
+  if (dev && stubs[dev]) {
+    input = { ...empty, ...stubs[dev] };
+    result = { outcome: input.outcome ?? 'cohort' };
+  } else {
+    result = await getMyResult(Astro.locals.supabase);
+    input = { ...empty, outcome: result?.outcome ?? null };
+    if (result?.outcome === 'cohort') {
+      const full = await getFullResult(Astro.locals.supabase);
+      if (full.error) throw new Error(full.error.message);
+      if (full.data) input.mouSigned = (await getCohortView(Astro.locals.supabase, full.data.id)).signature !== null;
+    }
+  }
+} catch {
+  failed = true;
+}
+const step = pickNextStep(input);
+const locked = input.under18 === true && input.parentSigned !== true;
+---
+<Portal title="Your Venn home">
+  {failed ? <p role="alert" data-home-error>We could not load your home page. Please refresh, or email contact@joinvenn.org.</p> : (
+    <>
+      <NextStep step={step} />
+      <section class="home-section" id="text-josh">
+        <TextJosh firstName="" code={dev && !locked ? stubSavePhone('', false) : ''} josh={joshPhone(import.meta.env)} locked={locked} />
+      </section>
+      {result && <section class="home-section" data-result-summary>
+        <h2>Your Result</h2>
+        <a class="pill" href="/portal/result">View your Result</a>
+      </section>}
+    </>
+  )}
+</Portal>
+<style>
+  .home-section { display: grid; gap: var(--sp-16); justify-items: start; margin-top: var(--sp-32); }
+  .home-section h2 { margin: 0; font-size: var(--fs-22); font-weight: var(--fw-600); letter-spacing: var(--track-tight); }
+  [data-home-error] { font-size: var(--fs-17); color: var(--ink); }
+</style>
