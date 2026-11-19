@@ -7,7 +7,7 @@
     "build": "astro build",
     "preview": "astro preview --host 0.0.0.0 --port 8000",
     "qa:mobile": "node scripts/mobile-qa.mjs",
-    "test": "node --test scripts/qa/*.test.mjs src/scripts/portal/*.test.ts"
+    "test": "node --test scripts/qa/*.test.mjs src/scripts/portal/*.test.ts src/lib/portal/*.test.ts"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.4",
