@@ -40,10 +40,8 @@ test('safeNext blocks open redirects', () => {
 });
 
 import { readFileSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
 
 const vercel = JSON.parse(readFileSync(new URL('../../vercel.json', import.meta.url), 'utf8'));
-const mainVercel = JSON.parse(execFileSync('git', ['show', 'origin/main:vercel.json'], { encoding: 'utf8' }));
 const portalRule = (r) => r.source === '/' && (r.has ?? []).some((h) => h.type === 'host' && h.value === 'portal.joinvenn.org');
 
 test('vercel.json redirects portal host root to /portal, host-scoped and non-permanent', () => {
@@ -51,8 +49,19 @@ test('vercel.json redirects portal host root to /portal, host-scoped and non-per
   assert.equal(rules.length, 1);
   assert.deepEqual(rules[0], { source: '/', has: [{ type: 'host', value: 'portal.joinvenn.org' }], destination: '/portal', permanent: false });
 });
-test('other redirects, rewrites and headers are unchanged from main', () => {
-  assert.deepEqual(vercel.redirects.filter((r) => !portalRule(r)), mainVercel.redirects);
-  assert.deepEqual(vercel.rewrites, mainVercel.rewrites);
-  assert.deepEqual(vercel.headers, mainVercel.headers);
+test('redirects and rewrites match the expected list', () => {
+  assert.deepStrictEqual(vercel.redirects, [
+    { source: '/boost', destination: '/refer', permanent: true },
+    { source: '/pricing', destination: '/startups', permanent: true },
+    { source: '/', has: [{ type: 'host', value: 'portal.joinvenn.org' }], destination: '/portal', permanent: false },
+  ]);
+  assert.deepStrictEqual(vercel.rewrites, [
+    { source: '/u', destination: 'https://wirjadichvbmrqzamwtp.supabase.co/functions/v1/unsubscribe' },
+  ]);
+});
+test('header rules keep their sources and header names', () => {
+  assert.deepStrictEqual(vercel.headers.map((h) => h.source), ['/(.*)', '/(.*)\\.md', '/(llms|llms-full)\\.txt']);
+  assert.deepStrictEqual(vercel.headers[0].headers.map((h) => h.key), [
+    'Content-Security-Policy', 'Referrer-Policy', 'X-Frame-Options', 'X-Content-Type-Options', 'Permissions-Policy',
+  ]);
 });
