@@ -1,4 +1,4 @@
--- consent_state check for 20261123020000_portal_consent_state.sql + 20261123030000_portal_consent_state_application.sql (venn-site #127). LOCAL db only; all rolls back.
+-- consent_state check for 20261123020000_portal_consent_state.sql (venn-site #127). LOCAL db only; all rolls back.
 begin;
 
 create function pg_temp.as_user(uid uuid, em text) returns void language sql as $$
