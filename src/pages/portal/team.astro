@@ -1,0 +1,22 @@
+---
+export const prerender = false;
+import Portal from '../../layouts/Portal.astro';
+import Team from '../../components/portal/Team.astro';
+import { getMyTeam } from '../../lib/portal/api';
+import { teamView } from '../../lib/portal/team';
+
+let view = null;
+let failed = false;
+try {
+  const r = await getMyTeam(Astro.locals.supabase);
+  if (r.error) failed = true;
+  else view = teamView(r.data ?? []);
+} catch {
+  failed = true;
+}
+const q = Astro.url.searchParams;
+const notice = q.get('added') ? 'Co-founder added.' : q.get('removed') ? 'Co-founder removed.' : '';
+---
+<Portal title="Your team">
+  <Team view={view} failed={failed} error={q.get('error') ?? ''} notice={notice} />
+</Portal>

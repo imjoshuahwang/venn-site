@@ -57,6 +57,18 @@ export async function giveConsent(sb: SupabaseClient, clauses: Record<string, bo
   return wrap<number>(await sb.rpc('give_consent', { clauses, version }));
 }
 
+export type TeamRow = { member_id: number | null; email: string; state: string; is_me: boolean; lead_is_me: boolean };
+
+export async function getMyTeam(sb: SupabaseClient): Promise<Api<TeamRow[]>> {
+  return wrap<TeamRow[]>(await sb.rpc('get_my_team'));
+}
+export async function addTeamMember(sb: SupabaseClient, email: string): Promise<Api<unknown>> {
+  return wrap<unknown>(await sb.rpc('add_team_member', { p_email: email }));
+}
+export async function removeTeamMember(sb: SupabaseClient, memberId: number): Promise<Api<string>> {
+  return wrap<string>(await sb.rpc('remove_team_member', { p_member_id: memberId }));
+}
+
 export async function signMou(sb: SupabaseClient, resultId: number, typedName: string, agreed: boolean): Promise<Api<MouSignature>> {
   return wrap<MouSignature>(await sb.rpc('sign_mou', { p_result_id: resultId, p_typed_name: typedName, p_agreed: agreed }));
 }
