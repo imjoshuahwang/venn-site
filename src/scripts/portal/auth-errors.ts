@@ -34,18 +34,16 @@ const fallbackStore = memoryStore();
 
 /**
  * Pages call it before touching Supabase; a returned message stops the attempt.
- * Login and resend need a Turnstile token (verified server-side); login, reset and resend are limited per IP and per email.
+ * Login, reset and resend need a Turnstile token (verified server-side); login, reset and resend are limited per IP and per email.
  */
 export async function authGuard(action: Action, request: Request, deps: GuardDeps = {}): Promise<string | null> {
   if (action === 'set-password') return null;
   let form = deps.form;
   if (!form) { try { form = await request.clone().formData(); } catch { form = new FormData(); } }
   const ip = clientIp(request);
-  if (action !== 'reset') {
-    const secret = deps.secret ?? process.env.TURNSTILE_SECRET_KEY ?? TURNSTILE_TEST.secretPass;
-    const token = String(form.get('cf-turnstile-response') ?? '');
-    if (!(await verifyTurnstile(token, secret, ip, deps.fetch))) return TURNSTILE_MESSAGE;
-  }
+  const secret = deps.secret ?? process.env.TURNSTILE_SECRET_KEY ?? TURNSTILE_TEST.secretPass;
+  const token = String(form.get('cf-turnstile-response') ?? '');
+  if (!(await verifyTurnstile(token, secret, ip, deps.fetch))) return TURNSTILE_MESSAGE;
   const email = String(form.get('email') ?? '');
   const { limited } = await checkLimits(deps.store ?? fallbackStore, action, { ip, email });
   return limited ? RATE_MESSAGE : null;

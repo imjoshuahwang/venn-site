@@ -48,3 +48,11 @@ test('failed password change does not sign anyone out', async () => {
   assert.deepEqual(await changePassword(supabase as never, 'x'), { code: 'weak_password' });
   assert.deepEqual(calls, []);
 });
+
+test('authGuard: reset is refused without a valid Turnstile token and accepted with one', async () => {
+  const bad = { store: memoryStore(), fetch: cfNo, secret: TURNSTILE_TEST.secretFail };
+  assert.equal(await authGuard('reset', req(), { form: form({ email: 'a@x.org', 'cf-turnstile-response': 'tok' }), ...bad }), TURNSTILE_MESSAGE);
+  assert.equal(await authGuard('reset', req(), { form: form({ email: 'a@x.org' }), ...bad }), TURNSTILE_MESSAGE);
+  const ok = { store: memoryStore(), fetch: cfOk, secret: TURNSTILE_TEST.secretPass };
+  assert.equal(await authGuard('reset', req(), { form: form({ email: 'a@x.org', 'cf-turnstile-response': 'tok' }), ...ok }), null);
+});
