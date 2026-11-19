@@ -1,0 +1,52 @@
+---
+import { COHORT_COPY, MOU_COPY, safeHttps, logoUrl, mouMode } from '../../../data/mou';
+import MouForm from '../MouForm.astro';
+import ResultState from './ResultState.astro';
+const { result, view, full = false, endpoint = '/portal/mou' } = Astro.props as {
+  result: { id: number; letter: string | null; cohort: any } | null;
+  view: { signature: { typed_name: string; signed_at: string } | null; isLead: boolean; orgCount: number | null } | null;
+  full?: boolean; endpoint?: string;
+};
+const letter = typeof result?.letter === 'string' && result.letter.trim() ? result.letter.trim() : null;
+const c = result?.cohort ?? null;
+const logo = logoUrl(c?.logo_path, import.meta.env.PUBLIC_SUPABASE_URL);
+const video = safeHttps(c?.video_url);
+const slidesUrl = safeHttps(c?.slides_url);
+const facts = [[COHORT_COPY.goal, c?.goal], [COHORT_COPY.criteria, c?.criteria], [COHORT_COPY.timeline, c?.timeline]].filter(([, v]) => typeof v === 'string' && v.trim());
+---
+{!result || !view ? <ResultState state="empty" /> : (
+  <article class="cohort" data-cohort>
+    {letter && <section class="letter" data-letter><p>{letter}</p></section>}
+    <section class="details" data-details aria-labelledby="cohort-h">
+      {logo && <img class="logo" src={logo} alt={COHORT_COPY.logoAlt(c?.company ?? c?.name ?? 'Cohort')} width="48" height="48" />}
+      <h1 id="cohort-h">{c?.name ?? COHORT_COPY.heading}</h1>
+      {c?.company && <p class="company">{c.company}</p>}
+      {view.orgCount != null && <p class="orgs" data-orgs>{MOU_COPY.orgs(view.orgCount)}</p>}
+      {facts.length > 0 && <dl>{facts.map(([k, v]) => <><dt>{k}</dt><dd>{v}</dd></>)}</dl>}
+      {(video || slidesUrl) && (
+        <p class="links">
+          {video && <a class="pill" href={video} target="_blank" rel="noopener noreferrer">{COHORT_COPY.watch}</a>}
+          {slidesUrl && <a class="pill" href={slidesUrl} target="_blank" rel="noopener noreferrer">{COHORT_COPY.slides}</a>}
+        </p>
+      )}
+    </section>
+    <div class="slot" data-slot="slides"><slot name="slides" /></div>
+    <div class="slot" data-slot="guidingQuestions"><slot name="guidingQuestions" /></div>
+    <MouForm resultId={result.id} mode={mouMode(view, full)} signature={view.signature} endpoint={endpoint} />
+  </article>
+)}
+<style>
+  .cohort { display: grid; gap: var(--sp-32); animation: rise var(--dur-3) var(--ease) both; }
+  .letter p { margin: 0; white-space: pre-line; font-size: var(--fs-17); color: var(--ink); }
+  .details { display: grid; gap: var(--sp-12); justify-items: start; }
+  .logo { border-radius: var(--r-12); object-fit: contain; }
+  h1 { margin: 0; font-size: var(--fs-28); font-weight: var(--fw-800); letter-spacing: var(--track-tight); line-height: 1.15; }
+  .company, .orgs { margin: 0; font-size: var(--fs-15); color: var(--muted); }
+  dl { margin: 0; display: grid; gap: var(--sp-12); }
+  dt { font-size: var(--fs-13); font-weight: var(--fw-600); color: var(--muted); }
+  dd { margin: 0; font-size: var(--fs-17); color: var(--ink); }
+  .links { margin: 0; display: flex; flex-wrap: wrap; gap: var(--sp-12); }
+  .slot:empty { display: none; }
+  @keyframes rise { from { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .cohort { animation: none; } }
+</style>

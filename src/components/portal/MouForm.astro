@@ -1,0 +1,93 @@
+---
+import { MOU_COPY, MOU_TEXT, COHORT_COPY, formatSigned, type CohortMode } from '../../data/mou';
+const { resultId, mode, signature = null, endpoint = '/portal/mou' } = Astro.props as {
+  resultId: number; mode: CohortMode; signature?: { typed_name: string; signed_at: string } | null; endpoint?: string;
+};
+---
+<section class="mou" data-mou data-mode={mode} data-result={resultId} data-endpoint={endpoint} aria-labelledby="mou-h">
+  <h2 id="mou-h">{COHORT_COPY.mouHeading}</h2>
+  <div class="text">{MOU_TEXT.map((p) => <p>{p}</p>)}</div>
+  <p class="status" data-signed hidden={mode !== 'signed'}>{signature ? MOU_COPY.signedAs(signature.typed_name, formatSigned(signature.signed_at)) : ''}</p>
+  <p class="status" data-member hidden={mode !== 'member'}>{MOU_COPY.leadSigns}</p>
+  <p class="status" data-full hidden={mode !== 'full'}>{MOU_COPY.full}</p>
+  <form data-form hidden={mode !== 'sign'} novalidate>
+    <label class="field"><span>{MOU_COPY.nameLabel}</span>
+      <input data-name type="text" name="name" autocomplete="name" required />
+    </label>
+    <label class="agree"><input data-agree type="checkbox" name="agreed" /><span>{MOU_COPY.agreeLabel}</span></label>
+    <button class="pill" type="submit" data-sign aria-disabled="true">{MOU_COPY.sign}</button>
+    <p class="err" role="alert" data-error hidden></p>
+  </form>
+</section>
+<script>
+  import { MOU_COPY, validateMou, formatSigned, type MouErrorKind } from '../../data/mou';
+  const root = document.querySelector<HTMLElement>('[data-mou]');
+  if (root) {
+    const q = <T extends HTMLElement>(s: string) => root.querySelector<T>(s)!;
+    const form = q<HTMLFormElement>('[data-form]');
+    const name = q<HTMLInputElement>('[data-name]');
+    const agree = q<HTMLInputElement>('[data-agree]');
+    const btn = q<HTMLButtonElement>('[data-sign]');
+    const err = q('[data-error]');
+    let inflight = false;
+    const setMode = (m: string) => {
+      root.dataset.mode = m;
+      form.hidden = m !== 'sign';
+      q('[data-signed]').hidden = m !== 'signed';
+      q('[data-full]').hidden = m !== 'full';
+      q('[data-member]').hidden = m !== 'member';
+    };
+    const refresh = () => {
+      const ok = validateMou(name.value, agree.checked).ok && !inflight;
+      btn.setAttribute('aria-disabled', ok ? 'false' : 'true');
+    };
+    const showError = (k: MouErrorKind) => { err.textContent = MOU_COPY.errors[k]; err.hidden = false; };
+    name.addEventListener('input', refresh);
+    agree.addEventListener('change', refresh);
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (inflight) return;
+      const v = validateMou(name.value, agree.checked);
+      if (!v.ok) { showError('invalid'); return; }
+      inflight = true;
+      err.hidden = true;
+      root.dataset.state = 'submitting';
+      btn.textContent = MOU_COPY.signing;
+      refresh();
+      try {
+        const r = await fetch(root.dataset.endpoint!, { method: 'POST', body: JSON.stringify({ resultId: Number(root.dataset.result), name: v.name, agreed: true }) });
+        const body = await r.json().catch(() => ({}));
+        if (r.ok && body.signature) {
+          q('[data-signed]').textContent = MOU_COPY.signedAs(body.signature.typed_name, formatSigned(body.signature.signed_at));
+          setMode('signed');
+        } else {
+          const k = (body.error ?? 'retry') as MouErrorKind;
+          if (k === 'full') setMode('full');
+          else if (k === 'signed') { q('[data-signed]').textContent = MOU_COPY.errors.signed; setMode('signed'); }
+          else if (k === 'not_owner') setMode('member');
+          else showError(k in MOU_COPY.errors ? k : 'retry');
+        }
+      } catch { showError('retry'); }
+      finally { inflight = false; root.dataset.state = 'idle'; btn.textContent = MOU_COPY.sign; refresh(); }
+    });
+  }
+</script>
+<style>
+  .mou { display: grid; gap: var(--sp-16); width: 100%; padding: var(--sp-24); border: 1px solid var(--line); border-radius: var(--r-20); background: var(--panel); }
+  h2 { margin: 0; font-size: var(--fs-22); font-weight: var(--fw-800); letter-spacing: var(--track-tight); }
+  .text { display: grid; gap: var(--sp-12); font-size: var(--fs-15); color: var(--body); }
+  .text p, .status, .err { margin: 0; }
+  .status { font-size: var(--fs-17); font-weight: var(--fw-600); color: var(--ink); animation: rise var(--dur-2) var(--ease) both; }
+  .err { font-size: var(--fs-15); color: var(--ink); }
+  [hidden] { display: none; }
+  form { display: grid; gap: var(--sp-16); justify-items: start; }
+  .field { display: grid; gap: var(--sp-8); width: 100%; font-size: var(--fs-15); font-weight: var(--fw-600); }
+  input[type='text'] { min-height: 44px; padding: 0 var(--sp-16); font: inherit; font-weight: var(--fw-400); border: 1px solid var(--line); border-radius: var(--r-12); background: var(--white); color: var(--ink); }
+  .agree { display: flex; align-items: center; gap: var(--sp-12); min-height: 44px; font-size: var(--fs-15); cursor: pointer; }
+  .agree input { width: 24px; height: 24px; flex: none; }
+  input:focus-visible, button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  button.pill { border: 0; cursor: pointer; font-family: inherit; min-height: 44px; }
+  button.pill[aria-disabled='true'] { opacity: 0.4; cursor: not-allowed; }
+  @keyframes rise { from { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .status { animation: none; } }
+</style>

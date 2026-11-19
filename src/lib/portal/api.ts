@@ -6,7 +6,7 @@ export type Api<T> = { data: T | null; error: ApiError | null };
 export type Cohort = { id: number; slug: string; name: string; company: string | null; goal: string | null; criteria: string | null; timeline: string | null; video_url: string | null; slides_url: string | null; logo_path: string | null; seat_cap: number };
 export type PortalResult = {
   id: number; outcome: 'cohort' | 'peer' | 'network_waitlist' | 'track_waitlist' | 'not_this_season';
-  cohort_id: number | null; why_matched: string | null; season: string; viewed_at: string | null; ceremony_done_at: string | null;
+  cohort_id: number | null; why_matched: string | null; letter: string | null; season: string; viewed_at: string | null; ceremony_done_at: string | null;
   cohort: Cohort | null;
 };
 export type PeerCard = {
@@ -50,4 +50,20 @@ export async function peerDown(sb: SupabaseClient, matchId: number): Promise<Api
 
 export async function signMou(sb: SupabaseClient, resultId: number, typedName: string, agreed: boolean): Promise<Api<MouSignature>> {
   return wrap<MouSignature>(await sb.rpc('sign_mou', { p_result_id: resultId, p_typed_name: typedName, p_agreed: agreed }));
+}
+
+/** The caller's MOU signature for a result (RLS: own rows only); data null (no error) when unsigned. */
+export async function getMyMouSignature(sb: SupabaseClient, resultId: number): Promise<Api<MouSignature>> {
+  const r = await sb.from('mou_signatures').select('*').eq('result_id', resultId).limit(1).maybeSingle();
+  return wrap<MouSignature>(r as never);
+}
+
+/** True when the caller is the lead (owner) of the result's team; non-leads see "your lead signs". */
+export async function isLead(sb: SupabaseClient, resultId: number): Promise<Api<boolean>> {
+  return wrap<boolean>(await sb.rpc('portal_is_lead', { p_result_id: resultId }));
+}
+
+/** Approved orgs in the result's cohort, for "N orgs in this cohort"; null when the result has no cohort. */
+export async function cohortOrgCount(sb: SupabaseClient, resultId: number): Promise<Api<number>> {
+  return wrap<number>(await sb.rpc('cohort_org_count', { p_result_id: resultId }));
 }

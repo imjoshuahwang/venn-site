@@ -1,6 +1,17 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Outcome } from '../../data/portal-copy';
 import type { PeerContact, PeerRow } from '../../data/portal-peer';
+import { getMyMouSignature, isLead, cohortOrgCount } from './api.ts';
+
+export type CohortView = { signature: { typed_name: string; signed_at: string } | null; isLead: boolean; orgCount: number | null };
+
+/** What the Cohort page needs beyond the result: signed state (from mou_signatures), lead flag, org count. Throws on any read error. */
+export async function getCohortView(supabase: SupabaseClient, resultId: number): Promise<CohortView> {
+  const [sig, lead, count] = await Promise.all([getMyMouSignature(supabase, resultId), isLead(supabase, resultId), cohortOrgCount(supabase, resultId)]);
+  const err = sig.error ?? lead.error ?? count.error;
+  if (err) throw new Error(err.message);
+  return { signature: sig.data ? { typed_name: sig.data.typed_name, signed_at: sig.data.signed_at } : null, isLead: lead.data === true, orgCount: count.data };
+}
 
 export type MyResult = { outcome: Outcome; letter: string | null };
 
