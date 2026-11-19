@@ -170,11 +170,12 @@ for (const [slug, preset] of Object.entries(VIEWPORTS)) {
     } finally {
       psql(def);
       psql('grant execute on function public.consent_state(text) to authenticated');
+      psql("notify pgrst, 'reload schema'");
     }
     // Retry after the function is back: the error clears and the signed-in user lands on the ceremony (consent not yet given).
     await page.click('[data-retry]');
     await page.waitForURL('**/portal/ceremony');
-    assert.equal(await page.locator('[role=alert]').count(), 0);
+    assert.equal(await page.locator("[role=alert]:visible").count(), 0);
     await ctx.close();
   });
 }

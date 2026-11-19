@@ -1,4 +1,4 @@
--- give_consent check for 20261120010000_portal_consent_rpc.sql (venn-site #127). LOCAL db only; all rolls back.
+-- give_consent check for 20261123010000_portal_consent_rpc.sql (venn-site #127). LOCAL db only; all rolls back.
 -- Counts run as the superuser (reset role) because the consents select policy needs an owned result.
 begin;
 
