@@ -119,6 +119,7 @@ async function runPortalFlow({ flow, device, browser, base, login }) {
         assertTestAddress(rest || login.email);
         await p.fill('input[name=email]', rest || login.email);
         await p.fill('input[name=password]', login.password || '');
+        await p.waitForFunction(() => document.querySelector('input[name="cf-turnstile-response"]')?.value, null, { timeout: 15000 }); // always-pass widget fills this async
         await Promise.all([p.waitForURL((u) => !u.pathname.endsWith('/portal/login'), { timeout: 15000 }), p.click('button[type=submit]')]);
       } else if (verb === 'sign-out') {
         await p.evaluate(() => fetch('/portal/logout', { method: 'POST' }));
