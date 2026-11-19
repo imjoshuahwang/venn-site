@@ -64,6 +64,14 @@ export function clearRateLimits(execFile = execFileSync) {
   } catch { /* stack without the table or psql: the dev server's in-memory limiter is per run anyway */ }
 }
 
+// Local DB only: puts a seeded user back to a fresh first visit so each device run starts at the sealed card.
+export function resetCeremony(slug, execFile = execFileSync) {
+  const email = `contact+portal-${slug}@joinvenn.org`;
+  assertTestAddress(email);
+  execFile('psql', ['postgresql://postgres:postgres@127.0.0.1:54322/postgres', '-qc',
+    `update public.results r set viewed_at = null, ceremony_done_at = null from public.applications a where a.id = r.application_id and a.email = '${email}'`], { stdio: 'ignore' });
+}
+
 // ---- runner ----
 const DEVICES = ['iPhone SE', 'iPhone 15', 'Pixel 7'];
 const CLS_PORTAL = 0.05;
@@ -121,6 +129,13 @@ async function runPortalFlow({ flow, device, browser, base, login }) {
         await p.fill('input[name=password]', login.password || '');
         await p.waitForFunction(() => document.querySelector('input[name="cf-turnstile-response"]')?.value, null, { timeout: 15000 }); // always-pass widget fills this async
         await Promise.all([p.waitForURL((u) => !u.pathname.endsWith('/portal/login'), { timeout: 15000 }), p.click('button[type=submit]')]);
+      } else if (verb === 'reset-ceremony') {
+        resetCeremony(unq(rest));
+      } else if (verb === 'reduced-motion') {
+        await p.emulateMedia({ reducedMotion: 'reduce' });
+        await p.reload({ waitUntil: 'load' });
+      } else if (verb === 'expect-gone') {
+        await p.locator(unq(rest)).first().waitFor({ state: 'detached', timeout: 10000 });
       } else if (verb === 'sign-out') {
         await p.evaluate(() => fetch('/portal/logout', { method: 'POST' }));
       } else if (verb === 'fill' && /email/.test(s)) {

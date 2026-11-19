@@ -16,7 +16,7 @@ const email = user?.email ?? 'Account';
     {user && (
       <header class="topbar">
         <details class="account">
-          <summary aria-label="Account menu">{email}</summary>
+          <summary aria-label="Account menu"><span class="who">{email}</span></summary>
           <form method="post" action="/portal/logout"><button type="submit">Sign out</button></form>
         </details>
       </header>
@@ -31,7 +31,9 @@ const email = user?.email ?? 'Account';
   main { position: relative; max-width: 640px; margin: 0 auto; padding: var(--sp-24) var(--gutter) var(--sp-64); }
   .topbar { position: relative; max-width: 640px; margin: 0 auto; padding: env(safe-area-inset-top) max(var(--gutter), env(safe-area-inset-right)) 0 max(var(--gutter), env(safe-area-inset-left)); display: flex; justify-content: flex-end; }
   .account { position: relative; }
-  .topbar summary { display: flex; align-items: center; min-height: 44px; min-width: 44px; max-width: 70vw; padding: 0 var(--sp-12); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-15); color: var(--ink); cursor: pointer; list-style: none; }
+  .account { min-width: 0; max-width: 100%; }
+  .topbar .who { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .topbar summary { display: flex; align-items: center; min-height: 44px; min-width: 44px; max-width: 100%; padding: 0 var(--sp-12); font-size: var(--fs-15); color: var(--ink); cursor: pointer; list-style: none; }
   .topbar summary::-webkit-details-marker { display: none; }
   .topbar form { position: absolute; right: 0; top: 100%; z-index: 1; background: var(--white); border-radius: var(--r-12); box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12); }
   .topbar button { min-height: 44px; min-width: 44px; padding: 0 var(--sp-24); border: 0; background: none; font: inherit; font-size: var(--fs-15); color: var(--ink); cursor: pointer; white-space: nowrap; }
