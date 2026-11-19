@@ -49,8 +49,14 @@
     - expect-url /portal
     - screenshot ceremony
 - name: auth-reused-expired-link
-  on: /portal/auth/callback?code=used
+  on: /portal/login
   steps:
+    - mint-link
+    - goto-link
+    - expect-url /portal
+    - screenshot first-use
+    - sign-out
+    - goto-link
     - expect-url /portal/resend?expired=1
     - expect-visible text=That link has expired
     - screenshot expired
@@ -93,6 +99,7 @@
     - expect-url /portal
 - name: auth-turnstile-and-429
   on: /portal/login
+  allowConsole: status of 429
   steps:
     - sign-in
     - expect-url /portal

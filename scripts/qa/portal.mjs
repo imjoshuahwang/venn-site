@@ -98,6 +98,7 @@ async function runPortalFlow({ flow, device, browser, base, login }) {
     sess[name] = { ctx, page, state };
     return sess[name];
   };
+  let link;
   let cur = await open('default');
   const sub = (s) => s.replaceAll('{email}', login.email).replaceAll('{password}', login.password || '');
   let step = '', lastShot = shotPath(device.name, flow.name, 'start');
@@ -121,6 +122,17 @@ async function runPortalFlow({ flow, device, browser, base, login }) {
         await p.fill('input[name=password]', login.password || '');
         await p.waitForFunction(() => document.querySelector('input[name="cf-turnstile-response"]')?.value, null, { timeout: 15000 }); // always-pass widget fills this async
         await Promise.all([p.waitForURL((u) => !u.pathname.endsWith('/portal/login'), { timeout: 15000 }), p.click('button[type=submit]')]);
+      } else if (verb === 'mint-link') {
+        const email = rest || login.email;
+        assertTestAddress(email);
+        const { resolveTarget } = await import('../portal/users.mjs');
+        const t = resolveTarget({ env: process.env });
+        const { createClient } = await import('@supabase/supabase-js');
+        const { data, error } = await createClient(t.url, t.key, { auth: { persistSession: false, autoRefreshToken: false } }).auth.admin.generateLink({ type: 'magiclink', email });
+        if (error) throw new Error(`generateLink: ${error.message}`);
+        link = new URL(`/portal/auth/callback?token_hash=${data.properties.hashed_token}&type=magiclink`, base).href;
+      } else if (verb === 'goto-link') {
+        await p.goto(link, { waitUntil: 'load' });
       } else if (verb === 'sign-out') {
         await p.evaluate(() => fetch('/portal/logout', { method: 'POST' }));
       } else if (verb === 'fill' && /email/.test(s)) {
@@ -134,6 +146,7 @@ async function runPortalFlow({ flow, device, browser, base, login }) {
     const fails = [];
     for (const [name, x] of Object.entries(sess)) {
       await x.page.waitForTimeout(400);
+      if (flow.allowConsole) x.state.console = x.state.console.filter((m) => !m.includes(flow.allowConsole));
       for (const r of await runChecks(x.page, x.state)) if (!r.pass) fails.push(`${name}: ${r.check} ${r.details}`);
     }
     if (fails.length) throw Object.assign(new Error(fails.join('; ')), { step: 'checks' });

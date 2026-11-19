@@ -21,7 +21,7 @@ export function parseFlows(text) {
     if (indent === 0 && body.startsWith('- ')) { flow = { name: '', on: '/', steps: [] }; flows.push(flow); inSteps = false; body = body.slice(2); }
     else if (inSteps && body.startsWith('- ')) { flow.steps.push(unquote(body.slice(2))); continue; }
     if (!flow) throw new Error(`flows.yaml: line outside a flow: ${line}`);
-    const m = body.match(/^(name|on|pending|steps):\s*(.*)$/);
+    const m = body.match(/^(name|on|pending|allowConsole|steps):\s*(.*)$/);
     if (!m) throw new Error(`flows.yaml: cannot read line: ${line}`);
     inSteps = m[1] === 'steps';
     if (!inSteps) flow[m[1]] = m[1] === 'pending' ? Number(unquote(m[2])) : unquote(m[2]);
