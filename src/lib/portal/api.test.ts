@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getMyPeer, getMyResult, markViewed, peerDown, signMou, finishCeremony } from './api.ts';
+import { getMyPeer, getMyResult, markViewed, peerDown, signMou, finishCeremony, savePhone } from './api.ts';
 
 // Stub client: records rpc calls; no network.
 function stub(rpcResult: { data: unknown; error: unknown }, row: unknown = null) {
@@ -40,4 +40,10 @@ test('getMyResult reads results with the cohort joined', async () => {
   const { sb, calls } = stub({ data: null, error: null }, { id: 1, cohort: { id: 2 } });
   assert.equal((await getMyResult(sb)).data?.id, 1);
   assert.equal(calls[0].fn, 'from:results');
+});
+
+test("savePhone maps args and returns the code", async () => {
+  const { sb, calls } = stub({ data: "VENN-4F2K", error: null });
+  assert.equal((await savePhone(sb, "+14155550123", true)).data, "VENN-4F2K");
+  assert.deepEqual(calls[0], { fn: "save_phone", args: { p_phone: "+14155550123", p_whatsapp: true } });
 });

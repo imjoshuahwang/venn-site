@@ -147,4 +147,31 @@ begin
   reset role;
 end $$;
 
+-- save_phone (#132): mints once, stable, stores phone + whatsapp, refuses non-leads and anon
+do $$
+declare
+  ue uuid := gen_random_uuid(); ae bigint; re bigint; c1 text; c2 text; row_ record; ok boolean;
+begin
+  insert into auth.users (id, email, email_confirmed_at) values (ue, 'eve@example.com', now());
+  insert into public.applications (role, name, email, working_on, source) values ('student', 'Eve Fox', 'eve@example.com', 'x', '/apply') returning id into ae;
+  insert into public.results (application_id, outcome, status) values (ae, 'peer', 'approved') returning id into re;
+  if has_function_privilege('anon', 'public.save_phone(text,boolean)', 'execute') then raise exception 'anon can execute save_phone'; end if;
+  perform pg_temp.as_user(ue, 'eve@example.com'); set local role authenticated;
+  c1 := public.save_phone('+1 (415) 555-0123', false);
+  if c1 !~ '^VENN-[A-Z0-9]{4}$' then raise exception 'bad code %', c1; end if;
+  c2 := public.save_phone('+44 7700 900123', true);
+  if c2 <> c1 then raise exception 'code changed % -> %', c1, c2; end if;
+  reset role;
+  select phone, whatsapp, text_code into row_ from public.results where id = re;
+  if row_.phone <> '+447700900123' or row_.whatsapp is not true or row_.text_code <> c1 then raise exception 'save_phone stored wrong row %', row_; end if;
+  perform pg_temp.as_user(ue, 'eve@example.com'); set local role authenticated;
+  begin perform public.save_phone('4155550123', false); ok := false; exception when invalid_parameter_value then ok := true; end;
+  if not ok then raise exception 'phone without country code accepted'; end if;
+  reset role;
+  perform pg_temp.as_user(gen_random_uuid(), 'nobody@example.com'); set local role authenticated;
+  begin perform public.save_phone('+14155550123', false); ok := false; exception when insufficient_privilege then ok := true; end;
+  if not ok then raise exception 'non-owner saved a phone'; end if;
+  reset role;
+end $$;
+
 rollback;

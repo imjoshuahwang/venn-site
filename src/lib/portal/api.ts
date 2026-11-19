@@ -48,6 +48,11 @@ export async function peerDown(sb: SupabaseClient, matchId: number): Promise<Api
   return { data: (row as PeerCard) ?? null, error: null };
 }
 
+/** Saves the lead's phone and mints (once) the VENN-XXXX text code; same code on every later call (#132). */
+export async function savePhone(sb: SupabaseClient, phone: string, whatsapp: boolean): Promise<Api<string>> {
+  return wrap<string>(await sb.rpc('save_phone', { p_phone: phone, p_whatsapp: whatsapp }));
+}
+
 export async function signMou(sb: SupabaseClient, resultId: number, typedName: string, agreed: boolean): Promise<Api<MouSignature>> {
   return wrap<MouSignature>(await sb.rpc('sign_mou', { p_result_id: resultId, p_typed_name: typedName, p_agreed: agreed }));
 }
