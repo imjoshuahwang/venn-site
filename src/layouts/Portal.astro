@@ -12,12 +12,15 @@ const { title = 'Portal' } = Astro.props;
   <body>
     <div class="blobs" aria-hidden="true"><i class="g"></i><i class="b"></i></div>
     <main><slot /></main>
+    <footer class="data-line">Want your data deleted? <a href="mailto:contact@joinvenn.org">Email contact@joinvenn.org</a></footer>
   </body>
 </html>
 <style is:global>
   *, *::before, *::after { box-sizing: border-box; }
   body { margin: 0; font-family: var(--font); font-size: var(--fs-17); line-height: 1.5; color: var(--ink); background: var(--white); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
   main { position: relative; max-width: 640px; margin: 0 auto; padding: var(--sp-48) var(--gutter) var(--sp-64); }
+  .data-line { max-width: 640px; margin: 0 auto; padding: 0 var(--gutter) var(--sp-48); font-size: var(--fs-13); color: var(--muted); }
+  .data-line a { color: inherit; text-underline-offset: 3px; }
   .blobs { position: fixed; inset: 0; z-index: -1; overflow: hidden; }
   .blobs i { position: absolute; width: 70vmax; height: 70vmax; border-radius: var(--r-pill); filter: blur(80px); opacity: 0.45; }
   .blobs .g { background: var(--green); top: -30vmax; left: -25vmax; }
