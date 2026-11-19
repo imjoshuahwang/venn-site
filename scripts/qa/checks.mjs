@@ -209,14 +209,17 @@ export async function smallText(page) {
 }
 
 // WebKit emits this from the Cloudflare Turnstile iframe's blob worker; harmless and not our code.
-// Exact full message only, and only when a Turnstile iframe was present during the page/flow.
-export const TURNSTILE_NOISE = 'Failed to load resource: WebKitBlobResource error 1';
+// Real text: "Failed to load resource: The operation couldn't be completed. (WebKitBlobResource error 1.)"
+// (apostrophe varies), so match the stable substring, only when a Turnstile iframe was present.
+export const TURNSTILE_NOISE = 'WebKitBlobResource error 1';
 export function isTurnstileNoise(text, turnstileSeen) {
-  return Boolean(turnstileSeen) && text === TURNSTILE_NOISE;
+  return Boolean(turnstileSeen) && String(text).includes(TURNSTILE_NOISE);
 }
 
 export async function consoleErrors(page, state) {
-  const msgs = state.console.filter((m) => !isTurnstileNoise(m, state.turnstileSeen));
+  const frameNow = await page.evaluate(() => !!document.querySelector('iframe[src*="challenges.cloudflare.com"]')).catch(() => false);
+  const seen = state.turnstileSeen || frameNow;
+  const msgs = state.console.filter((m) => !isTurnstileNoise(m, seen));
   const all = [...msgs, ...state.pageErrors.map((e) => `pageerror: ${e}`)];
   return result('console', all.length, list(all.map((s) => s.slice(0, 120))));
 }

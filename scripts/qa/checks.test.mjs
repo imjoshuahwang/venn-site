@@ -88,11 +88,15 @@ test('a visually-hidden 1px heading does not overlap the visible text it sits ov
   assert.deepEqual(rows.filter((r) => !r.pass), []);
 });
 
-test('isTurnstileNoise matches only the exact message with a Turnstile frame seen', async () => {
-  const { isTurnstileNoise, TURNSTILE_NOISE } = await import('./checks.mjs');
-  assert.equal(isTurnstileNoise(TURNSTILE_NOISE, true), true);
-  assert.equal(isTurnstileNoise(TURNSTILE_NOISE, false), false);
-  assert.equal(isTurnstileNoise('WebKitBlobResource error 1', true), false);
-  assert.equal(isTurnstileNoise(`${TURNSTILE_NOISE} extra`, true), false);
+test('isTurnstileNoise matches the captured WebKit text only with a Turnstile frame', async () => {
+  const { isTurnstileNoise } = await import('./checks.mjs');
+  for (const apos of ["'", '\u2019']) {
+    const msg = `Failed to load resource: The operation couldn${apos}t be completed. (WebKitBlobResource error 1.)`;
+    assert.equal(isTurnstileNoise(msg, true), true);
+    assert.equal(isTurnstileNoise(msg, false), false);
+  }
+  assert.equal(isTurnstileNoise('Failed to load resource: WebKitBlobResource error 1', true), true);
+  assert.equal(isTurnstileNoise('webkitblobresource error 1', true), false);
   assert.equal(isTurnstileNoise('Failed to load resource: the server responded with a status of 404', true), false);
+  assert.equal(isTurnstileNoise('TypeError: x is undefined', true), false);
 });
