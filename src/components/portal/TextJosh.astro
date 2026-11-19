@@ -14,6 +14,7 @@ const { firstName, code = '', phone = '', josh, locked = false } = Astro.props;
   .text-josh { display: grid; gap: 12px; justify-self: stretch; }
   .text-josh label:not(.wa) { display: grid; gap: 8px; font-size: 15px; }
   .wa { display: flex; align-items: center; gap: 8px; min-height: 44px; }
+  .wa input { width: 44px; height: 44px; margin: 0 -4px 0 -12px; }
   .pill { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 24px; border-radius: 999px; background: var(--ink, #111); color: var(--bg, #fff); text-decoration: none; }
   .pill[aria-disabled='true'] { opacity: 0.4; pointer-events: none; }
 </style>

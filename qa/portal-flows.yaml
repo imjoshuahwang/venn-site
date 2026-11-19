@@ -97,6 +97,7 @@
 - name: ceremony-not-this-season
   on: /portal
   steps:
+    - reset-ceremony nts
     - sign-in contact+portal-nts@joinvenn.org
     - expect-visible [data-screen=sealed]
     - screenshot sealed
