@@ -14,6 +14,7 @@ const PORT = 8127;
 const BASE = `http://127.0.0.1:${PORT}`;
 const PASSWORD = 'e2e-Consent-pass-1';
 const SHOTS = new URL('../qa/portal-shots/127/', import.meta.url).pathname;
+const SHOTS128 = new URL('../qa/portal-shots/128/', import.meta.url).pathname;
 const VIEWPORTS = { 'iphone-se': 'iPhone SE (3rd gen)', 'iphone-15': 'iPhone 15', 'pixel-7': 'Pixel 7' };
 const run = Date.now().toString(36);
 const created = [];
@@ -124,6 +125,8 @@ for (const [slug, preset] of Object.entries(VIEWPORTS)) {
     await ctx.close();
   });
 
+  const shot128 = (page, name) => page.screenshot({ path: `${SHOTS128}${name}-${slug}.png`, fullPage: true, scale: 'css' });
+
   test(`high school applicant goes to cosign (${slug})`, async () => {
     const u = await makeUser(`hs-${slug}`, 'high_school');
     const ctx = await browser.newContext(ctxOpts());
@@ -131,7 +134,8 @@ for (const [slug, preset] of Object.entries(VIEWPORTS)) {
     await login(page, u.email);
     for (const n of ['coordinator_groups', 'data_use', 'retention']) await tick(page, n);
     await page.click('button[type=submit]');
-    await page.waitForURL(`${BASE}/portal/cosign`);
+    await page.waitForURL(`${BASE}/portal`);
+    await page.locator("form.parent-request").waitFor();
     await shot(page, 'cosign');
     await ctx.close();
   });
@@ -186,12 +190,12 @@ for (const [slug, preset] of Object.entries(VIEWPORTS)) {
     await login(page, u.email);
     for (const n of ['coordinator_groups', 'data_use', 'retention']) await tick(page, n);
     await page.click('button[type=submit]');
-    await page.waitForURL(`${BASE}/portal/cosign`);
+    await page.waitForURL(`${BASE}/portal`);
     await page.goto(`${BASE}/portal`);
     assert.equal(await page.locator('[data-next-step=waiting-on-parent]').count(), 1);
     assert.equal(await page.locator('[data-pill]').getAttribute('aria-disabled'), 'true');
     await page.waitForSelector('form.parent-request');
-    await shot(page, 'parent-waiting');
+    await shot128(page, 'parent-waiting');
     await checkLayout(page, 'parent-waiting');
     // Mint the link the form would email, so the e2e never sends mail.
     const { data: token, error } = await admin.rpc('request_parent_consent', { p_user_id: u.id, p_parent_email: `contact+portal-e2e-${run}-p-${slug}@joinvenn.org` });
@@ -200,18 +204,48 @@ for (const [slug, preset] of Object.entries(VIEWPORTS)) {
     const pp = await parent.newPage();
     await pp.goto(`${BASE}/portal/parent/${token}`);
     await pp.getByRole('button', { name: 'I agree' }).waitFor();
-    await shot(pp, 'parent-link');
+    await shot128(pp, 'parent-link');
     await checkLayout(pp, 'parent-link');
     await pp.getByRole('button', { name: 'I agree' }).click();
     await pp.getByText('this has been signed').waitFor();
     await pp.goto(`${BASE}/portal/parent/${token}`);
     await pp.getByText('this has been signed').waitFor();
-    await shot(pp, 'parent-reused');
+    await shot128(pp, 'parent-reused');
     await parent.close();
     await page.goto(`${BASE}/portal`);
     assert.equal(await page.locator('[data-next-step=waiting-on-parent]').count(), 0);
     assert.equal(await page.locator('form.parent-request').count(), 0);
-    await shot(page, 'parent-signed');
+    await shot128(page, 'parent-signed');
+    await ctx.close();
+  });
+
+  test(`an expired parent link is calm and a resend works (${slug})`, async () => {
+    const u = await makeUser(`exp-${slug}`, 'high_school');
+    const ctx = await browser.newContext(ctxOpts());
+    const page = await ctx.newPage();
+    await login(page, u.email);
+    for (const n of ['coordinator_groups', 'data_use', 'retention']) await tick(page, n);
+    await page.click('button[type=submit]');
+    await page.waitForURL(`${BASE}/portal`);
+    const to = `contact+portal-e2e-${run}-x-${slug}@joinvenn.org`;
+    const first = (await admin.rpc('request_parent_consent', { p_user_id: u.id, p_parent_email: to })).data;
+    await admin.from('parent_consents').update({ expires_at: new Date(Date.now() - 60000).toISOString() }).eq('user_id', u.id);
+    const parent = await browser.newContext(ctxOpts());
+    const pp = await parent.newPage();
+    await pp.goto(`${BASE}/portal/parent/${first}`);
+    await pp.getByText('expired or is not valid').waitFor();
+    assert.equal(await pp.getByRole('button', { name: 'I agree' }).count(), 0);
+    await shot128(pp, 'parent-expired');
+    await checkLayout(pp, 'parent-expired');
+    await page.goto(`${BASE}/portal`);
+    assert.equal(await page.locator('form.parent-request').count(), 1);
+    // Resend goes through the RPC, not the form, so no mail is attempted.
+    const second = (await admin.rpc('request_parent_consent', { p_user_id: u.id, p_parent_email: to })).data;
+    await pp.goto(`${BASE}/portal/parent/${second}`);
+    await pp.getByRole('button', { name: 'I agree' }).waitFor();
+    await pp.goto(`${BASE}/portal/parent/${first}`);
+    await pp.getByText('expired or is not valid').waitFor();
+    await parent.close();
     await ctx.close();
   });
 
