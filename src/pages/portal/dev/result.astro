@@ -18,7 +18,7 @@ const peerState = state === 'waiting' ? 'waiting' : state === 'both-down' ? 'bot
 const peerEndpoint = '/portal/dev/peer-down?' + (q.get('fail') ? 'fail=1' : q.get('mutual') ? 'mutual=1' : '');
 // Cohort states: unsigned (default), signed, full, null (missing cohort fields), member (non-lead), plus loading/error. `fail=full|signed|not_owner|invalid|retry` makes Sign error.
 const cohortRow = state === 'null' ? { id: 1, name: 'Fall cohort', company: null, goal: null, criteria: null, timeline: null, video_url: null, slides_url: null, logo_path: null }
-  : { id: 1, name: 'Teaching Tools', company: 'Lincoln Labs', goal: 'Ship one tool that a teacher uses every week.', criteria: 'A team of students with a working prototype and a real user.', timeline: 'Sept to Dec 2026, one session a week.', video_url: 'https://www.youtube.com/watch?v=fixture', slides_url: 'https://example.com/slides', logo_path: null };
+  : { id: 1, name: 'Teaching Tools', company: 'Lincoln Labs', goal: 'Ship one tool that a teacher uses every week.', criteria: 'A team of students with a working prototype and a real user.', timeline: 'Sept to Dec 2026, one session a week.', video_url: 'https://www.youtube.com/watch?v=fixture', slides_url: 'https://example.com/slides', logo_path: 'https://wirjadichvbmrqzamwtp.supabase.co/storage/v1/object/public/cohort-logos/fixture.png' };
 const cohortResult = { id: 1, letter, cohort: cohortRow };
 const cohortView = { signature: state === 'signed' ? { typed_name: 'Maya Lee', signed_at: '2026-11-18T17:00:00Z' } : null, isLead: state !== 'member', orgCount: state === 'null' ? null : 4 };
 const mouEndpoint = '/portal/dev/mou' + (q.get('fail') ? `?fail=${encodeURIComponent(q.get('fail'))}` : '');
