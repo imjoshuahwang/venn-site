@@ -38,3 +38,21 @@ test('safeNext blocks open redirects', () => {
   assert.equal(safeNext('/\\evil.com'), null);
   assert.equal(safeNext('https://evil.com'), null);
 });
+
+import { readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+
+const vercel = JSON.parse(readFileSync(new URL('../../vercel.json', import.meta.url), 'utf8'));
+const mainVercel = JSON.parse(execFileSync('git', ['show', 'origin/main:vercel.json'], { encoding: 'utf8' }));
+const portalRule = (r) => r.source === '/' && (r.has ?? []).some((h) => h.type === 'host' && h.value === 'portal.joinvenn.org');
+
+test('vercel.json redirects portal host root to /portal, host-scoped and non-permanent', () => {
+  const rules = vercel.redirects.filter(portalRule);
+  assert.equal(rules.length, 1);
+  assert.deepEqual(rules[0], { source: '/', has: [{ type: 'host', value: 'portal.joinvenn.org' }], destination: '/portal', permanent: false });
+});
+test('other redirects, rewrites and headers are unchanged from main', () => {
+  assert.deepEqual(vercel.redirects.filter((r) => !portalRule(r)), mainVercel.redirects);
+  assert.deepEqual(vercel.rewrites, mainVercel.rewrites);
+  assert.deepEqual(vercel.headers, mainVercel.headers);
+});
