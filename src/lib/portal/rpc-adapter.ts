@@ -29,6 +29,7 @@ export function stubResult(outcome: string | null): MyResult | null {
 type PeerRpcRow = {
   match_id: number; partner_name: string | null; partner_org: string | null; partner_project: string | null;
   why_matched: string | null; i_am_down: boolean; they_are_down: boolean; partner_email: string | null;
+  partner_state?: string | null; partner_country?: string | null;
 };
 
 const one = (data: unknown): PeerRpcRow | null => (Array.isArray(data) ? data[0] : data) ?? null;
@@ -39,9 +40,13 @@ export async function getMyPeer(supabase: Pick<SupabaseClient, 'rpc'>): Promise<
   if (error) throw error;
   const r = one(data);
   if (!r) return null;
+  const region = [r.partner_state, r.partner_country].map((v) => v?.trim()).filter(Boolean).join(', ');
+  const both = r.i_am_down && r.they_are_down && !!r.partner_email;
   return {
     match_id: r.match_id, first_name: r.partner_name ?? undefined, project: r.partner_project ?? undefined,
-    place: r.partner_org ?? undefined, why_matched: r.why_matched ?? undefined, mine_down: r.i_am_down, theirs_down: r.they_are_down,
+    place: region || (r.partner_org ?? undefined), why_matched: r.why_matched ?? undefined, mine_down: r.i_am_down, theirs_down: r.they_are_down,
+    // get_my_peer already withholds the email until both are down, so a load can show the reveal without re-tapping.
+    contact: both ? { name: r.partner_name ?? undefined, email: r.partner_email! } : undefined,
   };
 }
 

@@ -12,6 +12,7 @@ export type PortalResult = {
 export type PeerCard = {
   match_id: number; partner_name: string; partner_org: string | null; partner_project: string | null; why_matched: string | null;
   i_am_down: boolean; they_are_down: boolean; partner_email: string | null;
+  partner_state: string | null; partner_country: string | null;
 };
 export type MouSignature = { id: number; result_id: number; cohort_id: number; typed_name: string; agreed: boolean; signed_at: string; user_id: string };
 

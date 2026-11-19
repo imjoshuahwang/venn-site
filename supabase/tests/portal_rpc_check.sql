@@ -73,6 +73,13 @@ begin
   select * into p from public.get_my_peer();
   if p.partner_name <> 'Bo' or p.partner_org <> 'Beta HS' or p.partner_email is not null or p.i_am_down or p.they_are_down then
     raise exception 'pre-tap card wrong: %', p; end if;
+  -- #144: partner state/country come back (null until set), org still there as the fallback
+  if p.partner_state is not null or p.partner_country is not null then raise exception 'location should start null: %', p; end if;
+  reset role;
+  update public.applications set state = 'Ohio', country = 'US' where id = ab;
+  perform pg_temp.as_user(ua, 'maya@example.com'); set local role authenticated;
+  select * into p from public.get_my_peer();
+  if p.partner_state <> 'Ohio' or p.partner_country <> 'US' or p.partner_org <> 'Beta HS' then raise exception 'location wrong: %', p; end if;
   -- one tap: still no email; second tap is idempotent
   select * into p from public.peer_down(mid);
   if not p.i_am_down or p.they_are_down or p.partner_email is not null or p.partner_name <> 'Bo' then raise exception 'after one tap wrong: %', p; end if;

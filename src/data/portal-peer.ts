@@ -14,6 +14,7 @@ export type PeerRow = {
   why_matched?: string;
   mine_down?: boolean;
   theirs_down?: boolean;
+  contact?: PeerContact;
 };
 export type PeerContact = { name?: string; email?: string; phone?: string };
 export type PeerState = 'none' | 'mine' | 'theirs' | 'both';
