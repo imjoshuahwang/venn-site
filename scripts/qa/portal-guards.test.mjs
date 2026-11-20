@@ -44,3 +44,14 @@ test('supabase site_url is the bare origin (templates append /portal/auth/callba
   assert.match(toml, /^site_url = "https:\/\/joinvenn\.org"$/m);
   assert.match(toml, /additional_redirect_urls = \[[^\]]*"https:\/\/joinvenn\.org\/portal\/auth\/callback"/);
 });
+
+import { readdirSync } from 'node:fs';
+
+test('portal runs on demand and POST bodies survive (#169)', () => {
+  // The adapter's edge middleware re-fetches the render function without method or body, which turned every POST into a GET.
+  assert.ok(!/edgeMiddleware/.test(readFileSync(new URL('../../astro.config.mjs', import.meta.url), 'utf8')));
+  const walk = (d) => readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(new URL(`${e.name}/`, d)) : [new URL(e.name, d)]));
+  for (const f of walk(new URL('../../src/pages/portal/', import.meta.url))) {
+    assert.match(readFileSync(f, 'utf8'), /export const prerender = false/, f.pathname);
+  }
+});
