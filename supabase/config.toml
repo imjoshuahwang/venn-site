@@ -11,7 +11,7 @@ verify_jwt = false
 
 [auth]
 site_url = "https://joinvenn.org"
-additional_redirect_urls = ["https://joinvenn.org/portal/auth/callback", "http://localhost:8000/portal/auth/callback", "https://joinvenn.org/portal/**"]
+additional_redirect_urls = ["https://joinvenn.org/portal/auth/callback", "http://localhost:8000/portal/auth/callback"]
 minimum_password_length = 8
 
 [auth.email]
