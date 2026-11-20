@@ -38,7 +38,7 @@ async function makeUser(tag, level) {
 
 before(async () => {
   server = spawn('npx', ['astro', 'dev', '--host', '127.0.0.1', '--port', String(PORT)], {
-    env: { ...process.env, PUBLIC_SUPABASE_URL: API, PUBLIC_SUPABASE_ANON_KEY: st.ANON_KEY, PORTAL_HOST: 'portal.invalid' },
+    env: { ...process.env, PUBLIC_SUPABASE_URL: API, PUBLIC_SUPABASE_ANON_KEY: st.ANON_KEY },
     stdio: 'ignore',
   });
   for (let i = 0; i < 120; i++) {

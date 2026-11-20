@@ -1,11 +1,10 @@
 import { defineMiddleware } from 'astro:middleware';
-import { isPublicPortalPath, portalRewrite, safeNext } from './lib/portal/host';
+import { isPublicPortalPath, safeNext } from './lib/portal/host';
 import { createServerClient, getUser } from './lib/portal/supabase';
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const { pathname } = context.url;
-  const target = portalRewrite(context.url.host, pathname, import.meta.env.PORTAL_HOST ?? process.env.PORTAL_HOST);
-  if (!target) return next();
+  if (pathname !== '/portal' && !pathname.startsWith('/portal/')) return next();
 
   const done = (res: Response) => {
     res.headers.set('Cache-Control', 'private, no-store');
@@ -16,10 +15,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
   context.locals.supabase = createServerClient(context);
   context.locals.user = await getUser(context);
 
-  if (!context.locals.user && !isPublicPortalPath(target)) {
+  if (!context.locals.user && !isPublicPortalPath(pathname)) {
     const n = safeNext(pathname + context.url.search);
     return done(context.redirect(n ? `/portal/login?next=${encodeURIComponent(n)}` : '/portal/login', 302));
   }
-  const res = target === pathname ? await next() : await context.rewrite(target);
-  return done(res);
+  return done(await next());
 });
