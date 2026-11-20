@@ -101,6 +101,8 @@ async function runPortalFlow({ flow, device, browser, base, login }) {
     const page = await ctx.newPage();
     await page.route(SUPABASE_BLOCK, (r) => r.abort());
     const state = await prepare(page);
+    state.seen = []; state.allow = [];
+    page.on('response', (r) => state.seen.push({ status: r.status(), url: r.url() }));
     state.clsMax = CLS_PORTAL;
     await page.goto(new URL(flow.on || '/', base).href, { waitUntil: 'load', timeout: 45000 });
     sess[name] = { ctx, page, state };
@@ -119,8 +121,17 @@ async function runPortalFlow({ flow, device, browser, base, login }) {
       step = `step ${i + 1} "${raw}"`;
       const s = sub(raw), verb = s.trim().split(/\s+/)[0], rest = s.trim().slice(verb.length).trim();
       const p = cur.page;
-      if (verb === 'new-context') await open(unq(rest));
+      if (verb === 'new-context') cur = await open(unq(rest));
       else if (verb === 'as') cur = sess[unq(rest)] || (() => { throw new Error(`no context "${rest}"`); })();
+      else if (verb === 'reset-test-state') execFileSync('node', ['scripts/portal/seed.mjs', '--yes', '--reset-test-state'], { stdio: 'ignore', env: { ...process.env, PORTAL_TEST_PASSWORD: login.password } });
+      else if (verb === 'double-tap') await p.locator(unq(rest)).filter({ visible: true }).first().dblclick({ timeout: 10000 });
+      else if (verb === 'allow-error') { const [st, ...re] = rest.split(/\s+/); cur.state.allow.push({ status: Number(st), re: new RegExp(unq(re.join(' '))) }); } // scoped to this flow, this context, one status + url
+      else if (verb === 'expect-absent') { await p.locator(unq(rest)).filter({ visible: true }).first().waitFor({ state: 'hidden', timeout: 10000 }).catch(() => { throw new Error(`"${rest}" is visible`); }); }
+      else if (verb === 'expect-content' || verb === 'expect-no-content') {
+        const hit = new RegExp(unq(rest), 'i').test(await p.content());
+        if (verb === 'expect-content' && !hit) throw new Error(`page has no /${rest}/`);
+        if (verb === 'expect-no-content' && hit) throw new Error(`page content matches /${rest}/`);
+      }
       else if (verb === 'expect-url') await p.waitForURL((u) => (u.pathname + u.search).includes(unq(rest)), { timeout: 10000 });
       else if (verb === 'sign-in') {
         await p.goto(new URL('/portal/login', base).href, { waitUntil: 'load' });
@@ -145,17 +156,20 @@ async function runPortalFlow({ flow, device, browser, base, login }) {
       } else await runStep(p, s, ctx);
       cur.page = cur.page;
     }
-    await shot('final');
     const fails = [];
     for (const [name, x] of Object.entries(sess)) {
       await x.page.waitForTimeout(400);
+      for (const a of x.state.allow) { // drop the one console line a declared response produced; no such response = the declaration fails
+        if (!x.state.seen.some((r) => r.status === a.status && a.re.test(r.url))) { fails.push(`${name}: allow-error ${a.status} ${a.re} never happened`); continue; }
+        const i = x.state.console.findIndex((m) => m.includes(`status of ${a.status}`));
+        if (i >= 0) x.state.console.splice(i, 1);
+      }
       for (const r of await runChecks(x.page, x.state)) if (!r.pass) fails.push(`${name}: ${r.check} ${r.details}`);
     }
     if (fails.length) throw Object.assign(new Error(fails.join('; ')), { step: 'checks' });
     return { pass: true, details: `${flow.steps.length} steps`, shot: lastShot };
   } catch (e) {
-    await cur.page.screenshot({ path: shotPath(device.name, flow.name, 'fail') }).catch(() => {});
-    return { pass: false, details: `${e.step || step}: ${String(e.message).split('\n')[0]} (${shotPath(device.name, flow.name, 'fail')})` };
+    return { pass: false, details: `${e.step || step}: ${String(e.message).split('\n')[0]}` };
   } finally {
     for (const x of Object.values(sess)) await x.ctx.close().catch(() => {});
   }

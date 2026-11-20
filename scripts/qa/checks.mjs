@@ -12,7 +12,8 @@ export async function prepare(page) {
   const seen = (f) => { if (f.url().includes('challenges.cloudflare.com')) state.turnstileSeen = true; };
   page.on('frameattached', seen);
   page.on('framenavigated', seen);
-  page.on('console', (m) => { if (m.type() === 'error') state.console.push(m.text()); });
+  // WebKit reports navigation-aborted Turnstile blob loads as errors; not an app error.
+  page.on('console', (m) => { if (m.type() === 'error' && !/WebKitBlobResource error 1/.test(m.text())) state.console.push(m.text()); });
   page.on('pageerror', (e) => state.pageErrors.push(String(e)));
   await page.addInitScript(() => {
     window.__cls = 0;
@@ -184,8 +185,11 @@ export async function tapTargets(page) {
     const out = [];
     for (const el of document.querySelectorAll('a, button, input:not([type=hidden]), [role=button]')) {
       if (!q.isVisible(el)) continue;
-      const r = el.getBoundingClientRect();
+      let r = el.getBoundingClientRect();
       if (q.hiddenTarget(el, r) || q.inProse(el)) continue;
+      // A checkbox or radio is tapped through its enclosing label, so the label is the real target.
+      const lab = /^(checkbox|radio)$/.test(el.type) ? el.closest('label') : null;
+      if (lab) r = lab.getBoundingClientRect();
       if (r.width < min || r.height < min) out.push(`${q.describe(el)} ${Math.round(r.width)}x${Math.round(r.height)}`);
     }
     return out;

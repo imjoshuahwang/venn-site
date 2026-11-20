@@ -18,6 +18,7 @@ const RESULT_SPECS = [
   { slug: 'cohort', outcome: 'cohort', cohort: 'test-cohort' },
   { slug: 'cohort-done', outcome: 'cohort', cohort: 'test-cohort', ceremony_done_at: DONE },
   { slug: 'cohort-full', outcome: 'cohort', cohort: 'test-cohort-full' },
+  { slug: 'cohort-full-b', outcome: 'cohort', cohort: 'test-cohort-full' },
   { slug: 'peer-a', outcome: 'peer' },
   { slug: 'peer-b', outcome: 'peer' },
   { slug: 'peer-one-a', outcome: 'peer' },
@@ -32,6 +33,10 @@ const RESULT_SPECS = [
   { slug: 'lead', outcome: 'cohort', cohort: 'test-cohort' },
 ];
 const MEMBERS = ['member-1', 'member-2'];
+// Every other result user has answered the consent ceremony (src/data/consent.ts); these two still land on /portal/ceremony.
+export const UNCONSENTED = ['cohort-done', 'minor'];
+export const CONSENT_VERSION = '2026-11-v1';
+export const CONSENT_CLAUSES = ['coordinator_groups', 'highlights', 'full_name_photo', 'data_use', 'retention'];
 
 export const SEEDED_USERS = [
   ...RESULT_SPECS.map((s) => ({
@@ -43,7 +48,7 @@ export const SEEDED_USERS = [
 
 export function buildPlan() {
   const cohorts = [
-    { slug: 'test-cohort', name: 'Test Cohort', season: SEASON, seat_cap: 6 },
+    { slug: 'test-cohort', name: 'Test Cohort', season: SEASON, seat_cap: 6, goal: 'Test goal', timeline: 'Test timeline' },
     { slug: 'test-cohort-full', name: 'Test Cohort (full)', season: SEASON, seat_cap: 1 },
   ];
   const results = RESULT_SPECS.map((s) => ({

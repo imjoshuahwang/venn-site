@@ -1,7 +1,7 @@
 // Idempotent portal test-user seed (#118). Usage: npm run seed:portal -- --yes [--dry-run] [--target preview]
 // Creates confirmed auth users via the admin API (no mail), Test applications (source='test'), and approved Results
-// on those test rows only. Never deletes.
-import { buildPlan, resolveTarget, emailFor, SEEDED_USERS, TEST_PASSWORD_DEFAULT, SEASON } from './users.mjs';
+// on those test rows only. Never deletes real data; --reset-test-state only resets local test users' consents and signatures.
+import { buildPlan, resolveTarget, emailFor, SEEDED_USERS, UNCONSENTED, CONSENT_VERSION, CONSENT_CLAUSES, TEST_PASSWORD_DEFAULT, SEASON } from './users.mjs';
 
 const argv = process.argv.slice(2);
 const flag = (n) => argv.includes(n);
@@ -61,12 +61,34 @@ for (const r of plan.results) {
   }, { onConflict: 'application_id,season' }).select('id').single(), `result ${r.slug}`).id;
 }
 
+if (flag('--reset-test-state')) {
+  const unconsented = plan.results.filter((x) => UNCONSENTED.includes(x.slug)).map((x) => ids.get(x.email));
+  ok(await sb.from('consents').delete().in('user_id', unconsented), 'reset consents');
+}
+for (const r of plan.results.filter((x) => !UNCONSENTED.includes(x.slug))) {
+  const rows = CONSENT_CLAUSES.map((clause) => ({ user_id: ids.get(r.email), clause, accepted: true, version: CONSENT_VERSION }));
+  ok(await sb.from('consents').upsert(rows, { onConflict: 'user_id,clause,version' }), `consent ${r.slug}`);
+}
+
 for (const p of plan.pairs) {
   const have = ok(await sb.from('peer_matches').select('id').eq('result_a', resId[p.a]).maybeSingle(), `find pair ${p.a}`);
+  const downs = { a_down_at: p.a_down ? '2026-11-03T00:00:00Z' : null, b_down_at: p.b_down ? '2026-11-03T00:00:00Z' : null };
+  if (have && flag('--reset-test-state')) ok(await sb.from('peer_matches').update(downs).eq('id', have.id), `reset pair ${p.a}`);
   if (!have) ok(await sb.from('peer_matches').insert({
     season: SEASON, result_a: resId[p.a], result_b: resId[p.b], why_matched: p.why_matched,
-    a_down_at: p.a_down ? '2026-11-03T00:00:00Z' : null, b_down_at: p.b_down ? '2026-11-03T00:00:00Z' : null,
+    ...downs,
   }), `pair ${p.a}`);
+}
+
+// Signatures: cohort-full-b always holds the one seat of test-cohort-full; --reset-test-state clears every other test signature so mou-sign can rerun.
+{
+  const keep = resId['cohort-full-b'];
+  const mine = Object.values(resId).filter((id) => id !== keep);
+  if (flag('--reset-test-state')) ok(await sb.from('mou_signatures').delete().in('result_id', mine), 'reset signatures');
+  const has = ok(await sb.from('mou_signatures').select('id').eq('result_id', keep).maybeSingle(), 'find seat signature');
+  if (!has) ok(await sb.from('mou_signatures').insert({
+    result_id: keep, cohort_id: cohortId['test-cohort-full'], typed_name: 'Seat Holder', agreed: true, user_id: ids.get(emailFor('cohort-full-b')),
+  }), 'seat signature');
 }
 
 for (const m of plan.teamMembers) {
