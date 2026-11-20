@@ -48,10 +48,10 @@ const slides = buildSlides(cohort, logo);
 </script>
 <style>
   .deck { display: grid; gap: var(--sp-12); }
-  .track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; scrollbar-width: none; border-radius: var(--r-20); border: 1px solid var(--line); background: var(--panel); }
+  .track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; border-radius: var(--r-20); border: 1px solid var(--line); background: var(--panel); }
   .track::-webkit-scrollbar { display: none; }
-  .track:focus-visible, .ctl:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
-  .slide { flex: 0 0 100%; scroll-snap-align: start; box-sizing: border-box; min-height: 240px; padding: var(--sp-24); display: grid; align-content: center; justify-items: start; gap: var(--sp-12); }
+  .track:focus-visible, .ctl:focus-visible { outline: 1px solid var(--muted); outline-offset: 2px; }
+  .slide { flex: 0 0 100%; scroll-snap-align: start; scroll-snap-stop: always; box-sizing: border-box; min-height: 240px; padding: var(--sp-24); display: grid; align-content: center; justify-items: start; gap: var(--sp-12); }
   img { border-radius: var(--r-12); object-fit: contain; }
   .kicker { margin: 0; font-size: var(--fs-13); font-weight: var(--fw-600); color: var(--muted); }
   .body { margin: 0; font-size: var(--fs-28); font-weight: var(--fw-800); letter-spacing: var(--track-tight); line-height: 1.15; color: var(--ink); overflow-wrap: anywhere; }
