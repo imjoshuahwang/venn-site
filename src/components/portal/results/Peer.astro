@@ -3,7 +3,6 @@ import { PEER_COPY } from '../../../data/portal-peer';
 import ResultState from './ResultState.astro';
 const { view, endpoint = '/portal/peer-down' } = Astro.props as { view: any; endpoint?: string };
 const empty = !view || !view.card.firstName;
-const c = view?.contact;
 ---
 {empty ? <ResultState state="empty" /> : (
   <article class="peer" data-peer data-match={view.matchId} data-endpoint={endpoint} data-stage={view.stage}>
@@ -20,7 +19,6 @@ const c = view?.contact;
       <p class="status" role="alert" data-retry hidden>{PEER_COPY.retry}</p>
       <div class="both" data-both hidden={view.stage !== 'both'}>
         <p class="status">{PEER_COPY.both}</p>
-        <p class="contact"><span data-name>{c?.name}</span> <a data-email href={c?.email ? `mailto:${c.email}` : undefined}>{c?.email}</a> <span data-phone>{c?.phone}</span></p>
       </div>
     </div>
   </article>
@@ -46,14 +44,7 @@ const c = view?.contact;
         .then(async (r) => {
           if (!r.ok) throw new Error(String(r.status)); // 401 and 5xx share the retry state
           const { contact } = await r.json();
-          if (contact?.email || contact?.name) {
-            q('[data-name]').textContent = contact.name ?? '';
-            const a = q<HTMLAnchorElement>('[data-email]');
-            a.textContent = contact.email ?? '';
-            if (contact.email) a.href = `mailto:${contact.email}`;
-            q('[data-phone]').textContent = contact.phone ?? '';
-            show('both');
-          }
+          if (contact?.email || contact?.name) show('both'); // the contact is never rendered; Josh starts the group
         })
         .catch(() => { show('none'); q('[data-retry]').hidden = false; })
         .finally(() => { inflight = false; });
@@ -72,7 +63,6 @@ const c = view?.contact;
   .slot { display: grid; gap: var(--sp-12); justify-items: start; width: 100%; }
   .slot [hidden] { display: none; }
   .status { margin: 0; font-size: var(--fs-17); font-weight: var(--fw-600); animation: rise var(--dur-2) var(--ease) both; }
-  .contact { margin: 0; display: grid; gap: var(--sp-4); font-size: var(--fs-17); }
   button.pill { border: 0; cursor: pointer; font-family: inherit; min-height: 44px; }
   @keyframes rise { from { opacity: 0; } }
   @media (prefers-reduced-motion: reduce) { .peer, .status { animation: none; } }
