@@ -12,8 +12,11 @@ export function createServerClient(Astro: Ctx): SupabaseClient {
         return parseCookieHeader(Astro.request.headers.get('cookie') ?? '').map((c) => ({ name: c.name, value: c.value ?? '' }));
       },
       setAll(list) {
+        // Our flags go last. @supabase/ssr passes httpOnly: false in options, which used to win and left the
+        // session token readable by page scripts. maxAge/expires from options still apply (sign out sets maxAge 0).
+        const secure = import.meta.env.PROD || new URL(Astro.request.url).protocol === 'https:';
         for (const { name, value, options } of list) {
-          Astro.cookies.set(name, value, { httpOnly: true, sameSite: 'lax', path: '/', ...options });
+          Astro.cookies.set(name, value, { ...options, httpOnly: true, secure, sameSite: 'lax', path: '/' });
         }
       },
     },
