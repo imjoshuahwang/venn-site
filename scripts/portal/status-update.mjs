@@ -4,7 +4,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 
 const TEMPLATE = new URL('../../supabase/templates/status-update.html', import.meta.url);
 const LINK_RE = /\{\{ \.SiteURL \}\}\/portal\/auth\/callback\?token_hash=\{\{ \.TokenHash \}\}/;
-export const SAMPLE_LINK = 'https://portal.joinvenn.org/portal/auth/callback?token_hash=SAMPLE-SINGLE-USE';
+export const SAMPLE_LINK = 'https://joinvenn.org/portal/auth/callback?token_hash=SAMPLE-SINGLE-USE';
 
 export function eligible(rows) { return rows.filter((r) => r.is_test === false); }
 export function pickSamples(rows, n = 5) { return eligible(rows).slice(0, Math.min(n, 5)); }

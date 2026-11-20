@@ -1,8 +1,7 @@
 {
   "redirects": [
     { "source": "/boost", "destination": "/refer", "permanent": true },
-    { "source": "/pricing", "destination": "/startups", "permanent": true },
-    { "source": "/", "has": [{ "type": "host", "value": "portal.joinvenn.org" }], "destination": "/portal", "permanent": false }
+    { "source": "/pricing", "destination": "/startups", "permanent": true }
   ],
   "rewrites": [
     { "source": "/u", "destination": "https://wirjadichvbmrqzamwtp.supabase.co/functions/v1/unsubscribe" }
