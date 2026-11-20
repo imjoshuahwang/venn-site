@@ -37,7 +37,7 @@ for (const [tag, device] of Object.entries(VIEWPORTS)) {
         window.__shared = { type: f.type, url: d.url, title: d.title, b64: await new Promise((res) => { const r = new FileReader(); r.onload = () => res(r.result.split(',')[1]); r.readAsDataURL(f); }) };
       };
     });
-    page.on('pageerror', (e) => console.log('PAGEERR', e.message));
+    page.on('pageerror', (e) => console.log('PAGEERR', e.message)); page.on('console', (m) => console.log('CONSOLE', m.text()));
     await page.goto(`${BASE}/portal/dev/result?outcome=cohort`, { waitUntil: 'networkidle' });
     await page.locator('[data-share-btn]').scrollIntoViewIfNeeded();
     await page.screenshot({ path: `${SHOTS}${tag}-page.png`, fullPage: true });

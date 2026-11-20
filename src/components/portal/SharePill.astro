@@ -30,7 +30,7 @@ const { name = '', label = '' } = Astro.props;
         state.textContent = 'Copied';
         setTimeout(() => (state.textContent = ''), 2500);
       } catch (e) {
-        if ((e as Error).name !== 'AbortError') state.textContent = '';
+        if ((e as Error).name !== 'AbortError') { console.error('share failed', e); state.textContent = ''; }
       }
     });
   });

@@ -42,6 +42,7 @@ export async function renderCard(spec: CardSpec): Promise<Blob> {
   if (spec.firstName) { g.font = `700 120px ${font}`; g.fillText(spec.firstName, 96, 1020); }
   g.font = `600 56px ${font}`; g.fillStyle = '#3a3a3a';
   g.fillText(spec.label, 96, 1110);
+  if (spec.label !== DEFAULT_LABEL) { g.font = `500 48px ${font}`; g.fillStyle = '#6a6a6a'; g.fillText("Venn Fall '26", 96, 1180); }
   const w = 520, h = 120, x = 96, y = 1560;
   g.fillStyle = '#0a0a0a'; g.beginPath(); g.roundRect(x, y, w, h, 60); g.fill();
   g.fillStyle = '#fff'; g.font = `600 48px ${font}`; g.textAlign = 'center';
