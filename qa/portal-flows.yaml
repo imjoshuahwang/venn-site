@@ -132,7 +132,7 @@
 - name: home
   on: /portal/login
   steps:
-    - sign-in contact+portal-cohort-done@joinvenn.org
+    - sign-in contact+portal-home@joinvenn.org
     - goto /portal?state=waiting-on-parent
     - expect-visible [data-next-step=waiting-on-parent]
     - screenshot waiting-on-parent
@@ -243,12 +243,12 @@
     - expect-no-content contact\+portal-peer-a@|tel:\+?[0-9]
     - tap [data-down]
     - expect-visible [data-both]
-    - expect-content contact\+portal-peer-a@joinvenn.org
+    - expect-no-content contact\+portal-peer-a@joinvenn.org
     - screenshot both
     - as default
     - goto /portal/result
     - expect-visible [data-both]
-    - expect-content contact\+portal-peer-b@joinvenn.org
+    - expect-no-content contact\+portal-peer-b@joinvenn.org
     - expect-visible text=Josh will start your group
 - name: peer-one-side-down
   on: /portal/login
@@ -272,7 +272,7 @@
     - expect-url /portal
     - goto /portal/result
     - expect-visible [data-both]
-    - expect-content contact\+portal-peer-both-b@joinvenn.org
+    - expect-no-content contact\+portal-peer-both-b@joinvenn.org
 - name: mou-sign
   on: /portal/login
   steps:

@@ -17,6 +17,7 @@ const DAY = '2026-11-01T00:00:00Z';
 const RESULT_SPECS = [
   { slug: 'cohort', outcome: 'cohort', cohort: 'test-cohort' },
   { slug: 'cohort-done', outcome: 'cohort', cohort: 'test-cohort', ceremony_done_at: DONE },
+  { slug: 'home', outcome: 'cohort', cohort: 'test-cohort', ceremony_done_at: DONE },
   { slug: 'cohort-full', outcome: 'cohort', cohort: 'test-cohort-full' },
   { slug: 'cohort-full-b', outcome: 'cohort', cohort: 'test-cohort-full' },
   { slug: 'peer-a', outcome: 'peer' },
