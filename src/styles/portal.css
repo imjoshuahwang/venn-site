@@ -40,6 +40,9 @@
   --dur-2: 240ms;
   --dur-3: 480ms;
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  --shadow-1: 0 1px 2px rgba(24, 24, 26, 0.06);
+  --shadow-2: 0 24px 48px rgba(24, 24, 26, 0.18);
 }
 
 .parent-request { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-12); margin-top: var(--sp-32); }
@@ -49,3 +52,25 @@
 .parent-request input, .text-josh input[type='tel'] { width: 100%; box-sizing: border-box; height: 44px; padding: 0 var(--sp-12); border: 1px solid var(--line); border-radius: var(--r-12); background: var(--white); color: var(--ink); font: inherit; font-size: var(--fs-17); }
 .parent-request input:focus-visible, .text-josh input[type='tel']:focus-visible { border-color: var(--ink); outline: 2px solid var(--ink); outline-offset: 1px; }
 .parent-request input:disabled, .text-josh input[type='tel']:disabled { color: var(--muted); }
+/* Ceremony (#117). Scoped under .ceremony so it never touches the result pages' own .card styles. */
+@media (prefers-reduced-motion: reduce) { .ceremony * { transition: none !important; animation: none !important; } }
+.ceremony, .reveal { display: grid; position: relative; }
+.ceremony [hidden] { display: none !important; }
+.ceremony .card { background: var(--panel); border-radius: var(--r-20); padding: var(--sp-32) var(--sp-24); display: grid; gap: var(--sp-16); justify-items: start; position: relative; z-index: 1; }
+.ceremony .eyebrow { margin: 0; font-size: var(--fs-13); font-weight: var(--fw-600); color: var(--muted); }
+.ceremony .headline { margin: 0; font-size: var(--fs-28); font-weight: var(--fw-800); letter-spacing: -0.02em; line-height: 1.15; color: var(--ink); }
+.ceremony .muted { color: var(--muted); margin: 0; }
+.ceremony .body { display: grid; gap: var(--sp-12); } .ceremony .body p { margin: 0; }
+.ceremony .actions { display: flex; gap: var(--sp-12); flex-wrap: wrap; }
+.ceremony .pill { border: 0; cursor: pointer; }
+.ceremony .pill.ghost { background: var(--white); color: var(--ink); border: 1px solid var(--line); }
+.ceremony .card a { color: var(--ink); text-decoration: underline; display: inline-flex; align-items: center; min-height: 44px; }
+.ceremony .glow { position: absolute; inset: -64px calc(-1 * var(--sp-16)); border-radius: var(--r-20); background: radial-gradient(closest-side, rgba(47, 107, 255, 0.22), rgba(31, 169, 113, 0.12), transparent); opacity: 0; pointer-events: none; }
+.ceremony .confetti { position: fixed; top: 0; width: 8px; height: 12px; border-radius: 0; pointer-events: none; z-index: 3; }
+.ceremony .skel { gap: var(--sp-12); justify-items: stretch; min-height: 280px; }
+.ceremony .skel .bar { background: var(--line); }
+@media (prefers-reduced-motion: no-preference) { .ceremony .skel .bar { animation: skel var(--dur-3) var(--ease) infinite alternate; } }
+@keyframes skel { from { opacity: 0.5; } to { opacity: 1; } }
+.ceremony .seal-cover { display: none; position: absolute; inset: 0; z-index: 2; background: var(--panel); border-radius: var(--r-20); padding: var(--sp-32) var(--sp-24); flex-direction: column; justify-content: center; gap: var(--sp-16); }
+.ceremony .seal-cover.on { display: flex; }
+.ceremony .bar { display: block; height: 56px; border-radius: var(--r-12); background: var(--panel); } .ceremony .bar.w1 { width: 40%; height: 16px; } .ceremony .bar.w2 { height: 40px; } .ceremony .bar.w3 { width: 70%; height: 16px; } .ceremony .bar.w4 { height: 44px; width: 50%; border-radius: var(--r-pill); }

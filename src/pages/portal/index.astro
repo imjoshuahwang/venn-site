@@ -1,6 +1,9 @@
 ---
 export const prerender = false;
 import Portal from '../../layouts/Portal.astro';
+import Ceremony from '../../components/portal/Ceremony.astro';
+import { getCeremonyData, stubMode } from '../../lib/portal/ceremony-data';
+import { initialScreen } from '../../lib/portal/ceremony.mjs';
 import NextStep from '../../components/portal/NextStep.astro';
 import TextJosh from '../../components/portal/TextJosh.astro';
 import { pickNextStep, loadHome, type NextStepInput } from '../../lib/portal/home';
@@ -9,6 +12,11 @@ import { stubSavePhone } from '../../lib/portal/rpc-adapter';
 import { getConsentState } from '../../lib/portal/api';
 import { CONSENT_VERSION } from '../../data/consent';
 
+const ceremony = await getCeremonyData(Astro);
+const inCeremony = ceremony.status === 'ok' && initialScreen(ceremony.result) === 'ceremony';
+// #127 consent, #128 parent, #132 phone are on their own pages: setup slots show only in stub mode unless ?setup=0.
+const showSlots = !!stubMode() && Astro.url.searchParams.get('setup') !== '0';
+const setup = { consent: !showSlots, parent: !showSlots, phone: !showSlots };
 const dev = import.meta.env.DEV ? Astro.url.searchParams.get('state') : null;
 const stubs: Record<string, Partial<NextStepInput>> = {
   'waiting-on-parent': { under18: true, parentSigned: false },
@@ -64,7 +72,7 @@ const step = pickNextStep({ ...input, under18 });
 
 ---
 <Portal title="Your Venn home">
-  {consentFailed ? <><p role="alert">We could not load this page.</p><form method="get" action="/portal"><button class="pill" type="submit" data-retry>Retry</button></form></> : failed ? <p role="alert" data-home-error>We could not load your home page. Please refresh, or email contact@joinvenn.org.</p> : (
+  {inCeremony ? <Ceremony result={ceremony.result} setup={setup} /> : consentFailed ? <><p role="alert">We could not load this page.</p><form method="get" action="/portal"><button class="pill" type="submit" data-retry>Retry</button></form></> : failed ? <p role="alert" data-home-error>We could not load your home page. Please refresh, or email contact@joinvenn.org.</p> : (
     <>
       <NextStep step={step} />
       <a class="pill" style="margin-top: var(--sp-32)" href="/portal/consent">Review consent</a>

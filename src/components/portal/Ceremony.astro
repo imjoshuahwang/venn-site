@@ -1,0 +1,140 @@
+---
+import Reveal from './Reveal.astro';
+const { result, setup } = Astro.props;
+const slots = { consent: 'Your consent', parent: 'Parent sign-off', phone: 'Text Josh' };
+const config = JSON.stringify({ result, setup });
+---
+<div class="ceremony" data-ceremony data-config={config}>
+  <div class="card skel" data-skel role="status" aria-busy="true" aria-label="Loading your portal"><span class="bar w1"></span><span class="bar w2"></span><span class="bar w3"></span><span class="bar w4"></span></div>
+  {Object.entries(slots).map(([id, name]) => (
+    <section class="card step" data-screen={`setup:${id}`} hidden>
+      <p class="eyebrow">One quick step</p>
+      <h1 class="headline">{name}</h1>
+      <p class="muted">This step opens soon. You can skip it for now.</p>
+      <button class="pill" type="button" data-next>Continue</button>
+    </section>
+  ))}
+  <section class="card sealed" data-screen="sealed" hidden>
+    <p class="eyebrow">Fall '26</p>
+    <h1 class="headline">Your Fall '26 Result</h1>
+    <button class="pill seal" type="button" data-reveal-btn aria-label="Open your result">Tap to open</button>
+  </section>
+  <Reveal outcome={result.outcome} letter={result.letter} />
+  <section class="card" data-screen="error" hidden role="alert">
+    <p class="eyebrow">Something went wrong</p>
+    <h1 class="headline">We could not save that</h1>
+    <p class="muted">Your result is safe. Please try once more, or write to <a href="mailto:contact@joinvenn.org">contact@joinvenn.org</a>.</p>
+    <button class="pill" type="button" data-retry>Try again</button>
+    <p class="muted" role="status" data-retry-note></p>
+  </section>
+</div>
+<script>
+  import { createCeremony, cardFrames, revealKind, timeline, share, sharePayload } from '../../lib/portal/ceremony.mjs';
+
+  const root = document.querySelector<HTMLElement>('[data-ceremony]')!;
+  const { result, setup } = JSON.parse(root.dataset.config!);
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const post = async (action: string) => {
+    const r = await fetch('/portal/api/ceremony', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action, id: result.id }) });
+    if (!r.ok) throw new Error(action);
+  };
+  const c = createCeremony({ result, setup, reduced, api: { markViewed: () => post('viewed'), finishCeremony: () => post('finish') } });
+  const $ = (s: string) => root.querySelector<HTMLElement>(s)!;
+  const show = (name: string) => {
+    root.querySelectorAll<HTMLElement>('[data-screen], [data-reveal]').forEach((el) => { el.hidden = (el.dataset.screen ?? 'letter') !== name; });
+    root.dataset.screen = name;
+  };
+  const view = () => {
+    const s = c.state.screen;
+    show(s === 'revealing' ? 'letter' : s);
+  };
+  const go = () => {
+    const s = c.state.screen;
+    if (s === 'finishing') return done();
+    view();
+  };
+  const done = async () => {
+    await c.finish();
+    if (c.state.finishPending) { show('error'); return; }
+    location.assign('/portal');
+  };
+
+  const anim = (el: Element, kf: Keyframe[], start: number, end: number) =>
+    el.animate(kf, { duration: end - start, delay: start, fill: 'both', easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' });
+
+  function play(): Promise<void> {
+    const kind = revealKind(result.outcome, reduced);
+    const card = $('[data-card]'), glow = $('[data-glow]'), headline = $('[data-headline]'), body = $('[data-body]'), actions = $('[data-actions]');
+    const chars = [...headline.querySelectorAll('.ch')] as HTMLElement[];
+    const hide = (el: Element) => { (el as HTMLElement).style.opacity = '0'; };
+    const beats = Object.fromEntries(timeline(kind).map((b: { name: string; start: number; end: number }) => [b.name, b]));
+    const end = timeline(kind).at(-1)!.end;
+    if (kind === 'reduced') {
+      anim(card, [{ opacity: 0 }, { opacity: 1 }], 0, 200);
+    } else {
+      const lift = cardFrames(kind);
+      card.animate(lift.frames, { duration: lift.duration, fill: 'both', easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' });
+      if (kind === 'big') {
+        const seal = $('[data-seal]');
+        seal.classList.add('on');
+        anim(seal, [{ opacity: 1, clipPath: 'inset(0 0 0 0)' }, { opacity: 0, clipPath: 'inset(0 50% 0 50%)' }], beats.seal.start, beats.seal.end);
+        anim(glow, [{ opacity: 0, transform: 'scale(0.4)' }, { opacity: 1, transform: 'scale(1)' }], beats.bloom.start, beats.bloom.end);
+        chars.forEach(hide); hide(body); hide(actions);
+        const n = chars.length || 1;
+        const t = beats.type;
+        chars.forEach((ch, i) => anim(ch, [{ opacity: 0 }, { opacity: 1 }], t.start + ((t.end - t.start) * i) / n, t.start + ((t.end - t.start) * i) / n + 60));
+        anim(body, [{ opacity: 0 }, { opacity: 1 }], t.end - 400, t.end);
+        anim(actions, [{ opacity: 0 }, { opacity: 1 }], beats.confetti.start, end);
+        confetti(beats.confetti.start);
+      } else {
+        anim(glow, [{ opacity: 0 }, { opacity: 0.5 }], beats.warm.start, beats.warm.end);
+        anim(body, [{ opacity: 0 }, { opacity: 1 }], beats.fade.start, beats.fade.end);
+        anim(actions, [{ opacity: 0 }, { opacity: 1 }], beats.fade.start, beats.fade.end);
+      }
+    }
+    return new Promise((r) => setTimeout(r, end));
+  }
+
+  function confetti(at: number) {
+    const colors = ['#2f6bff', '#1fa971', '#18181a', '#f4b400'];
+    setTimeout(() => {
+      for (let i = 0; i < 36; i++) {
+        const p = document.createElement('i');
+        p.className = 'confetti';
+        p.dataset.confetti = '';
+        p.style.left = `${Math.random() * 100}%`;
+        p.style.background = colors[i % colors.length];
+        root.appendChild(p);
+        p.animate([{ transform: 'translateY(0) rotate(0)', opacity: 1 }, { transform: `translateY(${280 + Math.random() * 200}px) rotate(${Math.random() * 540}deg)`, opacity: 0 }], { duration: 600, easing: 'ease-out', fill: 'forwards' }).onfinish = () => p.remove();
+      }
+    }, at);
+  }
+
+  $('[data-reveal-btn]').addEventListener('click', async () => {
+    if (c.state.screen !== 'sealed') return;
+    c.reveal(); // mark_viewed fires once; a failure never blocks the reveal
+    show('letter');
+    await play();
+    c.revealed();
+  });
+  root.querySelectorAll('[data-next]').forEach((b) => b.addEventListener('click', () => {
+    c.next();
+    go();
+  }));
+  $('[data-share]').addEventListener('click', async () => {
+    const r = await share(navigator, sharePayload());
+    $('[data-note]').textContent = r === 'copied' ? 'Link copied.' : r === 'failed' ? 'Copy joinvenn.org to share.' : '';
+  });
+  $('[data-retry]').addEventListener('click', async () => {
+    const btn = $('[data-retry]') as HTMLButtonElement;
+    btn.disabled = true;
+    const ok = await c.retryFinish();
+    if (ok) { location.assign('/portal'); return; }
+    btn.disabled = false;
+    $('[data-retry-note]').textContent = 'Still not working. Please try again in a moment.';
+  });
+
+  view();
+  $('[data-skel]').hidden = true;
+  root.dataset.ready = '';
+</script>

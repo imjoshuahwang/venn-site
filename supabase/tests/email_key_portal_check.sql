@@ -14,4 +14,8 @@ select pg_temp.ok(public.email_key(' Contact+Portal-Peer-A@JoinVenn.org ') = 'co
 select pg_temp.ok(public.email_key('contact+portal-a@joinvenn.org') <> public.email_key('contact+portal-b@joinvenn.org'), 'portal addresses stay distinct');
 select pg_temp.ok(public.email_key('contact+portal-a_b@joinvenn.org') = 'contact@joinvenn.org', 'near-miss (underscore) still stripped');
 select pg_temp.ok(public.email_key('x+portal-a@joinvenn.org') = 'x@joinvenn.org', 'other local part stripped');
+-- Seed regression: every seeded outcome user gets its own application, hence its own result and peer pair (the
+-- 'peer_matches_check' failure came from all portal users collapsing onto one email_key).
+select pg_temp.ok((select count(distinct public.email_key('contact+portal-' || s || '@joinvenn.org'))
+  from unnest(array['cohort','peer-a','peer-b','network','track','nts','draft','minor','lead']) s) = 9, 'one email_key per seeded outcome user');
 rollback;

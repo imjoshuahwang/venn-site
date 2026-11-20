@@ -73,32 +73,69 @@
     - expect-visible main
 - name: ceremony-cohort-first-visit
   on: /portal
-  pending: 117
   steps:
+    - reset-ceremony cohort
     - sign-in
-    - expect-visible main
+    - expect-visible [data-screen=sealed]
+    - expect-visible "text=Your Fall '26 Result"
+    - screenshot sealed
+    - tap [data-reveal-btn]
+    - expect-visible [data-headline]
+    - screenshot reveal-start
+    - wait 2000
+    - screenshot reveal-mid
+    - expect-visible [data-share]
+    - screenshot letter
+    - expect-visible "text=Test letter for cohort."
+    - tap [data-share]
+    - screenshot share
+    - wait 3000
+    - tap [data-next]
+    - expect-url /portal
+    - expect-gone [data-ceremony]
+    - screenshot home
 - name: ceremony-not-this-season
   on: /portal
-  pending: 117
   steps:
-    - sign-in
-    - expect-visible main
+    - reset-ceremony nts
+    - sign-in contact+portal-nts@joinvenn.org
+    - expect-visible [data-screen=sealed]
+    - screenshot sealed
+    - tap [data-reveal-btn]
+    - expect-visible "text=Not this season"
+    - expect-visible "text=Test letter for nts."
+    - wait 1600
+    - screenshot letter
+    - expect-visible [data-share]
+    - tap [data-next]
+    - expect-gone [data-ceremony]
+    - screenshot home
 - name: ceremony-reduced-motion
   on: /portal
-  pending: 117
   steps:
+    - reset-ceremony cohort
     - sign-in
-    - expect-visible main
+    - reduced-motion
+    - expect-visible [data-screen=sealed]
+    - tap [data-reveal-btn]
+    - expect-visible "text=Test letter for cohort."
+    - wait 400
+    - screenshot letter
+    - expect-visible [data-next]
+    - tap [data-next]
+    - expect-gone [data-ceremony]
+    - screenshot home
 - name: ceremony-second-visit-home
   on: /portal
-  pending: 117
   steps:
-    - sign-in
+    - sign-in contact+portal-cohort-done@joinvenn.org
+    - expect-url /portal
+    - expect-gone [data-ceremony]
     - expect-visible main
 - name: home
   on: /portal/login
   steps:
-    - sign-in
+    - sign-in contact+portal-cohort-done@joinvenn.org
     - goto /portal?state=waiting-on-parent
     - expect-visible [data-next-step=waiting-on-parent]
     - screenshot waiting-on-parent
@@ -140,3 +177,4 @@
     - tap input[name=highlights] + .box
     - screenshot consent-ready
     - tap text=Continue
+    - screenshot home
