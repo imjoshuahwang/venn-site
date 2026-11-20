@@ -7,7 +7,7 @@ import { chromium, devices } from 'playwright';
 
 const PORT = 8173;
 const BASE = `http://127.0.0.1:${PORT}`;
-const SHOTS = new URL('../qa/screens/173/', import.meta.url).pathname;
+const SHOTS = new URL('../qa/portal-shots/share/', import.meta.url).pathname;
 const VIEWPORTS = { 'iphone-se': 'iPhone SE (3rd gen)', 'iphone-15': 'iPhone 15', 'pixel-7': 'Pixel 7' };
 let server, browser;
 
@@ -34,16 +34,16 @@ for (const [tag, device] of Object.entries(VIEWPORTS)) {
       navigator.canShare = () => true;
       navigator.share = async (d) => {
         const f = d.files[0];
-        window.__shared = { type: f.type, url: d.url, title: d.title, b64: await new Promise((res) => { const r = new FileReader(); r.onload = () => res(r.result.split(',')[1]); r.readAsDataURL(f); }) };
+        window.__shared = { n: d.files.length, type: f.type, url: d.url, title: d.title, b64: await new Promise((res) => { const r = new FileReader(); r.onload = () => res(r.result.split(',')[1]); r.readAsDataURL(f); }) };
       };
     });
-    page.on('pageerror', (e) => console.log('PAGEERR', e.message)); page.on('console', (m) => console.log('CONSOLE', m.text()));
     await page.goto(`${BASE}/portal/dev/result?outcome=cohort`, { waitUntil: 'networkidle' });
     await page.locator('[data-share-btn]').scrollIntoViewIfNeeded();
     await page.screenshot({ path: `${SHOTS}${tag}-page.png`, fullPage: true });
     await page.click('[data-share-btn]');
     await page.waitForFunction(() => window.__shared);
     const s = await page.evaluate(() => window.__shared);
+    assert.equal(s.n, 1);
     assert.equal(s.type, 'image/png');
     assert.equal(s.url, 'https://joinvenn.org/');
     const buf = Buffer.from(s.b64, 'base64');
