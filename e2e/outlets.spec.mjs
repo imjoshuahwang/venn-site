@@ -14,7 +14,7 @@ const admin = createClient(API, st.SERVICE_ROLE_KEY, { auth: { persistSession: f
 const PORT = 8172;
 const BASE = `http://127.0.0.1:${PORT}`;
 const PASSWORD = 'e2e-Outlet-pass-1';
-const SHOTS = new URL('../qa/screens/172/', import.meta.url).pathname;
+const SHOTS = new URL('../qa/172/', import.meta.url).pathname;
 mkdirSync(SHOTS, { recursive: true });
 const OUTLETS = ['kinetic', 'mercator-post', 'to-be-obsolete', 'thebaytable', 'imperial-review', 'yvette-labs'];
 const VIEWPORTS = { 'iphone-se': 'iPhone SE (3rd gen)', 'iphone-15': 'iPhone 15', 'pixel-7': 'Pixel 7' };
@@ -53,7 +53,7 @@ async function makePlaced(slug, tag) {
   assert.ifError(cohort.error);
   const app = await admin.from('applications').insert({ role: 'student', level: 'college', name: 'E2E Outlet', email, working_on: 'e2e', source: 'test' }).select('id').single();
   assert.ifError(app.error);
-  const res = await admin.from('results').insert({ application_id: app.data.id, season: 'e2e', outcome: 'cohort', cohort_id: cohort.data.id, status: 'approved', approved_at: new Date().toISOString() }).select('id').single();
+  const res = await admin.from('results').insert({ application_id: app.data.id, season: 'fall-2026', outcome: 'cohort', cohort_id: cohort.data.id, status: 'approved', approved_at: new Date().toISOString() }).select('id').single();
   assert.ifError(res.error);
   for (const clause of ['coordinator_groups', 'highlights', 'full_name_photo', 'data_use', 'retention']) {
     const c = await admin.from('consents').insert({ user_id: data.user.id, clause, accepted: true, version: '2026-11-v1' });
@@ -83,7 +83,7 @@ for (const [phone, preset] of Object.entries(VIEWPORTS)) {
       await login(page, email);
       await page.goto(`${BASE}/portal/result`);
       const deck = page.locator('[data-slides]');
-      await deck.waitFor().catch(async (e) => { console.log('DBG', page.url(), (await page.locator('body').innerText()).slice(0, 400)); throw e; });
+      await deck.waitFor();
       assert.equal(await deck.locator('[data-slide]').count(), 6);
       const next = page.locator('[data-next]');
       for (let i = 0; i < 6; i++) {
