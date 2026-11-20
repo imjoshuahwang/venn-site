@@ -97,11 +97,6 @@ for (const m of plan.teamMembers) {
   if (!have) ok(await sb.from('team_members').insert({ lead_result_id: resId[m.lead], email_key: key }), `member ${m.slug}`);
 }
 
-const CLAUSES = ['coordinator_groups', 'highlights', 'full_name_photo', 'data_use', 'retention'];
-ok(await sb.from('consents').upsert(plan.results.flatMap((r) => CLAUSES.map((clause) => ({
-  user_id: ids.get(r.email), clause, accepted: true, version: '2026-11-v1',
-}))), { onConflict: 'user_id,clause,version' }), 'consents');
-
 ok(await sb.from('parent_consents').upsert({
   user_id: ids.get(emailFor(plan.parent.user)), parent_email: plan.parent.parent_email,
   token_hash: plan.parent.token_hash, expires_at: '2036-01-01T00:00:00Z', signed_at: null,

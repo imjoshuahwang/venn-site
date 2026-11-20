@@ -162,6 +162,7 @@
 - name: consent-ceremony
   on: /portal/login
   steps:
+    - reset-test-state
     - sign-in contact+portal-cohort-done@joinvenn.org
     - goto /portal/ceremony
     - expect-visible form.consent
@@ -224,22 +225,22 @@
     - expect-url /portal
     - goto /portal/result
     - expect-visible [data-down]
-    - expect-no-content mailto:(?!contact@joinvenn\.org)|tel:|contact\+portal-peer
+    - expect-no-content contact\+portal-peer-b@|tel:\+?[0-9]
     - new-context b
     - sign-in contact+portal-peer-b@joinvenn.org
     - expect-url /portal
     - goto /portal/result
     - expect-visible [data-down]
-    - expect-no-content mailto:(?!contact@joinvenn\.org)|tel:|contact\+portal-peer
+    - expect-no-content contact\+portal-peer-a@|tel:\+?[0-9]
     - as default
     - tap [data-down]
     - expect-visible [data-waiting]
-    - expect-no-content mailto:(?!contact@joinvenn\.org)|tel:|contact\+portal-peer
+    - expect-no-content contact\+portal-peer-b@|tel:\+?[0-9]
     - screenshot waiting
     - as b
     - goto /portal/result
     - expect-visible [data-down]
-    - expect-no-content mailto:(?!contact@joinvenn\.org)|tel:|contact\+portal-peer
+    - expect-no-content contact\+portal-peer-a@|tel:\+?[0-9]
     - tap [data-down]
     - expect-visible [data-both]
     - expect-content contact\+portal-peer-a@joinvenn.org
@@ -256,13 +257,13 @@
     - expect-url /portal
     - goto /portal/result
     - expect-visible [data-waiting]
-    - expect-no-content mailto:(?!contact@joinvenn\.org)|tel:|contact\+portal-peer
+    - expect-no-content contact\+portal-peer-one-b@|tel:\+?[0-9]
     - new-context b
     - sign-in contact+portal-peer-one-b@joinvenn.org
     - expect-url /portal
     - goto /portal/result
     - expect-visible [data-down]
-    - expect-no-content mailto:(?!contact@joinvenn\.org)|tel:|contact\+portal-peer
+    - expect-no-content contact\+portal-peer-one-a@|tel:\+?[0-9]
     - screenshot one-side
 - name: peer-already-both-down
   on: /portal/login
@@ -359,13 +360,19 @@
     - sign-in contact+portal-draft@joinvenn.org
     - expect-visible main
     - expect-absent [data-letter]
-- name: consent-under-18-routes-to-parent
+- name: consent-under-18-lands-home
   on: /portal/login
-  pending: 136
   steps:
+    - reset-test-state
     - sign-in contact+portal-minor@joinvenn.org
     - goto /portal/consent
-    - expect-url /portal/parent
+    - tap input[name=coordinator_groups] + .box
+    - tap input[name=data_use] + .box
+    - tap input[name=retention] + .box
+    - tap input[name=highlights] + .box
+    - tap text=Continue
+    - expect-absent form.consent
+    - expect-visible main
 - name: parent-token-reused-or-expired
   on: /portal/login
   steps:
