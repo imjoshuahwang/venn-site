@@ -180,7 +180,6 @@
     - screenshot consent-ready
     - tap text=Continue
     - screenshot home
-=======
 - name: waitlist-network
   on: /portal/login
   steps:
@@ -386,4 +385,3 @@
     - sign-in contact+portal-member-1@joinvenn.org
     - goto /portal/team
     - expect-absent text=(you)
->>>>>>> d22db3e (QA portal flows: results, waitlists, peer tap, co-sign, teams (#123))
