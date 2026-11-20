@@ -1,6 +1,7 @@
 # Portal auth + ceremony flows for `npm run qa:portal`. Same syntax as flows.yaml, plus:
 #   pending: <issue#>  skipped (never a pass) while that issue is open; remove when it merges. QA_PENDING=run overrides.
 #   sign-in [email] | sign-out | new-context <name> | as <name> | expect-url <fragment>; {email} = the seeded test address.
+#   reset-test-state | double-tap <sel> | expect-absent <sel> | expect-content <regex> | expect-no-content <regex> (page.content(), so hidden markup counts)
 # Email fields only accept contact+portal-<slug>@joinvenn.org. Local Supabase only.
 - name: auth-unauthenticated-redirect
   on: /portal
@@ -50,17 +51,14 @@
     - screenshot ceremony
 - name: auth-reused-expired-link
   on: /portal/auth/callback
-  pending: 130
   steps:
     - expect-visible main
 - name: auth-resend-always-answers
   on: /portal/login
-  pending: 130
   steps:
     - expect-visible main
 - name: auth-password-change-kills-other-device
   on: /portal/login
-  pending: 130
   steps:
     - sign-in
     - new-context b
@@ -68,7 +66,6 @@
     - expect-visible main
 - name: auth-turnstile-and-429
   on: /portal/login
-  pending: 130
   steps:
     - expect-visible main
 - name: ceremony-cohort-first-visit
@@ -135,7 +132,7 @@
 - name: home
   on: /portal/login
   steps:
-    - sign-in contact+portal-cohort-done@joinvenn.org
+    - sign-in contact+portal-home@joinvenn.org
     - goto /portal?state=waiting-on-parent
     - expect-visible [data-next-step=waiting-on-parent]
     - screenshot waiting-on-parent
@@ -163,12 +160,18 @@
     - expect-visible [data-home-error]
     - screenshot error
 - name: consent-ceremony
-  on: /portal/ceremony
+  on: /portal/login
   steps:
+    - reset-test-state
+    - sign-in contact+portal-cohort-done@joinvenn.org
+    - goto /portal/ceremony
     - expect-visible form.consent
 - name: consent
-  on: /portal/consent
+  on: /portal/login
   steps:
+    - reset-test-state
+    - sign-in contact+portal-cohort-done@joinvenn.org
+    - goto /portal/consent
     - expect-visible form.consent
     - expect-visible button:disabled
     - tap input[name=coordinator_groups] + .box
@@ -178,3 +181,214 @@
     - screenshot consent-ready
     - tap text=Continue
     - screenshot home
+- name: waitlist-network
+  on: /portal/login
+  steps:
+    - sign-in contact+portal-network@joinvenn.org
+    - expect-url /portal
+    - goto /portal/result
+    - expect-visible text=You are on the Network waitlist
+    - expect-visible text=Test letter for network.
+    - expect-visible text=Early word on new Programs
+    - expect-absent canvas
+    - expect-visible a[href="mailto:contact@joinvenn.org"]
+    - screenshot result
+- name: waitlist-track
+  on: /portal/login
+  steps:
+    - sign-in contact+portal-track@joinvenn.org
+    - expect-url /portal
+    - goto /portal/result
+    - expect-visible text=You are on the Track waitlist
+    - expect-visible text=Test letter for track.
+    - expect-visible text=after 5 days
+    - expect-absent canvas
+    - expect-visible a[href="mailto:contact@joinvenn.org"]
+    - screenshot result
+- name: not-this-season
+  on: /portal/login
+  steps:
+    - sign-in contact+portal-nts@joinvenn.org
+    - expect-url /portal
+    - goto /portal/result
+    - expect-visible text=Not this Season
+    - expect-visible text=Test letter for nts.
+    - expect-visible text=Show something you built or ran
+    - expect-absent canvas
+    - expect-visible a[href="mailto:contact@joinvenn.org"]
+    - screenshot result
+- name: peer-mutual-tap
+  on: /portal/login
+  steps:
+    - reset-test-state
+    - sign-in contact+portal-peer-a@joinvenn.org
+    - expect-url /portal
+    - goto /portal/result
+    - expect-visible [data-down]
+    - expect-no-content contact\+portal-peer-b@|tel:\+?[0-9]
+    - new-context b
+    - sign-in contact+portal-peer-b@joinvenn.org
+    - expect-url /portal
+    - goto /portal/result
+    - expect-visible [data-down]
+    - expect-no-content contact\+portal-peer-a@|tel:\+?[0-9]
+    - as default
+    - tap [data-down]
+    - expect-visible [data-waiting]
+    - expect-no-content contact\+portal-peer-b@|tel:\+?[0-9]
+    - screenshot waiting
+    - as b
+    - goto /portal/result
+    - expect-visible [data-down]
+    - expect-no-content contact\+portal-peer-a@|tel:\+?[0-9]
+    - tap [data-down]
+    - expect-visible [data-both]
+    - expect-no-content contact\+portal-peer-a@joinvenn.org
+    - screenshot both
+    - as default
+    - goto /portal/result
+    - expect-visible [data-both]
+    - expect-no-content contact\+portal-peer-b@joinvenn.org
+    - expect-visible text=Josh will start your group
+- name: peer-one-side-down
+  on: /portal/login
+  steps:
+    - sign-in contact+portal-peer-one-a@joinvenn.org
+    - expect-url /portal
+    - goto /portal/result
+    - expect-visible [data-waiting]
+    - expect-no-content contact\+portal-peer-one-b@|tel:\+?[0-9]
+    - new-context b
+    - sign-in contact+portal-peer-one-b@joinvenn.org
+    - expect-url /portal
+    - goto /portal/result
+    - expect-visible [data-down]
+    - expect-no-content contact\+portal-peer-one-a@|tel:\+?[0-9]
+    - screenshot one-side
+- name: peer-already-both-down
+  on: /portal/login
+  steps:
+    - sign-in contact+portal-peer-both-a@joinvenn.org
+    - expect-url /portal
+    - goto /portal/result
+    - expect-visible [data-both]
+    - expect-no-content contact\+portal-peer-both-b@joinvenn.org
+- name: mou-sign
+  on: /portal/login
+  steps:
+    - reset-test-state
+    - sign-in contact+portal-cohort@joinvenn.org
+    - expect-url /portal
+    - goto /portal/result
+    - expect-visible [data-mou] [data-name]
+    - expect-visible [data-sign][aria-disabled=true]
+    - tap [data-agree]
+    - expect-visible [data-sign][aria-disabled=true]
+    - fill [data-name] Test Person
+    - expect-visible [data-sign][aria-disabled=false]
+    - tap [data-agree]
+    - expect-visible [data-sign][aria-disabled=true]
+    - tap [data-agree]
+    - double-tap [data-sign]
+    - expect-visible [data-mou] [data-signed]
+    - expect-no-content This MOU is already signed
+    - goto /portal/result
+    - expect-visible [data-mou] [data-signed]
+    - screenshot signed
+- name: mou-seat-cap-refused
+  on: /portal/login
+  steps:
+    - reset-test-state
+    - sign-in contact+portal-cohort-full@joinvenn.org
+    - expect-url /portal
+    - goto /portal/result
+    - allow-error 409 /portal/mou
+    - fill [data-name] Test Person
+    - tap [data-agree]
+    - tap [data-sign]
+    - expect-visible [data-mou] [data-full]
+- name: cohort-result-page
+  on: /portal/login
+  steps:
+    - sign-in contact+portal-cohort@joinvenn.org
+    - expect-url /portal
+    - goto /portal/result
+    - expect-visible [data-cohort] [data-letter]
+    - expect-visible [data-cohort] [data-orgs]
+    - screenshot cohort
+- name: cohort-slides-and-questions
+  on: /portal/login
+  steps:
+    - sign-in contact+portal-cohort@joinvenn.org
+    - expect-url /portal
+    - goto /portal/result
+    - expect-visible [data-slides]
+    - tap [data-next]
+    - fill textarea[name=goal] Test answer
+    - tap [data-guiding] [data-save]
+    - expect-visible [data-guiding] [data-status]
+    - expect-content Saved\. You can change
+- name: parent-cosign-known-token
+  on: /portal/login
+  steps:
+    - reset-test-state
+    - goto /portal/parent/portal-seed-parent-token-local-only
+    - expect-visible button:has-text("I agree")
+    - tap button:has-text("I agree")
+    - expect-content has been signed
+    - goto /portal/parent/portal-seed-parent-token-local-only
+    - expect-content has been signed
+    - expect-absent button:has-text("I agree")
+- name: team-lead-invite-and-member-view
+  on: /portal/login
+  steps:
+    - reset-test-state
+    - sign-in contact+portal-lead@joinvenn.org
+    - goto /portal/team
+    - expect-visible text=contact+portal-member-1@joinvenn.org
+    - expect-visible text=Add co-founder
+    - new-context m
+    - sign-in contact+portal-member-1@joinvenn.org
+    - goto /portal/team
+    - expect-visible text=(you)
+    - expect-absent text=Add co-founder
+    - expect-absent text=Remove
+- name: ceremony-draft-only
+  on: /portal
+  pending: 117
+  steps:
+    - sign-in contact+portal-draft@joinvenn.org
+    - expect-visible main
+    - expect-absent [data-letter]
+- name: consent-under-18-lands-home
+  on: /portal/login
+  steps:
+    - reset-test-state
+    - sign-in contact+portal-minor@joinvenn.org
+    - goto /portal/consent
+    - tap input[name=coordinator_groups] + .box
+    - tap input[name=data_use] + .box
+    - tap input[name=retention] + .box
+    - tap input[name=highlights] + .box
+    - tap text=Continue
+    - expect-absent form.consent
+    - expect-visible main
+- name: parent-token-reused-or-expired
+  on: /portal/login
+  steps:
+    - reset-test-state
+    - goto /portal/parent/portal-seed-parent-token-expired
+    - expect-content expired or is not valid
+    - expect-absent button:has-text("I agree")
+- name: team-remove-loses-access
+  on: /portal/login
+  steps:
+    - reset-test-state
+    - sign-in contact+portal-lead@joinvenn.org
+    - goto /portal/team
+    - tap li:has-text("portal-member-1") button
+    - expect-visible text=Co-founder removed.
+    - new-context m
+    - sign-in contact+portal-member-1@joinvenn.org
+    - goto /portal/team
+    - expect-absent text=(you)
