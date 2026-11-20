@@ -94,10 +94,10 @@ const step = pickNextStep({ ...input, under18 });
         {team.length ? <p>{team.length === 1 ? '1 teammate' : `${team.length} teammates`} on your team.</p> : <p data-empty>No teammates yet.</p>}
         <a class="pill" href="/portal/team">Manage team</a>
       </section>
-      <section class="home-section" data-partner>
+      {cohortName && <section class="home-section" data-partner>
         <h2>Your cohort</h2>
-        {cohortName ? <p>{cohortName}</p> : <p data-empty>Your cohort will show here once you are placed.</p>}
-      </section>
+        <p>{cohortName}</p>
+      </section>}
     </>
   )}
 </Portal>

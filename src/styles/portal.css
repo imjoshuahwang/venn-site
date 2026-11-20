@@ -65,7 +65,7 @@
 .ceremony .pill { border: 0; cursor: pointer; }
 .ceremony .pill.ghost { background: var(--white); color: var(--ink); border: 1px solid var(--line); }
 .ceremony .card a { color: var(--ink); text-decoration: underline; display: inline-flex; align-items: center; min-height: 44px; }
-.ceremony .glow { position: absolute; inset: -64px calc(-1 * var(--sp-16)); border-radius: var(--r-20); background: radial-gradient(closest-side, rgba(47, 107, 255, 0.22), rgba(31, 169, 113, 0.12), transparent); opacity: 0; pointer-events: none; }
+.ceremony .glow { position: fixed; inset: 0; z-index: 0; background: radial-gradient(circle at 50% 45%, rgba(47, 107, 255, 0.55), rgba(31, 169, 113, 0.38) 45%, rgba(31, 169, 113, 0.1) 75%, transparent 100%); opacity: 0; pointer-events: none; }
 .ceremony .confetti { position: fixed; top: 0; width: 8px; height: 12px; border-radius: 0; pointer-events: none; z-index: 3; }
 .ceremony .skel { gap: var(--sp-12); justify-items: stretch; min-height: 280px; }
 .ceremony .skel .bar { background: var(--line); }
