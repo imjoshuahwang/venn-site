@@ -38,3 +38,9 @@ test('portal layout drops pill transition under reduced motion', () => {
   const css = readFileSync(new URL('../../src/layouts/Portal.astro', import.meta.url), 'utf8');
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)\s*\{[^}]*\.pill\s*\{\s*transition:\s*none/);
 });
+
+test('supabase site_url is the bare origin (templates append /portal/auth/callback) and the callback is allowlisted', () => {
+  const toml = readFileSync(new URL('../../supabase/config.toml', import.meta.url), 'utf8');
+  assert.match(toml, /^site_url = "https:\/\/joinvenn\.org"$/m);
+  assert.match(toml, /additional_redirect_urls = \[[^\]]*"https:\/\/joinvenn\.org\/portal\/auth\/callback"/);
+});
