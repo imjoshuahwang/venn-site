@@ -1,0 +1,37 @@
+---
+// Share pill (#173): draws the 9:16 card on tap, shares it as a PNG file, else copies the public link.
+interface Props { name?: string | null; label?: string | null }
+const { name = '', label = '' } = Astro.props;
+---
+<div class="share" data-share data-name={name ?? ''} data-label={label ?? ''}>
+  <button type="button" class="pill" data-share-btn>Share</button>
+  <span class="share-state" data-share-state role="status" aria-live="polite"></span>
+</div>
+<style>
+  .share { display: flex; align-items: center; gap: var(--sp-12); margin-top: var(--sp-24); }
+  .share-state { font-size: var(--fs-15); }
+  button.pill { border: 0; cursor: pointer; font-family: inherit; }
+</style>
+<script>
+  import { cardSpec, renderCard, shareUrl } from '../../lib/portal/share-card';
+  document.querySelectorAll<HTMLElement>('[data-share]').forEach((root) => {
+    const btn = root.querySelector<HTMLButtonElement>('[data-share-btn]')!;
+    const state = root.querySelector<HTMLElement>('[data-share-state]')!;
+    btn.addEventListener('click', async () => {
+      const url = shareUrl();
+      try {
+        const blob = await renderCard(cardSpec({ name: root.dataset.name, label: root.dataset.label }));
+        const file = new File([blob], 'venn.png', { type: 'image/png' });
+        if (navigator.canShare?.({ files: [file] })) {
+          await navigator.share({ files: [file], url, title: 'Venn' });
+          return;
+        }
+        await navigator.clipboard.writeText(url);
+        state.textContent = 'Copied';
+        setTimeout(() => (state.textContent = ''), 2500);
+      } catch (e) {
+        if ((e as Error).name !== 'AbortError') state.textContent = '';
+      }
+    });
+  });
+</script>

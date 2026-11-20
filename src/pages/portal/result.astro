@@ -2,6 +2,7 @@
 export const prerender = false;
 import Portal from '../../layouts/Portal.astro';
 import CohortSlides from '../../components/portal/results/CohortSlides.astro';
+import SharePill from '../../components/portal/SharePill.astro';
 import GuidingQuestions from '../../components/portal/GuidingQuestions.astro';
 import { logoUrl } from '../../data/mou';
 import { getMyGuidingAnswers, guidingAccess } from '../../lib/portal/guiding';
@@ -48,4 +49,5 @@ const page = result ? pageFor(result.outcome) : null;
     : page === 'waitlist' ? <Waitlist outcome={result.outcome} letter={result.letter} />
     : page === 'not_this_season' ? <NotThisSeason letter={result.letter} />
     : <ResultState state="empty" />}
+  {!failed && result && <SharePill name={Astro.locals.user?.user_metadata?.full_name ?? Astro.locals.user?.user_metadata?.name} label={cohort?.cohort?.name} />}
 </Portal>

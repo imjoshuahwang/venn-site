@@ -9,3 +9,4 @@ dist/
 supabase/.temp/
 qa/out/
 .claude/worktrees/
+qa/screens/
