@@ -2,6 +2,7 @@
 export const prerender = false;
 import Portal from '../../../layouts/Portal.astro';
 import CohortSlides from '../../../components/portal/results/CohortSlides.astro';
+import SharePill from '../../../components/portal/SharePill.astro';
 import GuidingQuestions from '../../../components/portal/GuidingQuestions.astro';
 import { logoUrl } from '../../../data/mou';
 import { STUB_GUIDING } from '../../../lib/portal/guiding';
@@ -34,4 +35,5 @@ const peer = peerView(stubPeer(peerState), peerState === 'both' ? STUB_CONTACT :
     : outcome === 'peer' ? <Peer view={state === 'empty' ? null : peer} endpoint={peerEndpoint} />
     : outcome === 'not_this_season' ? <NotThisSeason letter={letter} />
     : <Waitlist outcome={outcome === 'track_waitlist' ? 'track_waitlist' : 'network_waitlist'} letter={letter} />}
+  {state !== 'loading' && state !== 'error' && <SharePill name="Maya Okafor" label={outcome === 'cohort' ? cohortRow.name : null} />}
 </Portal>

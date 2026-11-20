@@ -2,6 +2,7 @@
 export const prerender = false;
 import Portal from '../../layouts/Portal.astro';
 import CohortSlides from '../../components/portal/results/CohortSlides.astro';
+import SharePill from '../../components/portal/SharePill.astro';
 import GuidingQuestions from '../../components/portal/GuidingQuestions.astro';
 import { logoUrl } from '../../data/mou';
 import { getMyGuidingAnswers, guidingAccess } from '../../lib/portal/guiding';
@@ -17,6 +18,7 @@ let cohort = null;
 let cohortView = null;
 let guiding = {};
 let failed = false;
+let firstName = '';
 try {
   const stub = import.meta.env.DEV ? Astro.url.searchParams.get('stub') : null;
   result = stub ? stubResult(stub) : await getMyResult(Astro.locals.supabase);
@@ -35,6 +37,7 @@ try {
 } catch {
   failed = true;
 }
+if (result && !failed) firstName = ((await Astro.locals.supabase.rpc('get_my_first_name')).data ?? '').split(' ')[0];
 const access = guidingAccess({ isLead: cohortView?.isLead ?? false, cutoff: cohort?.cohort?.guiding_cutoff });
 const page = result ? pageFor(result.outcome) : null;
 ---
@@ -48,4 +51,5 @@ const page = result ? pageFor(result.outcome) : null;
     : page === 'waitlist' ? <Waitlist outcome={result.outcome} letter={result.letter} />
     : page === 'not_this_season' ? <NotThisSeason letter={result.letter} />
     : <ResultState state="empty" />}
+  {!failed && result && <SharePill name={firstName} label={cohort?.cohort?.name} />}
 </Portal>
