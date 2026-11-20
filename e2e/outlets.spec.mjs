@@ -81,9 +81,9 @@ for (const [phone, preset] of Object.entries(VIEWPORTS)) {
       const ctx = await browser.newContext(d);
       const page = await ctx.newPage();
       await login(page, email);
-      await page.goto(`${BASE}/portal`);
+      await page.goto(`${BASE}/portal/result`);
       const deck = page.locator('[data-slides]');
-      await deck.waitFor();
+      await deck.waitFor().catch(async (e) => { console.log('DBG', page.url(), (await page.locator('body').innerText()).slice(0, 400)); throw e; });
       assert.equal(await deck.locator('[data-slide]').count(), 6);
       const next = page.locator('[data-next]');
       for (let i = 0; i < 6; i++) {

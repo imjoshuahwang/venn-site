@@ -34,7 +34,9 @@ test('slideshow renders every slide from the cohorts row, in order', () => {
     assert.equal(out.length, 6, r.slug);
     assert.deepEqual(out.map((s) => ({ title: s.title, body: s.body })), r.slides);
     assert.equal(out[3].title, 'Your role');
-    assert.match(out[3].body, /article/);
+    assert.match(out[3].body, /never have to contact/);
+    assert.match(out[3].body, /Venn is your facilitator/);
+    assert.match(out[5].body, /Venn sets your first goal/);
   }
 });
 
