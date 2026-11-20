@@ -19,19 +19,22 @@ const { name = '', label = '' } = Astro.props;
     const state = root.querySelector<HTMLElement>('[data-share-state]')!;
     btn.addEventListener('click', async () => {
       const url = shareUrl();
+      let file: File | null = null;
       try {
         const blob = await renderCard(cardSpec({ name: root.dataset.name, label: root.dataset.label }));
-        const file = new File([blob], 'venn.png', { type: 'image/png' });
+        file = new File([blob], 'venn.png', { type: 'image/png' });
         if (navigator.canShare?.({ files: [file] })) {
           await navigator.share({ files: [file], url, title: 'Venn' });
           return;
         }
+      } catch (e) {
+        if ((e as Error).name === 'AbortError') return;
+      }
+      try {
         await navigator.clipboard.writeText(url);
         state.textContent = 'Copied';
         setTimeout(() => (state.textContent = ''), 2500);
-      } catch (e) {
-        if ((e as Error).name !== 'AbortError') { console.error('share failed', e); state.textContent = ''; }
-      }
+      } catch {}
     });
   });
 </script>
