@@ -51,9 +51,11 @@ export async function authGuard(action: Action, request: Request, deps: GuardDep
   if (!form) { try { form = await request.clone().formData(); } catch { form = new FormData(); } }
   const ip = clientIp(request);
   const secret = deps.secret ?? process.env.TURNSTILE_SECRET_KEY ?? await devSecret();
-  if (!secret) return UNAVAILABLE_MESSAGE; // production with no key configured fails closed
-  const token = String(form.get('cf-turnstile-response') ?? '');
-  if (!(await verifyTurnstile(token, secret, ip, deps.fetch))) return TURNSTILE_MESSAGE;
+  // No secret configured (#169): Turnstile is off and the widget is not rendered; rate limits below still apply.
+  if (secret) {
+    const token = String(form.get('cf-turnstile-response') ?? '');
+    if (!(await verifyTurnstile(token, secret, ip, deps.fetch))) return TURNSTILE_MESSAGE;
+  }
   const email = String(form.get('email') ?? '');
   const { limited } = await checkLimits(deps.store ?? fallbackStore, action, { ip, email });
   return limited ? RATE_MESSAGE : null;
