@@ -10,24 +10,24 @@ const cfOk = (async () => ({ ok: true, json: async () => ({ success: true }) }))
 const cfNo = (async () => ({ ok: true, json: async () => ({ success: false }) })) as never;
 
 test('authGuard: missing or failed Turnstile blocks the attempt', async () => {
-  const deps = { store: memoryStore(), fetch: cfNo, secret: TURNSTILE_TEST.secretFail };
+  const deps = { store: memoryStore(), fetch: cfNo, secret: TURNSTILE_TEST.secretFail, siteKey: 'site' };
   assert.equal(await authGuard('login', req(), { form: form({ email: 'a@x.org', 'cf-turnstile-response': 'tok' }), ...deps }), TURNSTILE_MESSAGE);
   assert.equal(await authGuard('login', req(), { form: form({ email: 'a@x.org' }), ...deps }), TURNSTILE_MESSAGE);
 });
 test('authGuard: passes with a good token, then 6th per IP gets the calm 429 message', async () => {
-  const deps = { store: memoryStore(), fetch: cfOk, secret: TURNSTILE_TEST.secretPass };
+  const deps = { store: memoryStore(), fetch: cfOk, secret: TURNSTILE_TEST.secretPass, siteKey: 'site' };
   const f = form({ email: 'a@x.org', 'cf-turnstile-response': 'tok' });
   for (let i = 0; i < LIMIT; i++) assert.equal(await authGuard('login', req(), { form: f, ...deps }), null);
   assert.equal(await authGuard('login', req(), { form: f, ...deps }), RATE_MESSAGE);
 });
 test('authGuard: 6th per email limited from different IPs', async () => {
-  const deps = { store: memoryStore(), fetch: cfOk, secret: TURNSTILE_TEST.secretPass };
+  const deps = { store: memoryStore(), fetch: cfOk, secret: TURNSTILE_TEST.secretPass, siteKey: 'site' };
   const f = form({ email: 'a@x.org', 'cf-turnstile-response': 'tok' });
   for (let i = 0; i < LIMIT; i++) assert.equal(await authGuard('resend', req(`2.2.2.${i}`), { form: f, ...deps }), null);
   assert.equal(await authGuard('resend', req('2.2.9.9'), { form: f, ...deps }), RATE_MESSAGE);
 });
 test('authGuard: set-password needs no Turnstile', async () => {
-  const deps = { store: memoryStore(), fetch: cfNo, secret: TURNSTILE_TEST.secretFail };
+  const deps = { store: memoryStore(), fetch: cfNo, secret: TURNSTILE_TEST.secretFail, siteKey: 'site' };
   assert.equal(await authGuard('set-password', req(), { form: form({}), ...deps }), null);
 });
 test('password change signs out other sessions but keeps this device', async () => {
@@ -50,10 +50,10 @@ test('failed password change does not sign anyone out', async () => {
 });
 
 test('authGuard: reset is refused without a valid Turnstile token and accepted with one', async () => {
-  const bad = { store: memoryStore(), fetch: cfNo, secret: TURNSTILE_TEST.secretFail };
+  const bad = { store: memoryStore(), fetch: cfNo, secret: TURNSTILE_TEST.secretFail, siteKey: 'site' };
   assert.equal(await authGuard('reset', req(), { form: form({ email: 'a@x.org', 'cf-turnstile-response': 'tok' }), ...bad }), TURNSTILE_MESSAGE);
   assert.equal(await authGuard('reset', req(), { form: form({ email: 'a@x.org' }), ...bad }), TURNSTILE_MESSAGE);
-  const ok = { store: memoryStore(), fetch: cfOk, secret: TURNSTILE_TEST.secretPass };
+  const ok = { store: memoryStore(), fetch: cfOk, secret: TURNSTILE_TEST.secretPass, siteKey: 'site' };
   assert.equal(await authGuard('reset', req(), { form: form({ email: 'a@x.org', 'cf-turnstile-response': 'tok' }), ...ok }), null);
 });
 
@@ -76,4 +76,13 @@ test('authGuard: no Turnstile secret skips verification (no token, no Cloudflare
   } finally {
     if (saved !== undefined) process.env.TURNSTILE_SECRET_KEY = saved;
   }
+});
+
+test('authGuard: half-configured Turnstile (secret only, or site key only) skips verification', async () => {
+  let called = false;
+  const spy = (async () => { called = true; return { ok: true, json: async () => ({ success: false }) }; }) as never;
+  const f = () => form({ email: 'a@x.org' });
+  assert.equal(await authGuard('login', req(), { form: f(), store: memoryStore(), fetch: spy, secret: 's', siteKey: '' }), null);
+  assert.equal(await authGuard('login', req(), { form: f(), store: memoryStore(), fetch: spy, secret: '', siteKey: 'site' }), null);
+  assert.equal(called, false);
 });
