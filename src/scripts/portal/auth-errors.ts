@@ -25,11 +25,10 @@ export function authMessage(error: unknown): string {
 }
 
 export const TURNSTILE_MESSAGE = "We couldn't confirm you're a person. Refresh the page and try again.";
-export const UNAVAILABLE_MESSAGE = 'Sign-in is paused for a moment. Please try again soon.';
 export const RATE_MESSAGE = 'Too many tries. Wait a few minutes and try again.';
 
 type Action = 'login' | 'set-password' | 'reset' | 'resend';
-export interface GuardDeps { form?: FormData; store?: Store; fetch?: any; secret?: string }
+export interface GuardDeps { form?: FormData; store?: Store; fetch?: any; secret?: string; siteKey?: string }
 
 /** Cloudflare's test secret, dev builds only. Vite folds DEV to false in production so the key never ships; outside Vite (plain node) there is no fallback. */
 async function devSecret(): Promise<string> {
@@ -51,9 +50,12 @@ export async function authGuard(action: Action, request: Request, deps: GuardDep
   if (!form) { try { form = await request.clone().formData(); } catch { form = new FormData(); } }
   const ip = clientIp(request);
   const secret = deps.secret ?? process.env.TURNSTILE_SECRET_KEY ?? await devSecret();
-  if (!secret) return UNAVAILABLE_MESSAGE; // production with no key configured fails closed
-  const token = String(form.get('cf-turnstile-response') ?? '');
-  if (!(await verifyTurnstile(token, secret, ip, deps.fetch))) return TURNSTILE_MESSAGE;
+  const siteKey = deps.siteKey ?? process.env.PUBLIC_TURNSTILE_SITE_KEY ?? (await devSecret() ? 'dev' : '');
+  // Turnstile is enforced only when BOTH keys are set (#169); otherwise the widget is not rendered and rate limits below still apply.
+  if (secret && siteKey) {
+    const token = String(form.get('cf-turnstile-response') ?? '');
+    if (!(await verifyTurnstile(token, secret, ip, deps.fetch))) return TURNSTILE_MESSAGE;
+  }
   const email = String(form.get('email') ?? '');
   const { limited } = await checkLimits(deps.store ?? fallbackStore, action, { ip, email });
   return limited ? RATE_MESSAGE : null;
