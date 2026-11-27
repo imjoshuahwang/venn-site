@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { requestResend, RESEND_NOTICE, mailAllowed } from './resend.ts';
+import { requestResend, RESEND_NOTICE, mailAllowed, signInLinkSender } from './resend.ts';
 
 test('identical notice for known, unknown, and failing sends', async () => {
   const known = await requestResend('contact+portal-a@joinvenn.org', { send: async () => {}, floorMs: 0 });
@@ -24,4 +24,14 @@ test('mail only goes to test addresses unless opened', () => {
   assert.equal(mailAllowed('real@school.edu'), false);
   assert.equal(mailAllowed('real@school.edu', '1'), true);
   assert.equal(mailAllowed('contact+portal-x@joinvenn.org.evil.com'), false);
+});
+
+test('an expired link sends a sign-in link, never a password reset', async () => {
+  const calls: any[] = [];
+  const sb = { auth: { signInWithOtp: async (a: any) => { calls.push(a); return {}; }, resetPasswordForEmail: async () => { calls.push('reset'); return {}; } } } as never;
+  await signInLinkSender(sb, 'https://joinvenn.org')('a@b.co');
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].email, 'a@b.co');
+  assert.equal(calls[0].options.shouldCreateUser, false);
+  assert.match(calls[0].options.emailRedirectTo, /^https:\/\/joinvenn\.org\/portal\/auth\/callback/);
 });
