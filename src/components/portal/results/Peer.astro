@@ -2,33 +2,36 @@
 import { PEER_COPY } from '../../../data/portal-peer';
 import ResultState from './ResultState.astro';
 const { view, endpoint = '/portal/peer-down' } = Astro.props as { view: any; endpoint?: string };
-const empty = !view || !view.card.firstName;
+const views = ([] as any[]).concat(view ?? []).filter((v) => v?.card?.firstName); // one partner, or two in a triad
 ---
-{empty ? <ResultState state="empty" /> : (
-  <article class="peer" data-peer data-match={view.matchId} data-endpoint={endpoint} data-stage={view.stage}>
+{views.length === 0 ? <ResultState state="empty" /> : (
+  <article class="peer" data-peer-page>
     <h1>{PEER_COPY.heading}</h1>
-    <p class="lede">{PEER_COPY.notIn}</p>
-    <section class="card">
-      <h2>{view.card.firstName}</h2>
-      <p class="project">{view.card.project}</p>
-      <p class="place">{view.card.place}</p>
-      {view.card.why && <p class="whyLabel">{PEER_COPY.whyLabel}</p>}
-      <p class="why">{view.card.why}</p>
-    </section>
-    <p class="lede">{PEER_COPY.relay}</p>
-    <div class="slot">
-      <button class="pill" type="button" data-down hidden={view.stage !== 'none'}>{PEER_COPY.pill}</button>
-      <p class="status" data-waiting hidden={view.stage !== 'waiting'}>{PEER_COPY.waiting}</p>
-      <p class="status" role="alert" data-retry hidden>{PEER_COPY.retry}</p>
-      <div class="both" data-both hidden={view.stage !== 'both'}>
-        <p class="status">{PEER_COPY.both}</p>
+    <p class="lede">{views.length > 1 ? PEER_COPY.notInTwo : PEER_COPY.notIn}</p>
+    {views.map((v) => (
+      <div class="partner" data-peer data-match={v.matchId} data-endpoint={endpoint} data-stage={v.stage}>
+        <section class="card">
+          <h2>{v.card.firstName}</h2>
+          <p class="project">{v.card.project}</p>
+          <p class="place">{v.card.place}</p>
+          {v.card.why && <p class="whyLabel">{PEER_COPY.whyLabel}</p>}
+          <p class="why">{v.card.why}</p>
+        </section>
+        <div class="slot">
+          <button class="pill" type="button" data-down hidden={v.stage !== 'none'}>{PEER_COPY.pill}</button>
+          <p class="status" data-waiting hidden={v.stage !== 'waiting'}>{PEER_COPY.waiting}</p>
+          <p class="status" role="alert" data-retry hidden>{PEER_COPY.retry}</p>
+          <div class="both" data-both hidden={v.stage !== 'both'}>
+            <p class="status">{PEER_COPY.both}</p>
+          </div>
+        </div>
       </div>
-    </div>
+    ))}
+    <p class="lede">{PEER_COPY.relay}</p>
   </article>
 )}
 <script>
-  const root = document.querySelector<HTMLElement>('[data-peer]');
-  if (root) {
+  document.querySelectorAll<HTMLElement>('[data-peer]').forEach((root) => {
     const q = <T extends HTMLElement>(s: string) => root.querySelector<T>(s)!;
     const btn = q<HTMLButtonElement>('[data-down]');
     let inflight = false;
@@ -52,9 +55,10 @@ const empty = !view || !view.card.firstName;
         .catch(() => { show('none'); q('[data-retry]').hidden = false; })
         .finally(() => { inflight = false; });
     });
-  }
+  });
 </script>
 <style>
+  .partner { display: grid; gap: var(--sp-24); width: 100%; }
   .peer { display: grid; gap: var(--sp-24); justify-items: start; animation: rise var(--dur-3) var(--ease) both; }
   h1 { margin: 0; font-size: var(--fs-28); font-weight: var(--fw-800); letter-spacing: var(--track-tight); line-height: 1.15; }
   h2 { margin: 0; font-size: var(--fs-22); font-weight: var(--fw-800); }

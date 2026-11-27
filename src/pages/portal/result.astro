@@ -9,11 +9,11 @@ import { getMyGuidingAnswers, guidingAccess } from '../../lib/portal/guiding';
 import { Waitlist, NotThisSeason, ResultState, Peer, Cohort } from '../../components/portal/results';
 import { pageFor } from '../../data/portal-copy';
 import { peerView, stateOf } from '../../data/portal-peer';
-import { getMyResult, getMyPeer, getCohortView, stubResult } from '../../lib/portal/rpc-adapter';
+import { getMyResult, getMyPeers, getCohortView, stubResult } from '../../lib/portal/rpc-adapter';
 import { getMyResult as getFullResult } from '../../lib/portal/api';
 
 let result = null;
-let peer = null;
+let peer: ReturnType<typeof peerView>[] = [];
 let cohort = null;
 let cohortView = null;
 let guiding = {};
@@ -30,9 +30,9 @@ try {
     cohortView = cohort ? await getCohortView(Astro.locals.supabase, cohort.id) : null;
   }
   if (result?.outcome === 'peer') {
-    const row = await getMyPeer(Astro.locals.supabase);
+    const rows = await getMyPeers(Astro.locals.supabase);
     // A load only reads: the tap is written by the explicit POST. get_my_peer carries the contact once both are down.
-    peer = row ? peerView(row, stateOf(row) === 'both' ? row.contact : null) : null;
+    peer = rows.map((row) => peerView(row, stateOf(row) === 'both' ? row.contact : null));
   }
 } catch {
   failed = true;

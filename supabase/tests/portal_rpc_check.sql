@@ -174,4 +174,24 @@ begin
   reset role;
 end $$;
 
+-- triad (#189): a result in two pairs sees both partners from get_my_peer, in match order
+do $$
+declare
+  uf uuid := gen_random_uuid(); af bigint; ag bigint; ah bigint; rf bigint; rg bigint; rh bigint; n int; ids bigint[];
+begin
+  insert into auth.users (id, email, email_confirmed_at) values (uf, 'fay@example.com', now());
+  insert into public.applications (role, name, email, working_on, source) values ('student', 'Fay Wu', 'fay@example.com', 'x', '/apply') returning id into af;
+  insert into public.applications (role, name, email, working_on, source) values ('student', 'Gus Ng', 'gus@example.com', 'x', '/apply') returning id into ag;
+  insert into public.applications (role, name, email, working_on, source) values ('student', 'Hal Ro', 'hal@example.com', 'x', '/apply') returning id into ah;
+  insert into public.results (application_id, outcome, status) values (af, 'peer', 'approved') returning id into rf;
+  insert into public.results (application_id, outcome, status) values (ag, 'peer', 'approved') returning id into rg;
+  insert into public.results (application_id, outcome, status) values (ah, 'peer', 'approved') returning id into rh;
+  insert into public.peer_matches (result_a, result_b) values (rf, rg), (rf, rh), (rg, rh);
+  perform pg_temp.as_user(uf, 'fay@example.com'); set local role authenticated;
+  select count(*), array_agg(match_id order by match_id) into n, ids from public.get_my_peer();
+  reset role;
+  if n <> 2 then raise exception 'triad member sees % partners, want 2', n; end if;
+  if ids <> (select array_agg(id order by id) from public.peer_matches where rf in (result_a, result_b)) then raise exception 'triad rows differ'; end if;
+end $$;
+
 rollback;

@@ -44,13 +44,9 @@ type PeerRpcRow = {
 };
 
 const one = (data: unknown): PeerRpcRow | null => (Array.isArray(data) ? data[0] : data) ?? null;
+const many = (data: unknown): PeerRpcRow[] => (Array.isArray(data) ? data : data ? [data as PeerRpcRow] : []);
 
-/** The caller's Peer match (card fields and which sides are down). #116 returns org where the card wants a place. */
-export async function getMyPeer(supabase: Pick<SupabaseClient, 'rpc'>): Promise<PeerRow | null> {
-  const { data, error } = await supabase.rpc('get_my_peer');
-  if (error) throw error;
-  const r = one(data);
-  if (!r) return null;
+const toPeerRow = (r: PeerRpcRow): PeerRow => {
   const region = [r.partner_state, r.partner_country].map((v) => v?.trim()).filter(Boolean).join(', ');
   const both = r.i_am_down && r.they_are_down && !!r.partner_email;
   return {
@@ -59,6 +55,18 @@ export async function getMyPeer(supabase: Pick<SupabaseClient, 'rpc'>): Promise<
     // get_my_peer already withholds the email until both are down, so a load can show the reveal without re-tapping.
     contact: both ? { name: r.partner_name ?? undefined, email: r.partner_email! } : undefined,
   };
+};
+
+/** The caller's Peer matches, one per partner (two in a triad): card fields and which sides are down. #116 returns org where the card wants a place. */
+export async function getMyPeers(supabase: Pick<SupabaseClient, 'rpc'>): Promise<PeerRow[]> {
+  const { data, error } = await supabase.rpc('get_my_peer');
+  if (error) throw error;
+  return many(data).map(toPeerRow);
+}
+
+/** The caller's first Peer match, or null. */
+export async function getMyPeer(supabase: Pick<SupabaseClient, 'rpc'>): Promise<PeerRow | null> {
+  return (await getMyPeers(supabase))[0] ?? null;
 }
 
 /** Taps "I'd be down". Returns the other Peer's contact only once both are down (peer_down is the sole source). */

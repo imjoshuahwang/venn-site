@@ -2,7 +2,11 @@
 Usage: python3 scripts/portal/apply-plan.py plan.json [--apply] [--backup peer_matches_backup.json]
 plan.json: {cohorts:{slug:[{id,why}]}, pairs:[{ids,why}], nts:[{id,why}], duplicates:[{id,keep_id}]} (application ids).
 Never touches approved rows, never deletes anything. Existing draft rows are replaced in place and their letter cleared.
-Old peer_matches (a result may sit in one pair only) with no activity are repointed in place (same row id), others are kept and reported.
+Peer pairs of 2 ids make one peer_matches row; a triad (3 ids) makes all three edges AB, AC, BC (migration 20261126020000_peer_triads.sql
+must be applied first: a result may sit in at most two rows, an unordered pair only once).
+Old peer_matches with activity (a tap, a rematch, an approved side) are protected and kept; unprotected rows already holding a wanted pair
+are kept; the rest are repointed in place (same row id) where no constraint conflicts, else new rows are inserted. Stale rows left over
+are reported, never deleted. Reruns converge.
 Env via ~/venn: VENN_SUPABASE_SERVICE_ROLE_KEY and the Supabase URL."""
 import json, os, sys, urllib.request, collections
 sys.path.insert(0, os.path.expanduser("~/venn")); os.chdir(os.path.expanduser("~/venn"))
@@ -48,8 +52,8 @@ def main():
     dup_rows = [a for a in dups if a in res]
     print(f"duplicates: {len(dups)}, {len(dup_rows)} have a draft row (set to network_waitlist, why_matched marks DUPLICATE, letter cleared, seat freed; never approve them)")
     pairs = [p["ids"] for p in plan["pairs"]]
-    edges = [(p[0], p[1], pw["why"]) for p, pw in zip(pairs, plan["pairs"])]
-    print(f"peer pairs {len(edges)}; triads {sum(len(p) == 3 for p in pairs)} (third has no match row: one pair per result in the schema)")
+    edges = [(p[i], p[j], pw["why"]) for p, pw in zip(pairs, plan["pairs"]) for i, j in ((0, 1), (0, 2), (1, 2)) if j < len(p)]
+    print(f"peer pairs {len(pairs)}; triads {sum(len(p) == 3 for p in pairs)}; edges {len(edges)}")
     old = call("GET", f"peer_matches?select=*&season=eq.{SEASON}&limit=5000")
     print(f"old peer_matches {len(old)}")
     if not go:
@@ -68,34 +72,31 @@ def main():
         live = m["a_down_at"] or m["b_down_at"] or m["rematches"] or "approved" in (status.get(m["result_a"]), status.get(m["result_b"]))
         (protected if live else keep if pair in new else recycle).append(m)
     for m in keep: call("PATCH", f"peer_matches?id=eq.{m['id']}", {"why_matched": new[frozenset((m['result_a'], m['result_b']))][2]})
-    held = {x for m in protected + keep for x in (m["result_a"], m["result_b"])}
-    todo = [e for k, e in new.items() if k not in {frozenset((m["result_a"], m["result_b"])) for m in keep}]
-    skipped = [e for e in todo if set(e[:2]) & {x for m in protected for x in (m["result_a"], m["result_b"])}]
-    todo = [e for e in todo if e not in skipped]
-    need = {x for e in todo for x in e[:2]}
-    at = {m["id"]: (m["result_a"], m["result_b"]) for m in recycle}  # row id -> current vertices, for rows not yet placed
-    fixed = held | {x for m in recycle for x in ()}
-    owner = lambda: {x: i for i, v in at.items() for x in v}
+    pair_of = lambda a, b: frozenset((a, b))
+    cur = {m["id"]: (m["result_a"], m["result_b"]) for m in old}  # every row now in the table: id -> its two results
+    seq = 0
+    def ok(e, ignore=None):  # would edge e fit: unordered pair unused and each result in at most two other rows
+        rows = [v for i, v in cur.items() if i != ignore]
+        return all(pair_of(*v) != pair_of(e[0], e[1]) for v in rows) and all(sum(x in v for v in rows) < 2 for x in e[:2])
+    stale = {m["id"] for m in recycle}
+    todo = [e for k, e in new.items() if k not in {pair_of(m["result_a"], m["result_b"]) for m in keep}]
     placed = inserted = 0
     left = list(todo)
     while left:
         prog = False
-        for e in list(left):  # place an edge on a row that holds its vertices (or none), once its vertices are free
-            own = owner(); holders = {own[x] for x in e[:2] if x in own}
-            if (set(e[:2]) & fixed) or len(holders) > 1: continue
-            row = next(iter(holders), None) or next(iter(at), None)
-            if row is not None and (holders or all(x not in own for x in e[:2])):
+        for e in list(left):
+            mine = sorted(stale, key=lambda i: -len(set(cur[i]) & set(e[:2])))  # prefer a stale row that already holds its results
+            row = next((i for i in mine if ok(e, i)), None)
+            if row is not None:
                 call("PATCH", f"peer_matches?id=eq.{row}", {"result_a": e[0], "result_b": e[1], "why_matched": e[2], "a_down_at": None, "b_down_at": None, "rematches": 0})
-                at.pop(row); placed += 1
-            else:
-                call("POST", "peer_matches", [{"season": SEASON, "result_a": e[0], "result_b": e[1], "why_matched": e[2]}]); inserted += 1
+                cur[row] = e[:2]; stale.discard(row); placed += 1
+            elif ok(e):
+                call("POST", "peer_matches", [{"season": SEASON, "result_a": e[0], "result_b": e[1], "why_matched": e[2]}])
+                seq += 1; cur[f"new{seq}"] = e[:2]; inserted += 1
+            else: continue
             left.remove(e); prog = True
-        if left and not prog:  # stuck in a cycle: park one row on spare results to free its vertices
-            spare = sorted(r for r in status if status[r] != "approved" and r not in need and r not in owner() and r not in held)
-            row = next(i for i, v in at.items() if any(x in need for x in v))
-            call("PATCH", f"peer_matches?id=eq.{row}", {"result_a": spare[0], "result_b": spare[1]}); at[row] = (spare[0], spare[1])
-    extra = range(inserted)
-    print(f"peer_matches: kept {len(keep)}, repointed {placed}, inserted {inserted}, protected stale {len(protected)}, skipped (conflict with protected) {len(skipped)}, old rows left stale {len(at)}")
+        if not prog: break  # the rest are blocked by protected rows or a result already in two rows
+    print(f"peer_matches: kept {len(keep)}, repointed {placed}, inserted {inserted}, protected stale {len(protected)}, edges blocked (protected or full) {len(left)}, old rows left stale {len(stale)}")
 
 def same(o, r):
     return bool(o) and not o.get('letter') and o['status'] == 'draft' and all(o[k] == r[k] for k in ('outcome', 'cohort_id', 'why_matched'))
