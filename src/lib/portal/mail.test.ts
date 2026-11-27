@@ -21,5 +21,42 @@ for (const to of ['mom@gmail.com', 'contact@joinvenn.org', 'contact+portal-x@joi
     assert.equal(await sendParentLink(to, 'https://p/l', { fetch, apiToken: 't', log: (m) => logs.push(m) }), false);
     assert.equal(urls.length, 0);
     assert.equal(logs.length, 1);
+    assert.ok(!logs[0].includes('@'), 'log must not contain the address');
   });
 }
+
+test('sends from the student domain with the student key', async () => {
+  let init: RequestInit | undefined;
+  const fetch = (async (_u: string, i: RequestInit) => { init = i; return new Response('{}'); }) as unknown as typeof globalThis.fetch;
+  const real = process.env.STUDENT_RESEND_API_KEY;
+  process.env.STUDENT_RESEND_API_KEY = 're_student';
+  try {
+    assert.equal(await sendParentLink('contact+portal-x1@joinvenn.org', 'https://p/l', { fetch }), true);
+  } finally { if (real === undefined) delete process.env.STUDENT_RESEND_API_KEY; else process.env.STUDENT_RESEND_API_KEY = real; }
+  assert.equal((init!.headers as Record<string, string>).Authorization, 'Bearer re_student');
+  const body = JSON.parse(String(init!.body));
+  assert.equal(body.from, 'Venn <hello@vennstudentorgs.com>');
+  assert.equal(body.reply_to, 'contact@joinvenn.org');
+});
+
+test('RESEND_API_KEY is ignored: no student key means a clear error and no fetch', async () => {
+  const { urls, fetch } = calls();
+  const saved = { s: process.env.STUDENT_RESEND_API_KEY, r: process.env.RESEND_API_KEY };
+  delete process.env.STUDENT_RESEND_API_KEY;
+  process.env.RESEND_API_KEY = 're_cold';
+  try {
+    await assert.rejects(sendParentLink('contact+portal-x1@joinvenn.org', 'https://p/l', { fetch }), /STUDENT_RESEND_API_KEY/);
+  } finally {
+    if (saved.s !== undefined) process.env.STUDENT_RESEND_API_KEY = saved.s;
+    if (saved.r === undefined) delete process.env.RESEND_API_KEY; else process.env.RESEND_API_KEY = saved.r;
+  }
+  assert.equal(urls.length, 0);
+});
+
+test('retries a 500 then succeeds; the mail has a plain-text part with the link', async () => {
+  const bodies: string[] = []; const answers = [500, 200];
+  const fetch = (async (_u: string, i: RequestInit) => { bodies.push(String(i.body)); return new Response('{}', { status: answers.shift() }); }) as unknown as typeof globalThis.fetch;
+  assert.equal(await sendParentLink('contact+portal-x1@joinvenn.org', 'https://joinvenn.org/portal/parent/t', { fetch, apiToken: 't', sleep: async () => {} }), true);
+  assert.equal(bodies.length, 2);
+  assert.match(JSON.parse(bodies[1]).text, /joinvenn\.org\/portal\/parent\/t/);
+});

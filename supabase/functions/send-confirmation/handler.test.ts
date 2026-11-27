@@ -1,15 +1,18 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { handle } from "./handler.ts";
+import { handle as realHandle } from "./handler.ts";
 
 const ENV: Record<string, string> = {
   SUPABASE_URL: "https://supabase.example.com",
   SUPABASE_SERVICE_ROLE_KEY: "svc",
   WEBHOOK_SECRET: "s3cret",
-  RESEND_API_KEY: "re_fake",
+  STUDENT_RESEND_API_KEY: "re_student",
   SEND_MODE: "all",
 };
 const env = (k: string) => ENV[k];
+// No real DNS in tests: every domain has an MX.
+const resolve = async () => [{ exchange: "mx.example.com" }];
+const handle = (req: Request, e: (k: string) => string | undefined, sleep: (ms: number) => Promise<void> = async () => {}) => realHandle(req, e, { resolve, sleep });
 const row = {
   id: 7, role: "student", name: "ada lovelace", email: "ada@example.com", email_key: null,
   ref_code: "abc123", page_token: "f00dfeed00112233445566778899aabb", is_test: false, confirmed_at: null, email_status: null, share_due: "2026-10-20T22:40:00+00:00",
@@ -67,4 +70,48 @@ test("wrong webhook secret is rejected before any network call", async () => {
     assert.equal((await handle(req("nope"), env)).status, 401);
     assert.equal(calls.length, 0);
   });
+});
+
+test("handler sends from the student domain with the student key only", async () => {
+  await withFetch(async (calls) => {
+    const res = await handle(req(), env);
+    assert.equal(res.status, 200);
+    const send = calls.find((c) => c.url === "https://api.resend.com/emails")!;
+    const h = send.init!.headers as Record<string, string>;
+    assert.equal(h.Authorization, "Bearer re_student");
+    const body = JSON.parse(String(send.init!.body));
+    assert.equal(body.from, "Venn <hello@vennstudentorgs.com>");
+    assert.equal(body.reply_to, "contact@joinvenn.org");
+  });
+});
+
+test("missing student key sends nothing and releases the claim, even with RESEND_API_KEY set", async () => {
+  await withFetch(async (calls) => {
+    const e = (k: string) => (k === "STUDENT_RESEND_API_KEY" ? undefined : k === "RESEND_API_KEY" ? "re_cold" : ENV[k]);
+    const res = await handle(req(), e);
+    assert.equal(res.status, 500);
+    assert.match(JSON.stringify(await res.json()), /STUDENT_RESEND_API_KEY/);
+    assert.equal(calls.filter((c) => c.url.startsWith("https://api.resend.com/")).length, 0);
+    const last = calls.filter((c) => c.init?.method === "PATCH").at(-1)!;
+    assert.deepEqual(JSON.parse(String(last.init!.body)), { confirmed_at: null });
+  });
+});
+
+test("a 500 then 200 retries with the same Idempotency-Key and sends a plain-text part", async () => {
+  const real = globalThis.fetch;
+  const keys: string[] = []; let texts: string[] = []; let n = 0;
+  globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+    const u = String(url);
+    if (u.startsWith("https://api.resend.com/")) {
+      keys.push((init!.headers as Record<string, string>)["Idempotency-Key"]); texts.push(JSON.parse(String(init!.body)).text);
+      return n++ === 0 ? new Response("{}", { status: 500 }) : new Response(JSON.stringify({ id: "re_2" }), { status: 200 });
+    }
+    return new Response(JSON.stringify(init?.method === "PATCH" ? [{ id: 7 }] : [row]), { status: 200 });
+  }) as typeof fetch;
+  try {
+    const res = await handle(req(), env);
+    assert.equal(res.status, 200);
+    assert.deepEqual(keys, ["confirm-7", "confirm-7"]);
+    assert.match(texts[1], /joinvenn\.org\/refer\?code=/);
+  } finally { globalThis.fetch = real; }
 });

@@ -70,7 +70,7 @@ test('mou endpoint happy path trims the name and returns the signature', async (
   const res = await post(ok, { sb });
   assert.equal(res.status, 200);
   assert.deepEqual(await res.json(), { signature: { typed_name: 'Maya Lee', signed_at: '2026-11-18T00:00:00Z' } });
-  assert.deepEqual(sb.calls, [{ fn: 'sign_mou', args: { p_result_id: 9, p_typed_name: 'Maya Lee', p_agreed: true } }]);
+  assert.deepEqual(sb.calls, [{ fn: 'sign_mou', args: { p_result_id: 9, p_typed_name: 'Maya Lee', p_agreed: true } }, { fn: 'portal_event', args: { p_step: 'mou_signed' } }]);
 });
 
 test('dev mou stub is DEV-gated and offers every error kind', () => {

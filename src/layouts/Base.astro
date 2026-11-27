@@ -2,6 +2,7 @@
 import { Image } from 'astro:assets';
 import logo from '../assets/venn-logo.png';
 import '../styles/global.css';
+import Icons from '../components/Icons.astro';
 
 interface Props {
   title: string;
@@ -42,8 +43,7 @@ const site = {
   <meta name="description" content={description}>
   {(noindex || bare) && <meta name="robots" content="noindex">}
   {shareUrl && <link rel="canonical" href={canonical}>}
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <Icons />
   <link rel="sitemap" href="/sitemap-index.xml">
   <meta property="og:type" content={type}>
   <meta property="og:title" content={ogTitle}>

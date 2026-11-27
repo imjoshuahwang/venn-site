@@ -1,5 +1,6 @@
 ---
 import '../styles/portal.css';
+import Icons from '../components/Icons.astro';
 const { title = 'Portal' } = Astro.props;
 const user = Astro.locals.user;
 const email = user?.email ?? 'Account';
@@ -10,6 +11,7 @@ const email = user?.email ?? 'Account';
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="robots" content="noindex" />
     <title>{title}</title>
+    <Icons />
   </head>
   <body>
     <div class="blobs" aria-hidden="true"><i class="g"></i><i class="b"></i></div>
