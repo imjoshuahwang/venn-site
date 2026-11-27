@@ -35,7 +35,8 @@ const config = JSON.stringify({ status: m?.status ?? null, viewed: !!m?.viewed_a
 <style is:global>
   .match { --forest: #1d2823; --forest-2: #2a3832; --mist: #dfe8e3; display: grid; gap: var(--sp-16); }
   .match [hidden] { display: none !important; }
-  .mstage { background: var(--forest); color: var(--mist); border-radius: var(--r-20); padding: var(--sp-32) var(--sp-16); min-height: 520px; display: grid; grid-template-rows: auto 1fr auto; gap: var(--sp-24); overflow: hidden; }
+  .mstage { background: var(--forest); color: var(--mist); border-radius: var(--r-20); padding: var(--sp-32) var(--sp-16); min-height: 520px; display: grid; grid-template-rows: auto 1fr; gap: var(--sp-24); overflow: hidden; }
+  .mline s { text-decoration: none; visibility: hidden; }
   .mline { margin: 0; min-height: 4.2em; font-size: var(--fs-17); line-height: 1.4; }
   .mpair { display: flex; justify-content: center; align-items: center; gap: 8px; transition: transform var(--dur-3) var(--ease); }
   .mpair.up { transform: translateY(-16px); }
@@ -73,7 +74,7 @@ const config = JSON.stringify({ status: m?.status ?? null, viewed: !!m?.viewed_a
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const $ = (s: string) => root.querySelector<HTMLElement>(s)!;
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-    const send = (body: object) => { if (cfg.stub) return; try { fetch('/portal/api/match', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).catch(() => {}); } catch { /* the funnel never blocks */ } };
+    const send = (body: object) => { if (cfg.stub && !location.search.includes('probe')) return; try { fetch('/portal/api/match', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).catch(() => {}); } catch { /* the funnel never blocks */ } };
     const step = (type: string) => send({ action: 'step', type });
     let run = 0, drops = 0;
     const strip = $('[data-strip]');
@@ -93,7 +94,8 @@ const config = JSON.stringify({ status: m?.status ?? null, viewed: !!m?.viewed_a
       const id = ++run;
       const low = lowEnd(navigator as never, drops);
       const p = plan({ status: cfg.status, viewedAt: cfg.viewed, reduced, low, replay });
-      if (p.screen !== 'stage' || p.kind === 'reduced') { showCard(); return; }
+      if (p.screen !== 'stage') { showCard(); return; }
+      if (p.kind === 'reduced') { step('stage_opened'); if (!replay && !cfg.viewed) send({ action: 'viewed' }); showCard(); return; }
       const b = (BEATS as Record<string, typeof BEATS.full>)[p.kind!];
       $('[data-card]').hidden = true; $('[data-stage]').hidden = false; root.dataset.beat = 'stage';
       $('[data-pair]').classList.remove('up'); $('[data-who]').hidden = true; $('[data-win]').style.opacity = '1';
@@ -106,7 +108,7 @@ const config = JSON.stringify({ status: m?.status ?? null, viewed: !!m?.viewed_a
       if (!replay && !cfg.viewed) send({ action: 'viewed' });
       const line = `${openerLine(cfg.home)} ${root.dataset.search}`;
       const lineEl = $('[data-line]'); lineEl.textContent = '';
-      if (b.type) { frames(); for (let i = 1; i <= line.length; i++) { if (id !== run) return; lineEl.textContent = line.slice(0, i); await sleep(b.type); } } else lineEl.textContent = line;
+      if (b.type) { frames(); for (let i = 1; i <= line.length; i++) { if (id !== run) return; lineEl.replaceChildren(line.slice(0, i), Object.assign(document.createElement('s'), { textContent: line.slice(i) })); await sleep(b.type); } } else lineEl.textContent = line;
       await sleep(b.hold); if (id !== run) return;
       root.dataset.beat = 'wheel'; strip.dataset.run = '';
       if (b.spin) {
