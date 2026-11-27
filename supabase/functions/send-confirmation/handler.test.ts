@@ -11,7 +11,7 @@ const ENV: Record<string, string> = {
 };
 const env = (k: string) => ENV[k];
 const row = {
-  id: 7, role: "student", name: "ada lovelace", email: "ada@example.com", email_key: null,
+  id: 7, role: "student", name: "ada lovelace", email: "ada@gmail.com", email_key: null,
   ref_code: "abc123", page_token: "f00dfeed00112233445566778899aabb", is_test: false, confirmed_at: null, email_status: null, share_due: "2026-10-20T22:40:00+00:00",
 };
 const req = (secret = "s3cret") =>
@@ -50,7 +50,7 @@ test("handler sends one Resend email carrying the deadline and the void rule", a
     const h = sends[0].init!.headers as Record<string, string>;
     assert.equal(h["Idempotency-Key"], "confirm-7");
     const body = JSON.parse(String(sends[0].init!.body));
-    assert.deepEqual(body.to, ["ada@example.com"]);
+    assert.deepEqual(body.to, ["ada@gmail.com"]);
     assert.equal(body.subject, "You're almost done, Ada");
     for (const part of [body.html, body.text]) {
       assert.match(part, /Tuesday, Oct 20, 3:40 PM PT/);
