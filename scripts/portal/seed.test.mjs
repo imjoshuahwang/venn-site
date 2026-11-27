@@ -48,7 +48,8 @@ test('target guard refuses before any write', () => {
 
 test('seeder never sends mail', () => {
   const dir = new URL('.', import.meta.url);
-  for (const f of readdirSync(dir).filter((f) => f.endsWith('.mjs') && !f.endsWith('.test.mjs'))) {
+  // send-results.mjs is the one deliberate sender (#185); everything else here must stay mail-free.
+  for (const f of readdirSync(dir).filter((f) => f.endsWith('.mjs') && !f.endsWith('.test.mjs') && f !== 'send-results.mjs')) {
     const src = readFileSync(new URL(f, dir), 'utf8').replace(/\/\/.*$/gm, '');
     assert.doesNotMatch(src, /inviteUserByEmail|generateLink|resetPasswordForEmail/, f);
   }
