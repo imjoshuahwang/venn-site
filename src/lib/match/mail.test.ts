@@ -63,9 +63,10 @@ test('kill switch unset sends nothing and never calls fetch', async () => {
   assert.deepEqual(await sendMail(mail(), { env: envOf({ STUDENT_RESEND_API_KEY: 'k' }), fetch: noFetch }), { sent: false, reason: 'disabled' });
 });
 
-test('is_test, non-allowlisted recipient and missing key all fail closed', async () => {
+test('non-allowlisted recipient and missing key fail closed; a test row to an allowlisted address sends', async () => {
   const env = envOf({ MATCH_SENDS_ENABLED: '1', SEND_ALLOWLIST: 'contact+portal-*@joinvenn.org', STUDENT_RESEND_API_KEY: 'k' });
-  assert.deepEqual(await sendMail(mail(), { env, fetch: noFetch, isTest: true }), { sent: false, reason: 'test' });
+  const ok = (async () => new Response(JSON.stringify({ id: 'em_1' }))) as unknown as typeof fetch;
+  assert.deepEqual(await sendMail(mail(), { env, fetch: ok, isTest: true }), { sent: true, id: 'em_1' });
   const real = buildNotice(T, 'expired', { matchId: 1, email: 'kid@example.com', name: 'K' });
   assert.deepEqual(await sendMail(real, { env, fetch: noFetch }), { sent: false, reason: 'not_allowlisted' });
   assert.deepEqual(await sendMail(mail(), { env: envOf({ MATCH_SENDS_ENABLED: '1', SEND_ALLOWLIST: 'contact+portal-*@joinvenn.org' }), fetch: noFetch }), { sent: false, reason: 'no_key' });

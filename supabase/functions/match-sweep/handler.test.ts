@@ -18,6 +18,7 @@ function stub(sweep: unknown[], r = row, o: { pending?: unknown[]; resend?: numb
     }
     if (u.includes('request_mailed_at=is.null')) return new Response(JSON.stringify(o.pending ?? []));
     if (u.includes('rpc/match_mail_done')) { marks.push(JSON.parse(init!.body as string)); return new Response('null'); }
+    if (u.includes('rpc/match_mail_lapsed')) return new Response('null');
     if (u.includes('rpc/match_sweep')) return new Response(JSON.stringify(sweep));
     return new Response(JSON.stringify([r]));
   }) as unknown as typeof globalThis.fetch;
@@ -42,11 +43,28 @@ test('enabled: a reminder goes to the peer and an expiry to the requester, once 
   assert.deepEqual(s.bodies.map((b) => [b.key, b.to]), [['match-reminder-5', ['contact+portal-p@joinvenn.org']], ['match-expired-5', ['contact+portal-r@joinvenn.org']]]);
 });
 
-test('is_test rows are skipped', async () => {
-  const s = stub([{ match_id: 5, action: 'remind' }], { ...row, peer: person('R', 'contact+portal-p@joinvenn.org', true) });
+test('is_test rows send when allowlisted and are marked done', async () => {
+  const s = stub([{ match_id: 5, action: 'intro' }], { ...row, status: 'accepted', peer: person('R', 'contact+portal-p@joinvenn.org', true) } as never);
+  const out = await (await call({ ...base, MATCH_SENDS_ENABLED: '1', SEND_ALLOWLIST: 'contact+portal-*@joinvenn.org' }, s)).json();
+  assert.equal(out.intro, 1);
+  assert.equal(s.bodies.length, 1);
+  assert.deepEqual(s.marks, [{ p_match_id: 5, p_kind: 'intro' }]);
+});
+
+test('is_test row to a non-allowlisted address sends nothing', async () => {
+  const s = stub([{ match_id: 5, action: 'intro' }], { ...row, status: 'accepted', peer: person('R', 'kid@example.com', true) } as never);
   const out = await (await call({ ...base, MATCH_SENDS_ENABLED: '1', SEND_ALLOWLIST: 'contact+portal-*@joinvenn.org' }, s)).json();
   assert.equal(out.skipped, 1);
   assert.equal(s.bodies.length, 0);
+});
+
+test('kill switch off then on: the accepted intro goes out on the first enabled run', async () => {
+  const s = stub([{ match_id: 5, action: 'intro' }], { ...row, status: 'accepted' } as never);
+  assert.deepEqual(await (await call(base, s)).json(), { disabled: true });
+  assert.equal(s.urls.length, 0);
+  const out = await (await call(on, s)).json();
+  assert.equal(out.intro, 1);
+  assert.deepEqual(s.marks, [{ p_match_id: 5, p_kind: 'intro' }]);
 });
 
 const on = { ...base, MATCH_SENDS_ENABLED: '1', SEND_ALLOWLIST: 'contact+portal-*@joinvenn.org' };
@@ -125,12 +143,14 @@ test('a failed marker after a good send is retried 3 times, and a failed send is
   assert.deepEqual(f.marks, []);
 });
 
-test('a lapsed intro is logged, not sent', async () => {
+test('a lapsed intro is not sent, is flagged once via match_mail_lapsed, and counted in the response', async () => {
   const logs: string[] = [];
   const s = stub([{ match_id: 5, action: 'lapsed' }], { ...row, status: 'accepted' } as never);
-  await handle(new Request('https://f.example.com/', { method: 'POST', headers: { 'x-webhook-secret': 'sec' } }), (k) => on[k], { fetch: s.fetch, log: (m: string) => logs.push(m) });
+  const res = await handle(new Request('https://f.example.com/', { method: 'POST', headers: { 'x-webhook-secret': 'sec' } }), (k) => on[k], { fetch: s.fetch, log: (m: string) => logs.push(m) });
   assert.equal(s.bodies.length, 0);
-  assert.ok(logs.some((l) => l.includes('retry window')));
+  assert.equal((await res.json()).lapsed, 1);
+  assert.ok(s.urls.some((u) => u.includes('rpc/match_mail_lapsed')));
+  assert.ok(logs.some((l) => l.includes('LAPSED')));
 });
 
 test('SEND_ALLOWLIST unset: nothing is sent', async () => {

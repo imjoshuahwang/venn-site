@@ -79,14 +79,13 @@ export function buildNotice(t: Templates, kind: 'declined' | 'expired', i: Notic
   return base(kind, i.matchId, [i.email], kind === 'declined' ? 'About your match' : 'Your match request closed', html);
 }
 
-export type SendDeps = { env: Env; fetch?: typeof fetch; log?: (m: string) => void; isTest?: boolean };
-export type SendResult = { sent: true; id: string | null } | { sent: false; reason: 'disabled' | 'test' | 'not_allowlisted' | 'no_key' | 'failed' };
+export type SendDeps = { env: Env; fetch?: typeof fetch; log?: (m: string) => void; isTest?: boolean /* kept for callers; the allowlist is the safety, test rows send when allowlisted (#282) */ };
+export type SendResult = { sent: true; id: string | null } | { sent: false; reason: 'disabled' | 'not_allowlisted' | 'no_key' | 'failed' };
 
-/** Fail closed: kill switch unset, test rows, non-allowlisted recipients (all of them), or a missing key send nothing. Never logs addresses. */
+/** Fail closed: kill switch unset, non-allowlisted recipients (all of them), or a missing key send nothing. Never logs addresses. */
 export async function sendMail(m: Mail, d: SendDeps): Promise<SendResult> {
   const log = d.log ?? console.log;
   if (!matchSendsEnabled(d.env)) return { sent: false, reason: 'disabled' };
-  if (d.isTest) return { sent: false, reason: 'test' };
   const list = d.env('SEND_ALLOWLIST');
   if (!m.to.every((e) => sendAllowed(e, list))) return { sent: false, reason: 'not_allowlisted' };
   const key = d.env('STUDENT_RESEND_API_KEY');

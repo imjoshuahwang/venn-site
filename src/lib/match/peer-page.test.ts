@@ -151,3 +151,10 @@ test('report, opt-out and unconfirmed answers send nothing', async () => {
   assert.equal(m.sent.length + g.sent.length, 0);
   assert.ok(!g.calls.some(([fn]) => fn === 'match_mail_target'));
 });
+
+test('accepted copy does not promise mail it cannot guarantee and says what to do if none arrives', () => {
+  const p = COPY.accepted.p ?? '';
+  assert.ok(!p.includes('We will email you both.') || p.includes('hour'));
+  assert.match(p, /hour/);
+  assert.match(p, /contact@joinvenn\.org/);
+});

@@ -35,7 +35,7 @@ export async function handle(req: Request, env: Env, deps: { fetch?: typeof fetc
     const r = await call(`matches?id=eq.${id}&select=${SELECT}`);
     return r.ok ? ((await r.json()) as Row[])[0] ?? null : null;
   };
-  const out: Record<string, number> = { remind: 0, expire: 0, intro: 0, decline: 0, request: 0, skipped: 0, failed: 0 };
+  const out: Record<string, number> = { remind: 0, expire: 0, intro: 0, decline: 0, request: 0, skipped: 0, failed: 0, lapsed: 0 };
   const markFn = (id: number, kind: string) => async () => (await call("rpc/match_mail_done", { method: "POST", body: JSON.stringify({ p_match_id: id, p_kind: kind }) })).ok;
   const done = async (id: number, kind: string, r: SendResult) => { if (r.sent) await markFn(id, kind)(); };
   const tally = (key: string, r: SendResult) => { out[r.sent ? key : r.reason === "failed" ? "failed" : "skipped"]++; };
@@ -65,8 +65,14 @@ export async function handle(req: Request, env: Env, deps: { fetch?: typeof fetc
       const row = await load(id);
       const rq = row?.requester?.applications, peer = row?.peer?.applications;
       if (!row || !rq || !peer) continue;
-      const isTest = rq.is_test || peer.is_test;
-      if (action === "lapsed") { out.skipped++; log(`match ${id} ${row.status} mail not sent: past the 20h retry window (sends were off or failing)`); continue; }
+      const isTest = false; // test rows send when allowlisted (#282)
+      if (action === "lapsed") {
+        // Past Resend's dedupe window: never auto-sent. Flag it once (match_events mail_lapsed) so Josh resends by hand with a fresh key.
+        out.lapsed++;
+        await call("rpc/match_mail_lapsed", { method: "POST", body: JSON.stringify({ p_match_id: id }) });
+        log(`match ${id} ${row.status} mail LAPSED: past the 20h retry window (sends were off or failing); resend by hand`);
+        continue;
+      }
       if (action === "remind" && row.message) {
         if (row.status !== "requested") { out.skipped++; continue; } // the peer answered since the sweep ran: no nudge
         const r = await sendMail(buildRequest(templates, "reminder", { matchId: id, peerEmail: peer.email, peerName: peer.name, requesterName: rq.name, requesterOrg: rq.org, message: row.message, token: await matchToken(tokenSecret, id) }), { env, fetch: f, log, isTest });
