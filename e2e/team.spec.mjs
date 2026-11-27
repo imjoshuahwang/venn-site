@@ -50,7 +50,7 @@ async function makeLead(tag) {
   assert.ifError(error);
   const app = await admin.from('applications').insert({ role: 'student', level: 'college', name: 'E2E Lead', email, working_on: 'e2e', source: 'test' }).select('id').single();
   assert.ifError(app.error);
-  const res = await admin.from('results').insert({ application_id: app.data.id, season: 'e2e', outcome: 'cohort', status: 'approved', approved_at: new Date().toISOString() }).select('id').single();
+  const res = await admin.from('results').insert({ application_id: app.data.id, season: 'fall-2026', outcome: 'cohort', status: 'approved', approved_at: new Date().toISOString(), viewed_at: new Date().toISOString(), ceremony_done_at: new Date().toISOString() }).select('id').single();
   assert.ifError(res.error);
   for (const clause of ['coordinator_groups', 'highlights', 'full_name_photo', 'data_use', 'retention']) {
     const c = await admin.from('consents').insert({ user_id: data.user.id, clause, accepted: true, version: '2026-11-v3' });
@@ -91,8 +91,7 @@ for (const [slug, preset] of Object.entries(VIEWPORTS)) {
     const page = await ctx.newPage();
     const shot = (name) => page.screenshot({ path: `${SHOTS}${name}-${slug}.png`, fullPage: true, scale: 'css' });
     await login(page, lead.email);
-    await page.goto(`${BASE}/portal`);
-    await page.click('a[href="/portal/team"]');
+    await page.goto(`${BASE}/portal/team`); // #225 dropped the home link; the page is still live
     await page.waitForURL(`${BASE}/portal/team`);
     await page.locator('form.add').waitFor();
     await shot('team-empty');

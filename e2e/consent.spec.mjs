@@ -37,7 +37,7 @@ async function makeUser(tag, level) {
   const app = await admin.from('applications').insert({ role: 'student', level, name: 'E2E Student', email, working_on: 'e2e' }).select('id').single();
   assert.ifError(app.error);
   // Home (#225) shows the consent link only for someone with a result; without one it is the "could not find a result" state.
-  const res = await admin.from('results').insert({ application_id: app.data.id, season: 'e2e', outcome: 'cohort', status: 'approved', approved_at: new Date().toISOString(), viewed_at: new Date().toISOString(), ceremony_done_at: new Date().toISOString() });
+  const res = await admin.from('results').insert({ application_id: app.data.id, season: 'fall-2026', outcome: 'cohort', status: 'approved', approved_at: new Date().toISOString(), viewed_at: new Date().toISOString(), ceremony_done_at: new Date().toISOString() });
   assert.ifError(res.error);
   created.push({ id: data.user.id, appId: app.data.id });
   return { email, id: data.user.id };
