@@ -26,9 +26,12 @@ test('authGuard: 6th per email limited from different IPs', async () => {
   for (let i = 0; i < LIMIT; i++) assert.equal(await authGuard('resend', req(`2.2.2.${i}`), { form: f, ...deps }), null);
   assert.equal(await authGuard('resend', req('2.2.9.9'), { form: f, ...deps }), RATE_MESSAGE);
 });
-test('authGuard: set-password needs no Turnstile', async () => {
-  const deps = { store: memoryStore(), fetch: cfNo, secret: TURNSTILE_TEST.secretFail, siteKey: 'site' };
-  assert.equal(await authGuard('set-password', req(), { form: form({}), ...deps }), null);
+test('authGuard: set-password needs a valid Turnstile token and has no rate limit', async () => {
+  const bad = { store: memoryStore(), fetch: cfNo, secret: TURNSTILE_TEST.secretFail, siteKey: 'site' };
+  assert.equal(await authGuard('set-password', req(), { form: form({ 'cf-turnstile-response': 'tok' }), ...bad }), TURNSTILE_MESSAGE);
+  assert.equal(await authGuard('set-password', req(), { form: form({}), ...bad }), TURNSTILE_MESSAGE);
+  const ok = { store: memoryStore(), fetch: cfOk, secret: TURNSTILE_TEST.secretPass, siteKey: 'site' };
+  for (let i = 0; i < LIMIT + 2; i++) assert.equal(await authGuard('set-password', req(), { form: form({ 'cf-turnstile-response': 'tok' }), ...ok }), null);
 });
 test('password change signs out other sessions but keeps this device', async () => {
   const calls: any[] = [];
