@@ -5,6 +5,7 @@ import { pathToFileURL } from 'node:url';
 export const TABLES = [
   'applications', 'results', 'peer_matches', 'mou_signatures', 'consents',
   'parent_consents', 'team_members', 'guiding_answers', 'portal_links', 'auth.users', 'rs_events',
+  'match_pool', 'matches', 'match_events', 'match_blocks',
 ];
 
 // Mirrors public.email_key().
@@ -22,6 +23,12 @@ export function parseArgs(argv) {
   }
   if (!email || email.startsWith('--') || !email.includes('@')) throw new Error('--email <address> is required');
   return { email };
+}
+
+async function ids2(q) {
+  const { data, error } = await q;
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((r) => r.result_id);
 }
 
 async function ids(q) {
@@ -45,6 +52,9 @@ export async function buildPlan(client, email) {
   const byUser = (t) => Promise.all(userIds.map((u) => ids(read(t).eq('user_id', u)))).then((x) => x.flat());
   const uniq = (a) => [...new Set(a)];
 
+  const matchIds = results.length
+    ? uniq([...(await byResult('matches', 'requester_result_id')), ...(await byResult('matches', 'peer_result_id'))])
+    : [];
   const tables = {
     applications: apps,
     results,
@@ -59,6 +69,13 @@ export async function buildPlan(client, email) {
     ]),
     guiding_answers: await byResult('guiding_answers', 'result_id'),
     portal_links: await byUser('portal_links'),
+    match_pool: results.length ? await ids2(read('match_pool', 'result_id').in('result_id', results)) : [],
+    matches: matchIds,
+    match_events: matchIds.length ? await ids(read('match_events').in('match_id', matchIds)) : [],
+    match_blocks: apps.length ? await Promise.all([
+      client.from('match_blocks').select('peer_result_id').in('application_id', apps),
+      results.length ? client.from('match_blocks').select('peer_result_id').in('peer_result_id', results) : { data: [] },
+    ]).then((rs) => uniq(rs.flatMap((r) => (r.data ?? []).map((x) => x.peer_result_id)))) : [],
     'auth.users': userIds,
     rs_events: await ids(read('rs_events').eq('email', String(email).trim().toLowerCase())),
   };
