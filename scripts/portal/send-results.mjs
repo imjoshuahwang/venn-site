@@ -41,13 +41,13 @@ export const linkFor = (hash, type) => `${SITE}/portal/auth/callback?token_hash=
 export const nextLink = (token) => `${SITE}/next/${token}`;
 // The warm no: three short human lines and one link to the no-account page. No sign-in, no password.
 export function renderNts(template, { name, link }) {
-  const html = template.replace('{{ .Name }}', esc(firstName(name))).replace('{{ .Link }}', esc(link));
+  const html = template.replaceAll('{{ .Name }}', esc(firstName(name))).replaceAll('{{ .Link }}', esc(link));
   const text = `Hi ${firstName(name)},\n\nThanks for applying to Venn. We got way more applications than we had spots for, so we couldn't fit you in this time.\n\nWe'd still like to keep you in mind. Tap this link and we'll consider you for the next cohort.\n\n${link}\n\nJosh`;
   return { html, text };
 }
 
 export function render(template, { name, link }) {
-  const html = template.replace('{{ .Name }}', esc(firstName(name))).replace('{{ .Link }}', esc(link));
+  const html = template.replaceAll('{{ .Name }}', esc(firstName(name))).replaceAll('{{ .Link }}', esc(link));
   const text = `Hi ${firstName(name)},\n\nVenn Fall 2026 results are out. Your result is waiting in your Venn portal. Use this link to choose a password and sign in with this email address. It works once and expires in 72 hours.\n\n${link}\n\nIf the link stops working, reply to this email and I will send a new one.\n\nJoshua`;
   return { html, text };
 }

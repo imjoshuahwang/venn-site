@@ -3,7 +3,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 
 const TEMPLATE = new URL('../../supabase/templates/status-update.html', import.meta.url);
-const LINK_RE = /https:\/\/joinvenn\.org\/portal\/auth\/callback\?token_hash=\{\{ \.TokenHash \}\}/;
+const LINK_RE = /https:\/\/joinvenn\.org\/portal\/auth\/callback\?token_hash=\{\{ \.TokenHash \}\}/g;
 export const SAMPLE_LINK = 'https://joinvenn.org/portal/auth/callback?token_hash=SAMPLE-SINGLE-USE';
 
 export function eligible(rows) { return rows.filter((r) => r.is_test === false); }

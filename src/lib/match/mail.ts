@@ -33,7 +33,7 @@ export function fill(tpl: string, vars: Record<string, string>): string {
     return esc(vars[k]);
   });
 }
-const plain = (html: string) => html.replace(/<a [^>]*href="([^"]+)"[^>]*>([^<]*)<\/a>/g, '$2: $1').replace(/<\/(p|h1|blockquote)>/g, '\n\n').replace(/<[^>]+>/g, '')
+const plain = (html: string) => html.replace(/<style>[\s\S]*?<\/style>|<!--[\s\S]*?-->|<div style="display:none[^>]*>[\s\S]*?<\/div>|<p class="fb"[\s\S]*?<\/p>/g, '').replace(/<a [^>]*href="([^"]+)"[^>]*>([^<]*)<\/a>/g, '$2: $1').replace(/<\/(p|h1|blockquote)>/g, '\n\n').replace(/<[^>]+>/g, '')
   .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\n{3,}/g, '\n\n').trim();
 
 const hex = (b: ArrayBuffer) => Array.from(new Uint8Array(b), (x) => x.toString(16).padStart(2, '0')).join('');
