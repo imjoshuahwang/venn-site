@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 const dir = new URL('../../supabase/templates/', import.meta.url);
 const read = (f) => readFileSync(new URL(f, dir), 'utf8');
 
-for (const f of ['invite.html', 'recovery.html', 'status-update.html', 'status-update.preview.html']) {
+for (const f of ['invite.html', 'recovery.html', 'magic-link.html', 'status-update.html', 'status-update.preview.html']) {
   test(`${f}: Venn look, one pill, joinvenn.org/portal link, no portal host`, () => {
     const h = read(f);
     assert.equal((h.match(/border-radius:999px/g) ?? []).length, 1);

@@ -1,0 +1,112 @@
+// Results-ready email (#185). One email per approved, not-yet-emailed result, with a single-use link that sets a password.
+// Dry run by default: prints the count and one rendered sample. `--send` sends. `--to a@x,b@y` restricts to those emails.
+// Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, RESEND_API_KEY, optional RESULTS_FROM (default "Venn <contact@joinvenn.org>").
+// Usage: node scripts/portal/send-results.mjs [--to a@x,b@y] [--send]
+import { readFileSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
+import { hashToken, SEASON } from './users.mjs';
+
+const TEMPLATE = new URL('../../supabase/templates/results-ready.html', import.meta.url);
+export const SUBJECT = 'Venn Fall 2026 results are out';
+export const SITE = 'https://joinvenn.org';
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+export function parseArgs(argv) {
+  const out = { send: false, to: null };
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === '--send') out.send = true;
+    else if (argv[i] === '--to') {
+      const v = argv[++i];
+      if (!v || v.startsWith('--')) throw new Error('--to needs a comma-separated list of emails');
+      out.to = v.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean);
+    } else throw new Error(`unknown argument: ${argv[i]}`);
+  }
+  return out;
+}
+
+export const firstName = (name) => String(name ?? '').trim().split(/\s+/)[0] || 'there';
+export const linkFor = (hash, type) => `${SITE}/portal/auth/callback?token_hash=${hash}&type=${type}&next=/portal/set-password`;
+
+export function render(template, { name, link }) {
+  const html = template.replace('{{ .Name }}', esc(firstName(name))).replace('{{ .Link }}', esc(link));
+  const text = `Hi ${firstName(name)},\n\nVenn Fall 2026 results are out. Your result is waiting in your Venn portal. Use this link to choose a password and sign in with this email address. It works once and expires in 72 hours.\n\n${link}\n\nIf the link stops working, reply to this email and I will send a new one.\n\nJoshua`;
+  return { html, text };
+}
+
+// Without --to, test applicants are never emailed. With --to, only the named addresses are.
+export function pickRows(rows, to) {
+  const want = to ? new Set(to) : null;
+  return rows.filter((r) => r.applications?.email && (want ? want.has(r.applications.email.toLowerCase()) : !r.applications.is_test));
+}
+
+export async function fetchPending(sb) {
+  const { data, error } = await sb.from('results')
+    .select('id, applications!inner(name, email, is_test)')
+    .eq('status', 'approved').eq('season', SEASON).is('emailed_at', null).order('id').limit(5000);
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+// An invite creates the account; if one already exists the same link works as a recovery. Either way the token is single use.
+export async function makeLink(sb, email) {
+  let type = 'invite';
+  let res = await sb.auth.admin.generateLink({ type, email });
+  if (res.error) { type = 'recovery'; res = await sb.auth.admin.generateLink({ type, email }); }
+  if (res.error) throw new Error(res.error.message);
+  const hash = res.data.properties.hashed_token;
+  const { error } = await sb.from('portal_links').insert({
+    user_id: res.data.user.id, token_hash: hashToken(hash), expires_at: new Date(Date.now() + 72 * 3600e3).toISOString(),
+  });
+  if (error) throw new Error(error.message);
+  return linkFor(hash, type);
+}
+
+export async function sendOne({ sb, row, template, from, resendKey, fetchImpl = fetch }) {
+  const email = row.applications.email.trim();
+  // Claim first: a crash after this point can skip a student, never double send. A failed send releases the claim.
+  const claim = await sb.from('results').update({ emailed_at: new Date().toISOString() }).eq('id', row.id).is('emailed_at', null).select('id');
+  if (claim.error) throw new Error(claim.error.message);
+  if (!claim.data.length) return 'already';
+  try {
+    const { html, text } = render(template, { name: row.applications.name, link: await makeLink(sb, email) });
+    const r = await fetchImpl('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json', 'Idempotency-Key': `results-ready-${row.id}`, 'User-Agent': 'venn-send-results/1' },
+      body: JSON.stringify({ from, to: [email], reply_to: 'contact@joinvenn.org', subject: SUBJECT, html, text }),
+    });
+    if (!r.ok) throw new Error(`resend ${r.status} ${(await r.text()).slice(0, 200)}`);
+    return 'sent';
+  } catch (e) {
+    await sb.from('results').update({ emailed_at: null }).eq('id', row.id);
+    throw e;
+  }
+}
+
+export async function run({ args, sb, template, from, resendKey, log = console.log, fetchImpl, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) }) {
+  const rows = pickRows(await fetchPending(sb), args.to);
+  log(`${rows.length} result(s) approved and not yet emailed${args.to ? ` (restricted to ${args.to.join(', ')})` : ''}.`);
+  if (!rows.length) return { sent: 0, failed: 0 };
+  if (!args.send) {
+    const r = rows[0];
+    log(`--- sample for ${r.applications.email} (link is a placeholder)\nSubject: ${SUBJECT}\nFrom: ${from}\n${render(template, { name: r.applications.name, link: linkFor('SAMPLE-SINGLE-USE', 'invite') }).text}`);
+    log('dry run: nothing sent. Add --send to send.');
+    return { sent: 0, failed: 0 };
+  }
+  let sent = 0, failed = 0;
+  for (const row of rows) {
+    try { if (await sendOne({ sb, row, template, from, resendKey, fetchImpl }) === 'sent') sent++; log(`sent  result ${row.id}`); }
+    catch (e) { failed++; log(`FAILED result ${row.id}: ${e.message}`); }
+    await sleep(600);
+  }
+  log(`done: ${sent} sent, ${failed} failed.`);
+  return { sent, failed };
+}
+
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const { SUPABASE_URL: url, SUPABASE_SERVICE_ROLE_KEY: key, RESEND_API_KEY: resendKey, RESULTS_FROM } = process.env;
+  if (!url || !key || !resendKey) { console.error('Set SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY and RESEND_API_KEY.'); process.exit(1); }
+  const { createClient } = await import('@supabase/supabase-js');
+  const sb = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+  const { failed } = await run({ args: parseArgs(process.argv.slice(2)), sb, template: readFileSync(TEMPLATE, 'utf8'), from: RESULTS_FROM || 'Venn <contact@joinvenn.org>', resendKey });
+  process.exit(failed ? 1 : 0);
+}
