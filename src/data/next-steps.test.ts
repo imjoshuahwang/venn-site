@@ -8,8 +8,8 @@ test('aws config: two steps, legal copy, no logo, 3-4 prompts', () => {
   assert.equal(c.steps.length, 2);
   assert.equal(TRADEMARK_NOTICE, 'Amazon Web Services, AWS and the AWS logo are trademarks of Amazon.com, Inc. or its affiliates.');
   assert.ok(c.legal.includes(TRADEMARK_NOTICE));
-  assert.ok(c.legal.some((l) => /logo/i.test(l) && /not|may not/i.test(l)));
-  assert.ok(c.legal.some((l) => /real AWS staff/i.test(l)));
+  assert.ok(c.legal.some((l) => /logos/i.test(l) && /Quadron/.test(l) && /slides/i.test(l) && /promotions/i.test(l)));
+  assert.ok(c.legal.some((l) => /AWS staff worked directly with Venn/i.test(l) && /informal association/i.test(l)));
   assert.ok(c.prompts.length >= 3 && c.prompts.length <= 4);
   assert.match(c.subject, /AWS/);
   assert.ok(!('logo' in c) || !c.logo);
@@ -32,4 +32,11 @@ test('partner lookup ignores prototype keys', () => {
   assert.equal(nextStepsFor('constructor').partner, 'aws');
   assert.equal(nextStepsFor('__proto__').partner, 'aws');
   assert.equal(nextStepsFor('toString').partner, 'aws');
+});
+
+test('no user-facing copy says partner or partnership', () => {
+  for (const c of Object.values(NEXT_STEPS)) {
+    const strings = [...c.steps, ...c.legal, ...c.prompts, c.subject, c.done.title, c.done.lead, ...c.done.next];
+    for (const s of strings) assert.doesNotMatch(s, /partner/i, s);
+  }
 });

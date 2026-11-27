@@ -16,8 +16,8 @@ export const NEXT_STEPS: Record<string, NextStepsConfig> = {
     partner: 'aws',
     steps: ['Logistics and legal', 'Email your mentor'],
     legal: [
-      'Clubs may not use the AWS logo.',
-      'The curriculum is aligned to AWS and comes from real AWS staff.',
+      "You can't use the AWS or Quadron logos in your own slides or local promotions.",
+      'AWS staff worked directly with Venn to shape the courses so they line up with AWS. This is an informal association, not an official deal with AWS.',
       TRADEMARK_NOTICE,
     ],
     prompts: [
