@@ -1,0 +1,27 @@
+---
+import { parentView, type ParentState, type ParentCtx } from '../../data/parent-consent';
+const { state, ctx = null } = Astro.props as { state: ParentState; ctx?: ParentCtx | null };
+const v = parentView(state, ctx);
+---
+<form method="post" class="parent" data-state={v.kind}>
+  <h1>{v.title}</h1>
+  {v.intro && <p>{v.intro}</p>}
+  {v.about && <p>{v.about}</p>}
+  {v.agree.length > 0 && (
+    <>
+      <h2>What you are agreeing to</h2>
+      <ul>{v.agree.map((t) => <li>{t}</li>)}</ul>
+    </>
+  )}
+  {v.body && <p>{v.body}</p>}
+  {v.mail && <a class="pill" href={v.mail}>contact@joinvenn.org</a>}
+  {v.button && <button class="pill" type="submit">{v.button}</button>}
+</form>
+<style>
+  .parent h1 { overflow-wrap: anywhere; }
+  .parent h2 { margin: var(--sp-24) 0 var(--sp-8); font-size: var(--fs-22); }
+  .parent p, .parent li { overflow-wrap: anywhere; }
+  .parent ul { margin: 0 0 var(--sp-24); padding-left: var(--sp-24); }
+  .parent li { margin-bottom: var(--sp-8); }
+  .parent .pill { width: 100%; border: 0; font-family: inherit; cursor: pointer; }
+</style>

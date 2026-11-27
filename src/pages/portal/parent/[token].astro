@@ -1,6 +1,7 @@
 ---
 import Portal from '../../../layouts/Portal.astro';
-import { CONSENT_PAGES } from '../../../data/consent';
+import ParentConsent from '../../../components/portal/ParentConsent.astro';
+import { parseParentState } from '../../../data/parent-consent';
 
 export const prerender = false;
 const sb = Astro.locals.supabase;
@@ -8,29 +9,10 @@ const token = Astro.params.token ?? '';
 if (Astro.request.method === 'POST' && Astro.request.headers.get('origin') === Astro.url.origin) {
   await sb.rpc('sign_parent_consent', { p_token: token });
 }
-const { data } = await sb.rpc('parent_consent_state', { p_token: token });
-const state = data ?? 'unknown';
+const { data: st } = await sb.rpc('parent_consent_state', { p_token: token });
+const { data: rows } = st === 'ok' || st === 'used' ? await sb.rpc('parent_consent_context', { p_token: token }) : { data: null };
+const { state, ctx } = parseParentState({ state: st, ...(rows?.[0] ?? {}) });
 ---
-<Portal title="Parent consent">
-  {state === 'ok' ? (
-    <form method="post">
-      <h1>Parent consent</h1>
-      <p>Your child is asking to join Venn. Please read what they agreed to, then say yes if you agree too.</p>
-      {CONSENT_PAGES.filter((p) => p.id !== 'confirm').map((p) => (
-        <section class="terms">
-          <h2>{p.title}</h2>
-          <p><strong>{p.summary}</strong></p>
-          <details><summary>The full text</summary>{p.body.map((t) => <p>{t}</p>)}</details>
-        </section>
-      ))}
-      <button class="pill" type="submit">I agree</button>
-      <style>
-        .terms { margin: 0 0 var(--sp-24); }
-        .terms h2 { margin: 0 0 var(--sp-8); font-size: var(--fs-22); }
-        .terms summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-weight: var(--fw-600); }
-        .terms p { overflow-wrap: anywhere; }
-      </style>
-    </form>
-  ) : state === 'used' ? <p>Thank you, this has been signed.</p>
-    : <p>This link has expired or is not valid. Ask your child to send a new one.</p>}
+<Portal title="Parent consent" dataLine={state === 'used'}>
+  <ParentConsent state={state} ctx={ctx} />
 </Portal>

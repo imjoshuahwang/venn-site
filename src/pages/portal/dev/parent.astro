@@ -1,0 +1,9 @@
+---
+export const prerender = false;
+import Portal from '../../../layouts/Portal.astro';
+import ParentConsent from '../../../components/portal/ParentConsent.astro';
+if (!import.meta.env.DEV) return new Response(null, { status: 404 });
+const state = ({ ok: 'ok', used: 'used' } as Record<string, 'ok' | 'used'>)[Astro.url.searchParams.get('state') ?? ''] ?? 'expired';
+const ctx = { first_name: 'Maya', cohort_name: 'Venn x Quadron Fall Cohort 2026' };
+---
+<Portal title="Parent fixture" dataLine={state === 'used'}><ParentConsent state={state} ctx={state === 'expired' ? null : ctx} /></Portal>
