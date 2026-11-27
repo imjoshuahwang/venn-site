@@ -5,7 +5,7 @@ import { TURNSTILE_TEST } from '../../lib/portal/turnstile-test-keys.ts';
 interface Props {
   title: string;
   lede?: string;
-  fields: ('email' | 'current-password' | 'new-password')[];
+  fields: ('email' | 'current-password' | 'new-password' | 'confirm-password')[];
   submit: string;
   error?: string;
   notice?: string;
@@ -34,7 +34,10 @@ const siteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || (import.meta.env.DE
         <label>Password<input name="password" type="password" autocomplete="current-password" enterkeyhint="go" required maxlength="200"></label>
       )}
       {fields.includes('new-password') && (
-        <label>New password<input name="password" type="password" autocomplete="new-password" enterkeyhint="go" required minlength="8" maxlength="200"></label>
+        <label>New password<input name="password" type="password" autocomplete="new-password" enterkeyhint="next" required minlength="8" maxlength="200"></label>
+      )}
+      {fields.includes('confirm-password') && (
+        <label>Confirm password<input name="confirm" type="password" autocomplete="new-password" enterkeyhint="go" required minlength="8" maxlength="200"></label>
       )}
       {turnstile && siteKey && <div class="cf-turnstile" data-sitekey={siteKey} data-appearance="interaction-only"></div>}
       <button class="btn" type="submit" data-working="Working...">{submit}</button>

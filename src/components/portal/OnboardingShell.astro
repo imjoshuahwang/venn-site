@@ -63,7 +63,12 @@ const { done, total, start = 0 } = Astro.props;
     form.addEventListener('submit', (e) => {
       if (!check()) { e.preventDefault(); return; }
       const b = form.querySelector<HTMLButtonElement>('button[type=submit]');
-      if (b) { b.setAttribute('aria-busy', 'true'); setTimeout(() => (b.disabled = true), 0); }
+      if (b) { b.dataset.label = b.textContent ?? ''; b.textContent = 'Saving...'; b.setAttribute('aria-busy', 'true'); setTimeout(() => (b.disabled = true), 0); }
+    });
+    // A failed save re-renders the page; back/forward restores from cache, so put the button back either way.
+    addEventListener('pageshow', () => {
+      const b = form.querySelector<HTMLButtonElement>('button[type=submit]');
+      if (b?.dataset.label) { b.disabled = false; b.removeAttribute('aria-busy'); b.textContent = b.dataset.label; }
     });
     show(i, 'none', false);
   }

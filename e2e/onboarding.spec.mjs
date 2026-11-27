@@ -61,6 +61,12 @@ async function login(page, email) {
   await page.goto(`${BASE}/portal/login`);
   await page.fill('input[name=email]', email);
   await page.fill('input[name=password]', PASSWORD);
+  await page.fill('input[name=confirm]', PASSWORD + 'x');
+  await page.waitForFunction(() => document.querySelector('input[name="cf-turnstile-response"]')?.value);
+  await page.click('button[type=submit]');
+  assert.match(await page.locator('[role=alert]').innerText(), /do not match/);
+  await page.fill('input[name=password]', PASSWORD);
+  await page.fill('input[name=confirm]', PASSWORD);
   await page.waitForFunction(() => document.querySelector('input[name="cf-turnstile-response"]')?.value);
   await page.click('button[type=submit]');
   await page.waitForURL('**/portal/ceremony');
@@ -108,7 +114,8 @@ async function profile(page, u, birthday) {
   await page.click('[data-panel]:visible [data-next]');
   await page.fill('input[name=birthday]', birthday); await shot(page, `${u.tag}-4-birthday`);
   await page.click('button[type=submit]');
-  await page.waitForURL('**/portal/onboarding/contact');
+  await page.waitForURL(/\/portal(\/ceremony)?$/); // #240: the result comes next; org and phone follow the reveal
+  await page.goto(`${BASE}/portal/onboarding/contact`);
 }
 async function contact(page, u) {
   await shot(page, `${u.tag}-5-org`);
@@ -131,9 +138,6 @@ test('adult: set-password, profile, contact, then /portal (390px)', async () => 
   await overflow(page, 'profile');
   await profile(page, u, bday(30));
   await overflow(page, 'contact');
-  // Portal home goes back to the next unfinished step while onboarding is open.
-  await page.goto(`${BASE}/portal`);
-  assert.equal(path(page), '/portal/onboarding/contact');
   await contact(page, u);
   await page.waitForURL(/\/portal(\/ceremony)?$/);
   const r = await row(u.appId);
@@ -147,10 +151,7 @@ test('under 18: ends on the MOU step (390px)', async () => {
   await toProfile(page, u);
   await profile(page, u, bday(18, 1)); // turns 18 tomorrow
   await contact(page, u);
-  await page.waitForURL('**/portal/onboarding/mou');
-  await shot(page, 'minor-9-mou');
-  await page.goto(`${BASE}/portal`);
-  assert.equal(path(page), '/portal/onboarding/mou');
+  await page.waitForURL(/\/portal(\/ceremony)?$/); // the MOU step is reached from the post-reveal checklist (C2)
   await ctx.close();
 });
 
@@ -171,5 +172,25 @@ test('phone and WhatsApp are required: errors, no write', async () => {
   assert.match(await res.text(), /WhatsApp/);
   const r = await row(u.appId);
   assert.equal(r.phone, null); assert.equal(r.onboarding_consent_at, null);
+  await ctx.close();
+});
+
+test('reload resumes at the next incomplete step with values kept; bad birthdays and phones are refused server side', async () => {
+  const u = { ...(await makeUser('resume', 'college')), tag: 'resume' };
+  const ctx = await browser.newContext(ctxOpts()); const page = await ctx.newPage();
+  await toProfile(page, u);
+  await profile(page, u, bday(30 - 1)); // 29: fine
+  await page.goto(`${BASE}/portal/onboarding/profile`);
+  assert.match(path(page), /\/portal(\/ceremony)?$/); // profile done: resumes past it
+  const r = await row(u.appId);
+  assert.equal(r.full_name, 'Ada Tester'); assert.equal(r.location, 'Lagos, Nigeria');
+  // Server side: out-of-range and future birthdays, and a non-E.164 phone, are refused by the RPCs and nothing changes.
+  const post = (url, form) => page.request.post(`${BASE}${url}`, { form, headers: { origin: BASE } });
+  await post('/portal/onboarding/profile', { name: 'X', location: 'Y', birthday: bday(-1) });
+  await post('/portal/onboarding/profile', { name: 'X', location: 'Y', birthday: bday(40) });
+  await post('/portal/onboarding/profile', { name: 'X', location: 'Y', birthday: bday(8) });
+  assert.equal((await row(u.appId)).full_name, 'Ada Tester');
+  await post('/portal/onboarding/contact', { orgOk: 'yes', phone: '4155550123', whatsapp: 'yes', consent: 'on' });
+  assert.equal((await row(u.appId)).phone, null);
   await ctx.close();
 });

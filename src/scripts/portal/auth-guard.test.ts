@@ -105,3 +105,13 @@ test('password change with a defer hook hands signOut to it instead of awaiting 
   release();
   await deferred;
 });
+
+test('first password set skips signOut of other sessions', async () => {
+  const calls: string[] = [];
+  const supabase = { auth: {
+    updateUser: async () => { calls.push('updateUser'); return { error: null }; },
+    signOut: async () => { calls.push('signOut'); return { error: null }; },
+  } };
+  assert.equal(await changePassword(supabase as never, 'newpassword1', undefined, { first: true }), null);
+  assert.deepEqual(calls, ['updateUser']);
+});
