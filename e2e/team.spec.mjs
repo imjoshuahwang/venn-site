@@ -52,7 +52,7 @@ async function makeLead(tag) {
   const res = await admin.from('results').insert({ application_id: app.data.id, season: 'e2e', outcome: 'cohort', status: 'approved', approved_at: new Date().toISOString() }).select('id').single();
   assert.ifError(res.error);
   for (const clause of ['coordinator_groups', 'highlights', 'full_name_photo', 'data_use', 'retention']) {
-    const c = await admin.from('consents').insert({ user_id: data.user.id, clause, accepted: true, version: '2026-11-v2' });
+    const c = await admin.from('consents').insert({ user_id: data.user.id, clause, accepted: true, version: '2026-11-v3' });
     if (c.error) throw new Error('consent seed: ' + c.error.message);
   }
   created.push({ id: data.user.id, appId: app.data.id, resId: res.data.id });

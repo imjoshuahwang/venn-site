@@ -173,13 +173,19 @@
     - sign-in contact+portal-cohort-done@joinvenn.org
     - goto /portal/consent
     - expect-visible form.consent
-    - expect-visible button:disabled
-    - tap input[name=coordinator_groups] + .box
-    - tap input[name=data_use] + .box
-    - tap input[name=retention] + .box
-    - tap input[name=highlights] + .box
+    - expect-visible [data-next]
+    - screenshot consent-first
+    - tap [data-next]
+    - tap [data-next]
+    - tap [data-next]
+    - tap [data-next]
+    - tap [data-next]
+    - tap [data-next]
+    - tap [data-next]
+    - tap [data-next]
+    - expect-visible [data-yes]
     - screenshot consent-ready
-    - tap text=Continue
+    - tap [data-yes]
     - screenshot home
 - name: waitlist-network
   on: /portal/login
@@ -366,11 +372,15 @@
     - reset-test-state
     - sign-in contact+portal-minor@joinvenn.org
     - goto /portal/consent
-    - tap input[name=coordinator_groups] + .box
-    - tap input[name=data_use] + .box
-    - tap input[name=retention] + .box
-    - tap input[name=highlights] + .box
-    - tap text=Continue
+    - tap [data-next]
+    - tap [data-next]
+    - tap [data-next]
+    - tap [data-next]
+    - tap [data-next]
+    - tap [data-next]
+    - tap [data-next]
+    - tap [data-next]
+    - tap [data-yes]
     - expect-absent form.consent
     - expect-visible main
 - name: parent-token-reused-or-expired

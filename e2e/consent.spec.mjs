@@ -67,6 +67,7 @@ async function login(page, email) {
   await page.click('button[type=submit]');
   await page.waitForURL('**/portal/ceremony');
 }
+const readAll = async (page) => { while (await page.locator('[data-next]').isVisible()) await page.click('[data-next]'); };
 const tick = (page, name) => page.locator(`label.clause:has(input[name=${name}])`).click();
 const consentRows = async (id) => Object.fromEntries((await admin.from('consents').select('clause,accepted').eq('user_id', id)).data.map((r) => [r.clause, r.accepted]));
 
@@ -95,17 +96,19 @@ for (const [slug, preset] of Object.entries(VIEWPORTS)) {
     // Entry point 1: first visit to /portal lands in ceremony setup.
     assert.equal(new URL(page.url()).pathname, '/portal/ceremony');
     await page.waitForSelector('form.consent');
-    assert.equal(await page.locator('button[type=submit]').isDisabled(), true);
+    assert.equal(await page.locator('[data-page]:visible').count(), 1);
     await shot(page, 'ceremony-consent-empty');
     await checkLayout(page, 'ceremony-consent-empty');
     await page.goto(`${BASE}/portal/consent`);
     await page.waitForSelector('form.consent');
     await shot(page, 'consent-empty');
     await checkLayout(page, 'consent-empty');
-    for (const n of ['coordinator_groups', 'data_use', 'retention', 'highlights']) await tick(page, n);
-    assert.equal(await page.locator('button[type=submit]').isDisabled(), false);
+    for (let i = 0; i < 3; i++) await page.click('[data-next]');
+    await tick(page, 'highlights');
+    await readAll(page);
+    assert.equal(await page.locator('[data-yes]').isVisible(), true);
     await shot(page, 'consent-ready');
-    await page.click('button[type=submit]');
+    await page.click('[data-yes]');
     await page.waitForURL(`${BASE}/portal`);
     await shot(page, 'consent-done');
     assert.deepEqual(await consentRows(u.id), { coordinator_groups: true, highlights: false, full_name_photo: false, data_use: true, retention: true });
@@ -117,7 +120,9 @@ for (const [slug, preset] of Object.entries(VIEWPORTS)) {
     await page.click('a[href="/portal/consent"]');
     await page.waitForURL(`${BASE}/portal/consent`);
     await page.waitForSelector('form.consent');
-    for (const [n, on] of Object.entries({ coordinator_groups: true, highlights: false, full_name_photo: false, data_use: true, retention: true })) {
+    for (let i = 0; i < 3; i++) await page.click('[data-next]');
+    // The three required clauses are answered by the final Yes and have no box; only the two optional choices show saved state.
+    for (const [n, on] of Object.entries({ highlights: false, full_name_photo: false })) {
       assert.equal(await page.locator(`input[name=${n}]`).isChecked(), on, n);
     }
     await shot(page, 'consent-reopened');
@@ -132,8 +137,8 @@ for (const [slug, preset] of Object.entries(VIEWPORTS)) {
     const ctx = await browser.newContext(ctxOpts());
     const page = await ctx.newPage();
     await login(page, u.email);
-    for (const n of ['coordinator_groups', 'data_use', 'retention']) await tick(page, n);
-    await page.click('button[type=submit]');
+    await readAll(page);
+    await page.click('[data-yes]');
     await page.waitForURL(`${BASE}/portal`);
     await page.locator("form.parent-request").waitFor();
     await shot(page, 'cosign');
@@ -145,14 +150,16 @@ for (const [slug, preset] of Object.entries(VIEWPORTS)) {
     const ctx = await browser.newContext(ctxOpts());
     const page = await ctx.newPage();
     await login(page, u.email);
-    const names = ['coordinator_groups', 'data_use', 'retention', 'full_name_photo'];
+    const names = ['full_name_photo'];
+    await page.goto(`${BASE}/portal/consent#page-4`);
     for (const n of names) await tick(page, n);
+    await readAll(page);
     await page.route('**/portal/consent', (r) => (r.request().method() === 'POST' ? r.abort() : r.continue()));
-    await page.click('button[type=submit]');
+    await page.click('[data-yes]');
     await page.locator('.err').waitFor({ state: 'visible' });
     assert.match(await page.locator('.err').innerText(), /did not save/);
     for (const n of names) assert.equal(await page.locator(`input[name=${n}]`).isChecked(), true);
-    assert.equal(await page.locator('button[type=submit]').isDisabled(), false);
+    assert.equal(await page.locator('[data-yes]').isDisabled(), false);
     await shot(page, 'consent-error');
     await checkLayout(page, 'consent-error');
     assert.deepEqual(await consentRows(u.id), {});
@@ -188,8 +195,8 @@ for (const [slug, preset] of Object.entries(VIEWPORTS)) {
     const ctx = await browser.newContext(ctxOpts());
     const page = await ctx.newPage();
     await login(page, u.email);
-    for (const n of ['coordinator_groups', 'data_use', 'retention']) await tick(page, n);
-    await page.click('button[type=submit]');
+    await readAll(page);
+    await page.click('[data-yes]');
     await page.waitForURL(`${BASE}/portal`);
     await page.goto(`${BASE}/portal`);
     assert.equal(await page.locator('[data-next-step=waiting-on-parent]').count(), 1);
@@ -224,8 +231,8 @@ for (const [slug, preset] of Object.entries(VIEWPORTS)) {
     const ctx = await browser.newContext(ctxOpts());
     const page = await ctx.newPage();
     await login(page, u.email);
-    for (const n of ['coordinator_groups', 'data_use', 'retention']) await tick(page, n);
-    await page.click('button[type=submit]');
+    await readAll(page);
+    await page.click('[data-yes]');
     await page.waitForURL(`${BASE}/portal`);
     const to = `contact+portal-e2e-${run}-x-${slug}@joinvenn.org`;
     const first = (await admin.rpc('request_parent_consent', { p_user_id: u.id, p_parent_email: to })).data;
@@ -260,8 +267,8 @@ for (const [slug, preset] of Object.entries(VIEWPORTS)) {
     const ctx = await browser.newContext(ctxOpts());
     const page = await ctx.newPage();
     await login(page, u.email);
-    for (const n of ['coordinator_groups', 'data_use', 'retention']) await tick(page, n);
-    await page.click('button[type=submit]');
+    await readAll(page);
+    await page.click('[data-yes]');
     await page.waitForURL(`${BASE}/portal`);
     assert.equal(await page.locator('form.parent-request').count(), 0);
     const res = await page.request.post(`${BASE}/portal/parent-request`, { form: { parent_email: 'p@example.org' }, headers: { origin: BASE } });
