@@ -127,6 +127,7 @@ for (const d of DEVICES) {
   test(`${d.name}: opener frame`, async () => { dev = d;
     const { ctx, page } = await open('first');
     await page.waitForTimeout(400); await shot(page, 'opener-typing');
+    const reserve = page.locator('[data-line] s'); assert.equal(await reserve.count(), 1, 'untyped remainder is rendered'); assert.equal(await reserve.getAttribute('aria-hidden'), 'true', 'reserve stays out of the live region');
     await beat(page, 'wheel'); await ctx.close();
   });
 }
