@@ -102,7 +102,7 @@ function mailed(status: string, outcome: string, o: { enabled?: boolean; markFai
     return { data: [{ outcome }], error: null };
   } };
   const f = (async (_u: string, init: RequestInit) => { sent.push({ ...JSON.parse(init.body as string), key: (init.headers as Record<string, string>)['Idempotency-Key'] }); return o.resend ? new Response('{}', { status: o.resend }) : new Response('{"id":"e1"}'); }) as unknown as typeof fetch;
-  const vars: Record<string, string> = { STUDENT_RESEND_API_KEY: 'k', ...(o.enabled === false ? {} : { MATCH_SENDS_ENABLED: '1' }) };
+  const vars: Record<string, string> = { STUDENT_RESEND_API_KEY: 'k', ...(o.enabled === false ? {} : { MATCH_SENDS_ENABLED: '1', SEND_ALLOWLIST: 'contact+portal-*@joinvenn.org' }) };
   return { calls, sent, d: (extra: Partial<Deps> = {}): Deps => ({ sb: sb as never, store: memoryStore(), ip: '1.1.1.1', mail: { templates: templates as never, env: (k) => vars[k], fetch: f, log: () => {} }, ...extra }) };
 }
 

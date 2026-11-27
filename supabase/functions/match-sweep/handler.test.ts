@@ -36,7 +36,7 @@ test('kill switch unset: no database call at all, nothing sent', async () => {
 
 test('enabled: a reminder goes to the peer and an expiry to the requester, once each by key', async () => {
   const s = stub([{ match_id: 5, action: 'remind' }, { match_id: 5, action: 'expire' }]);
-  const out = await (await call({ ...base, MATCH_SENDS_ENABLED: '1' }, s)).json();
+  const out = await (await call({ ...base, MATCH_SENDS_ENABLED: '1', SEND_ALLOWLIST: 'contact+portal-*@joinvenn.org' }, s)).json();
   assert.equal(out.remind, 1);
   assert.equal(out.expire, 1);
   assert.deepEqual(s.bodies.map((b) => [b.key, b.to]), [['match-reminder-5', ['contact+portal-p@joinvenn.org']], ['match-expired-5', ['contact+portal-r@joinvenn.org']]]);
@@ -44,12 +44,12 @@ test('enabled: a reminder goes to the peer and an expiry to the requester, once 
 
 test('is_test rows are skipped', async () => {
   const s = stub([{ match_id: 5, action: 'remind' }], { ...row, peer: person('R', 'contact+portal-p@joinvenn.org', true) });
-  const out = await (await call({ ...base, MATCH_SENDS_ENABLED: '1' }, s)).json();
+  const out = await (await call({ ...base, MATCH_SENDS_ENABLED: '1', SEND_ALLOWLIST: 'contact+portal-*@joinvenn.org' }, s)).json();
   assert.equal(out.skipped, 1);
   assert.equal(s.bodies.length, 0);
 });
 
-const on = { ...base, MATCH_SENDS_ENABLED: '1' };
+const on = { ...base, MATCH_SENDS_ENABLED: '1', SEND_ALLOWLIST: 'contact+portal-*@joinvenn.org' };
 
 test('pending requests are chosen by no request mail sent, not by token_hash; success is marked', async () => {
   const s = stub([], row, { pending: [{ id: 5 }] });
@@ -131,4 +131,11 @@ test('a lapsed intro is logged, not sent', async () => {
   await handle(new Request('https://f.example.com/', { method: 'POST', headers: { 'x-webhook-secret': 'sec' } }), (k) => on[k], { fetch: s.fetch, log: (m: string) => logs.push(m) });
   assert.equal(s.bodies.length, 0);
   assert.ok(logs.some((l) => l.includes('retry window')));
+});
+
+test('SEND_ALLOWLIST unset: nothing is sent', async () => {
+  const s = stub([{ match_id: 5, action: 'remind' }, { match_id: 5, action: 'expire' }]);
+  const out = await (await call({ ...base, MATCH_SENDS_ENABLED: '1' }, s)).json();
+  assert.equal(s.bodies.length, 0);
+  assert.equal(out.skipped, 2);
 });

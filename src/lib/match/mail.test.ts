@@ -64,18 +64,18 @@ test('kill switch unset sends nothing and never calls fetch', async () => {
 });
 
 test('is_test, non-allowlisted recipient and missing key all fail closed', async () => {
-  const env = envOf({ MATCH_SENDS_ENABLED: '1', STUDENT_RESEND_API_KEY: 'k' });
+  const env = envOf({ MATCH_SENDS_ENABLED: '1', SEND_ALLOWLIST: 'contact+portal-*@joinvenn.org', STUDENT_RESEND_API_KEY: 'k' });
   assert.deepEqual(await sendMail(mail(), { env, fetch: noFetch, isTest: true }), { sent: false, reason: 'test' });
   const real = buildNotice(T, 'expired', { matchId: 1, email: 'kid@example.com', name: 'K' });
-  assert.deepEqual(await sendMail(real, { env, fetch: noFetch }), { sent: false, reason: 'not_allowed' });
-  assert.deepEqual(await sendMail(mail(), { env: envOf({ MATCH_SENDS_ENABLED: '1' }), fetch: noFetch }), { sent: false, reason: 'no_key' });
+  assert.deepEqual(await sendMail(real, { env, fetch: noFetch }), { sent: false, reason: 'not_allowlisted' });
+  assert.deepEqual(await sendMail(mail(), { env: envOf({ MATCH_SENDS_ENABLED: '1', SEND_ALLOWLIST: 'contact+portal-*@joinvenn.org' }), fetch: noFetch }), { sent: false, reason: 'no_key' });
 });
 
 test('send posts once with an idempotency key and the student key, and logs the id without the address', async () => {
   const calls: RequestInit[] = [];
   const logs: string[] = [];
   const fetch = (async (_u: string, init: RequestInit) => { calls.push(init); return new Response(JSON.stringify({ id: 'em_1' })); }) as unknown as typeof globalThis.fetch;
-  const r = await sendMail(mail(), { env: envOf({ MATCH_SENDS_ENABLED: '1', STUDENT_RESEND_API_KEY: 'k' }), fetch, log: (m) => logs.push(m) });
+  const r = await sendMail(mail(), { env: envOf({ MATCH_SENDS_ENABLED: '1', SEND_ALLOWLIST: 'contact+portal-*@joinvenn.org', STUDENT_RESEND_API_KEY: 'k' }), fetch, log: (m) => logs.push(m) });
   assert.deepEqual(r, { sent: true, id: 'em_1' });
   const h = calls[0].headers as Record<string, string>;
   assert.equal(h['Idempotency-Key'], 'match-expired-1');
@@ -87,5 +87,10 @@ test('send posts once with an idempotency key and the student key, and logs the 
 
 test('an intro with one non-allowlisted address sends to neither', async () => {
   const m = buildIntro(T, { matchId: 1, a: { name: 'A', email: 'contact+portal-a@joinvenn.org' }, b: { name: 'B', email: 'b@example.com' } });
-  assert.deepEqual(await sendMail(m, { env: envOf({ MATCH_SENDS_ENABLED: '1', STUDENT_RESEND_API_KEY: 'k' }), fetch: noFetch }), { sent: false, reason: 'not_allowed' });
+  assert.deepEqual(await sendMail(m, { env: envOf({ MATCH_SENDS_ENABLED: '1', SEND_ALLOWLIST: 'contact+portal-*@joinvenn.org', STUDENT_RESEND_API_KEY: 'k' }), fetch: noFetch }), { sent: false, reason: 'not_allowlisted' });
+});
+
+test('SEND_ALLOWLIST unset refuses even a switched-on, keyed send', async () => {
+  const env = envOf({ MATCH_SENDS_ENABLED: '1', STUDENT_RESEND_API_KEY: 'k' });
+  assert.deepEqual(await sendMail(mail(), { env, fetch: noFetch }), { sent: false, reason: 'not_allowlisted' });
 });

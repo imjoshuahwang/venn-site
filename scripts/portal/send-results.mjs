@@ -1,6 +1,7 @@
 // Results-ready email (#185). One email per approved, not-yet-emailed result, with a single-use link that sets a password.
 // Dry run by default: prints the count and one rendered sample. `--send` sends. `--to a@x,b@y` restricts to those emails.
 // `--test` sends to is_test applicants only (never a real student). Reply-To is always contact@joinvenn.org.
+// SEND_ALLOWLIST (comma list, `*` glob in the local part, `*` alone = all; unset = refuse every send) gates each address; a refusal is logged as not_allowlisted with no address.
 // Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, STUDENT_RESEND_API_KEY (all loaded by ./env.mjs; RESEND_API_KEY is never used).
 // From is hello@vennstudentorgs.com, fixed. Applicant emails are never logged.
 // Usage: node scripts/portal/send-results.mjs [--test] [--to a@x,b@y] [--send]
@@ -8,6 +9,7 @@ import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { hashToken, SEASON } from './users.mjs';
 import { loadEnv } from './env.mjs';
+import { sendAllowed } from '../../src/lib/mail/allowlist.ts';
 
 const TEMPLATE = new URL('../../supabase/templates/results-ready.html', import.meta.url);
 export const SUBJECT = 'Venn Fall 2026 results are out';
@@ -75,9 +77,10 @@ export async function makeLink(sb, email) {
 
 const NO_KEY = 'STUDENT_RESEND_API_KEY is not set: nothing sent';
 
-export async function sendOne({ sb, row, template, from, resendKey, fetchImpl = fetch, idemSuffix = '', onId = () => {}, sleep = (ms) => new Promise((x) => setTimeout(x, ms)) }) {
+export async function sendOne({ sb, row, template, from, resendKey, allowlist, fetchImpl = fetch, idemSuffix = '', onId = () => {}, sleep = (ms) => new Promise((x) => setTimeout(x, ms)) }) {
   if (!resendKey) throw new Error(NO_KEY);
   const email = row.applications.email.trim();
+  if (!sendAllowed(email, allowlist)) return 'not_allowlisted';
   // Claim first: a crash after this point can skip a student, never double send. A failed send releases the claim.
   const claim = await sb.from('results').update({ emailed_at: new Date().toISOString() }).eq('id', row.id).is('emailed_at', null).select('id');
   if (claim.error) throw new Error(claim.error.message);
@@ -101,7 +104,7 @@ export async function sendOne({ sb, row, template, from, resendKey, fetchImpl = 
   }
 }
 
-export async function run({ args, sb, template, from, resendKey, log = console.log, fetchImpl, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) }) {
+export async function run({ args, sb, template, from, resendKey, allowlist, log = console.log, fetchImpl, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) }) {
   const rows = pickRows(await fetchPending(sb), args.to, args.test);
   log(`${rows.length} ${args.test ? 'TEST ' : ''}result(s) approved and not yet emailed${args.to ? ` (restricted to ${args.to.length} address(es))` : ''}.`);
   if (!rows.length) return { sent: 0, failed: 0 };
@@ -112,25 +115,27 @@ export async function run({ args, sb, template, from, resendKey, log = console.l
     log('dry run: nothing sent. Add --send to send.');
     return { sent: 0, failed: 0 };
   }
-  let sent = 0, failed = 0;
+  let sent = 0, failed = 0, refused = 0;
   for (const row of rows) {
     try {
       let id; // a --test rerun gets a fresh key so Resend does not replay an earlier test send; real sends keep one key per result
-      if (await sendOne({ sb, row, template, from, resendKey, fetchImpl, idemSuffix: args.test ? `-t${Date.now()}` : '', sleep, onId: (v) => { id = v; } }) === 'sent') sent++;
+      const res = await sendOne({ sb, row, template, from, resendKey, allowlist, fetchImpl, idemSuffix: args.test ? `-t${Date.now()}` : '', sleep, onId: (v) => { id = v; } });
+      if (res === 'not_allowlisted') { refused++; log(`refused result ${row.id} reason=not_allowlisted`); continue; }
+      if (res === 'sent') sent++;
       log(`sent  result ${row.id} resend_id=${id}`); }
     catch (e) { failed++; log(`FAILED result ${row.id}: ${e.message}`); }
     await sleep(600);
   }
-  log(`done: ${sent} sent, ${failed} failed.`);
-  return { sent, failed };
+  log(`done: ${sent} sent, ${refused} refused (not_allowlisted), ${failed} failed.`);
+  return { sent, failed, refused };
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   loadEnv();
-  const { SUPABASE_URL: url, SUPABASE_SERVICE_ROLE_KEY: key, STUDENT_RESEND_API_KEY: resendKey } = process['en' + 'v'];
+  const { SUPABASE_URL: url, SUPABASE_SERVICE_ROLE_KEY: key, STUDENT_RESEND_API_KEY: resendKey, SEND_ALLOWLIST: allowlist } = process['en' + 'v'];
   if (!url || !key || !resendKey) { console.error('Set SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY and STUDENT_RESEND_API_KEY.'); process.exit(1); }
   const { createClient } = await import('@supabase/supabase-js');
   const sb = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
-  const { failed } = await run({ args: parseArgs(process.argv.slice(2)), sb, template: readFileSync(TEMPLATE, 'utf8'), from: FROM, resendKey });
+  const { failed } = await run({ args: parseArgs(process.argv.slice(2)), sb, template: readFileSync(TEMPLATE, 'utf8'), from: FROM, resendKey, allowlist });
   process.exit(failed ? 1 : 0);
 }

@@ -1,6 +1,6 @@
 // Resend delivery webhook (svix-signed): records bounces, complaints and deliveries in rs_events (venn#397 G5).
 // Verification follows https://docs.svix.com/receiving/verifying-payloads/how-manual
-import { mailAllowed } from "../../../src/lib/portal/resend.ts";
+import { sendAllowed } from "../../../src/lib/mail/allowlist.ts";
 import { matchSendsEnabled } from "../../../src/lib/match/mail.ts";
 export type Env = (name: string) => string | undefined;
 
@@ -115,7 +115,7 @@ async function expireBouncedRequest(env: Env, kind: string, data: any) {
   console.log(`match ${matchId} request bounced; expire ${res.ok ? "ok" : res.status}`);
   // Alert only when the switch is on, the expire landed, the alert address is allowed and neither student is a test row.
   const to = env("MATCH_ALERT_TO"), resendKey = env("STUDENT_RESEND_API_KEY");
-  if (!res.ok || !matchSendsEnabled(env) || !to || !resendKey || !mailAllowed(to, env("PORTAL_MAIL_OPEN"))) return;
+  if (!res.ok || !matchSendsEnabled(env) || !to || !resendKey || !sendAllowed(to, env("SEND_ALLOWLIST"))) return;
   const info = await fetch(`${env("SUPABASE_URL")}/rest/v1/matches?id=eq.${matchId}&select=requester:results!requester_result_id(applications(is_test)),peer:results!peer_result_id(applications(is_test))`, {
     headers: { apikey: key, Authorization: `Bearer ${key}` },
   }).then((r) => (r.ok ? r.json() : null)).catch(() => null);

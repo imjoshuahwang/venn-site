@@ -1,7 +1,7 @@
 // Match mail (#251): request, reminder, joint intro, kind decline and expiry. Pure builders plus one fail-closed sender.
 // Peer to peer: the recipient of a request is another Venn student. The request never carries the requester's email,
 // phone, last name or birthday. The joint intro has both students in To and nothing else (no CC, no BCC).
-import { mailAllowed } from '../portal/resend.ts';
+import { sendAllowed } from '../mail/allowlist.ts';
 
 export const SITE = 'https://joinvenn.org';
 export const FROM = 'Venn <hello@vennstudentorgs.com>';
@@ -80,15 +80,15 @@ export function buildNotice(t: Templates, kind: 'declined' | 'expired', i: Notic
 }
 
 export type SendDeps = { env: Env; fetch?: typeof fetch; log?: (m: string) => void; isTest?: boolean };
-export type SendResult = { sent: true; id: string | null } | { sent: false; reason: 'disabled' | 'test' | 'not_allowed' | 'no_key' | 'failed' };
+export type SendResult = { sent: true; id: string | null } | { sent: false; reason: 'disabled' | 'test' | 'not_allowlisted' | 'no_key' | 'failed' };
 
 /** Fail closed: kill switch unset, test rows, non-allowlisted recipients (all of them), or a missing key send nothing. Never logs addresses. */
 export async function sendMail(m: Mail, d: SendDeps): Promise<SendResult> {
   const log = d.log ?? console.log;
   if (!matchSendsEnabled(d.env)) return { sent: false, reason: 'disabled' };
   if (d.isTest) return { sent: false, reason: 'test' };
-  const open = d.env('PORTAL_MAIL_OPEN');
-  if (!m.to.every((e) => mailAllowed(e, open))) return { sent: false, reason: 'not_allowed' };
+  const list = d.env('SEND_ALLOWLIST');
+  if (!m.to.every((e) => sendAllowed(e, list))) return { sent: false, reason: 'not_allowlisted' };
   const key = d.env('STUDENT_RESEND_API_KEY');
   if (!key) return { sent: false, reason: 'no_key' };
   const { idempotencyKey, ...body } = m;
