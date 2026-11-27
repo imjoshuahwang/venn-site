@@ -10,6 +10,9 @@ import { CONSENT_VERSION } from '../../data/consent';
 import { nextStepsFor } from '../../data/next-steps';
 import { getMyMatch } from '../../lib/portal/match-rpc';
 
+import { onboardingRedirect } from '../../lib/portal/onboarding';
+const onboarding = await onboardingRedirect(Astro.locals.supabase);
+if (onboarding) return Astro.redirect(onboarding, 303);
 const home = await loadHome({
   ceremony: () => getCeremonyData(Astro),
   consent: () => getConsentState(Astro.locals.supabase, CONSENT_VERSION),

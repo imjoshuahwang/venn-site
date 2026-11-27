@@ -1,0 +1,55 @@
+---
+import Portal from '../../../layouts/Portal.astro';
+import OnboardingShell from '../../../components/portal/OnboardingShell.astro';
+import { CONTACT_CONSENT_TEXT, getOnboarding, nextOnboardingPath, validateContact } from '../../../lib/portal/onboarding';
+
+export const prerender = false;
+const sb = Astro.locals.supabase;
+let error = '';
+const s = await getOnboarding(sb);
+if (Astro.request.method === 'POST') {
+  const f = await Astro.request.formData();
+  const r = validateContact(Object.fromEntries(f));
+  if (!r.ok) error = r.error;
+  else {
+    const { error: e } = await sb.rpc('save_onboarding_contact', { p_org_ok: r.orgOk, p_org_correction: r.orgCorrection, p_phone: r.phone, p_whatsapp: r.whatsapp, p_consent: true });
+    if (e) error = 'We could not save that. Please try again.';
+    else return Astro.redirect(nextOnboardingPath(await getOnboarding(sb)) ?? '/portal', 303);
+  }
+} else if (s && s.required && !s.profileDone) return Astro.redirect('/portal/onboarding/profile', 303);
+else if (s && s.contactDone) return Astro.redirect(nextOnboardingPath(s) ?? '/portal', 303);
+const org = s?.org || 'Your organization';
+---
+<Portal title="Your organization and phone | Venn">
+  <OnboardingShell done={4} total={8} start={error ? 3 : 0}>
+    <section class="ob-panel" data-panel>
+      <h1>Is this your organization?</h1>
+      <p class="lede">{org}</p>
+      <label class="ob-choice"><input type="radio" name="orgOk" value="yes" required data-msg="Tell us whether this is your organization." data-auto /> Yes</label>
+      <label class="ob-choice"><input type="radio" name="orgOk" value="no" /> No</label>
+      <div data-if-no><input name="orgCorrection" maxlength="300" aria-label="Your organization" placeholder="Your organization" data-msg="Tell us your organization." /></div>
+      <p class="ob-err" data-err role="alert" hidden></p>
+      <div class="ob-nav"><button class="pill" type="button" data-next>Continue</button></div>
+    </section>
+    <section class="ob-panel" data-panel hidden>
+      <h1>What's your phone number?</h1>
+      <p class="lede">Include the country code.</p>
+      <input name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+14155550123" enterkeyhint="next" maxlength="30" required data-phone aria-label="Phone number" data-msg="Enter your phone number with its country code, like +14155550123." />
+      <p class="ob-err" data-err role="alert" hidden></p>
+      <div class="ob-nav"><button class="pill ghost" type="button" data-back>Back</button><button class="pill" type="button" data-next>Continue</button></div>
+    </section>
+    <section class="ob-panel" data-panel hidden>
+      <h1>Do you use WhatsApp on this number?</h1>
+      <label class="ob-choice"><input type="radio" name="whatsapp" value="yes" required data-msg="Tell us whether you use WhatsApp." data-auto /> Yes</label>
+      <label class="ob-choice"><input type="radio" name="whatsapp" value="no" data-auto /> No</label>
+      <p class="ob-err" data-err role="alert" hidden></p>
+      <div class="ob-nav"><button class="pill ghost" type="button" data-back>Back</button></div>
+    </section>
+    <section class="ob-panel" data-panel hidden>
+      <h1>One last thing.</h1>
+      <label class="ob-consent"><input type="checkbox" name="consent" value="on" required data-msg="Tick the box to agree." /><span data-consent-text>{CONTACT_CONSENT_TEXT}</span></label>
+      <p class="ob-err" data-err role="alert" hidden={!error}>{error}</p>
+      <div class="ob-nav"><button class="pill ghost" type="button" data-back>Back</button><button class="pill" type="submit">Finish</button></div>
+    </section>
+  </OnboardingShell>
+</Portal>
