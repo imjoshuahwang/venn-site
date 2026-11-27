@@ -38,14 +38,16 @@ const email = user?.email ?? 'Account';
   .topbar summary::-webkit-details-marker { display: none; }
   .topbar form { position: absolute; right: 0; top: 100%; z-index: 1; background: var(--white); border-radius: var(--r-12); box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12); }
   .topbar button { min-height: 44px; min-width: 44px; padding: 0 var(--sp-24); border: 0; background: none; font: inherit; font-size: var(--fs-15); color: var(--ink); cursor: pointer; white-space: nowrap; }
-  .data-line { max-width: 640px; margin: 0 auto; padding: 0 max(var(--gutter), env(safe-area-inset-right)) calc(var(--sp-48) + env(safe-area-inset-bottom)) max(var(--gutter), env(safe-area-inset-left)); font-size: var(--fs-13); color: var(--muted); }
-  .data-line a { display: inline-flex; align-items: center; min-height: 44px; color: inherit; text-underline-offset: 3px; }
+  .data-line { max-width: 640px; margin: 0 auto; padding: 0 max(var(--gutter), env(safe-area-inset-right)) calc(var(--sp-48) + env(safe-area-inset-bottom)) max(var(--gutter), env(safe-area-inset-left)); font-size: var(--fs-15); color: var(--muted); }
+  .data-line a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 var(--sp-4); color: inherit; text-underline-offset: 3px; }
   .blobs { position: fixed; inset: 0; z-index: -1; overflow: hidden; }
   .blobs i { position: absolute; width: 70vmax; height: 70vmax; border-radius: var(--r-pill); filter: blur(80px); opacity: 0.45; }
   .blobs .g { background: var(--green); top: -30vmax; left: -25vmax; }
   .blobs .b { background: var(--blue); bottom: -35vmax; right: -30vmax; }
   a:focus-visible, button:focus-visible { outline: 3px solid var(--ink); outline-offset: var(--sp-4); }
   .pill { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; padding: var(--sp-12) var(--sp-24); border-radius: var(--r-pill); background: var(--ink); color: var(--white); font-size: var(--fs-15); font-weight: var(--fw-600); text-decoration: none; transition: opacity var(--dur-1) var(--ease); }
+  button, input, select, textarea { font-family: inherit; }
+  button.pill { border: 0; cursor: pointer; }
   .pill:hover { opacity: 0.85; }
   @media (prefers-reduced-motion: reduce) { .pill { transition: none; } }
 </style>

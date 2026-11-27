@@ -25,7 +25,7 @@ const none = ceremony.status === 'none' && !consentFailed;
 const failed = ceremony.status === 'error' || consentFailed;
 ---
 <Portal title="Your Venn home">
-  {inCeremony ? <Ceremony result={replay ? { ...ceremony.result, viewedAt: ceremony.result.viewedAt ?? ceremony.result.doneAt } : ceremony.result} setup={setup} replay={replay} /> : failed ? <><p role="alert">We could not load this page.</p><form method="get" action="/portal"><button class="pill" type="submit" data-retry>Retry</button></form></> : none ? (
+  {inCeremony ? <Ceremony result={replay ? { ...ceremony.result, viewedAt: ceremony.result.viewedAt ?? ceremony.result.doneAt } : ceremony.result} setup={setup} replay={replay} /> : failed ? <><section class="home" data-error><h1 role="alert">We could not load this page</h1><form method="get" action="/portal"><button class="pill" type="submit" data-retry>Try again</button></form></section></> : none ? (
     <section class="home" data-none>
       <h1>We could not find a result for {email}</h1>
       <form method="post" action="/portal/logout"><button class="pill" type="submit">Sign in with a different email</button></form>
@@ -36,9 +36,9 @@ const failed = ceremony.status === 'error' || consentFailed;
       {ceremony.status === 'ok' && ceremony.result.cohortName && <p class="cohort" data-cohort-name>{ceremony.result.cohortName}</p>}
       <h1>Your results are here</h1>
       <a class="pill" href="/portal/result">View your results</a>
-      {ceremony.status === 'ok' && ceremony.result.outcome === 'cohort' && <a class="next" href="/portal/next-steps" data-next-step>Next: {nextStepsFor(null).steps[0]}</a>}
-      {ceremony.status === 'ok' && <a class="again" href="/portal?replay=1" data-watch-again>Watch again</a>}
-      <a class="consent" href="/portal/consent">Review consent</a>
+      {ceremony.status === 'ok' && ceremony.result.outcome === 'cohort' && <a class="pill ghost" href="/portal/next-steps" data-next-step>Next: {nextStepsFor(null).steps[0]}</a>}
+      {ceremony.status === 'ok' && <a class="pill ghost" href="/portal?replay=1" data-watch-again>Watch again</a>}
+      <a class="pill ghost" href="/portal/consent">Review consent</a>
     </section>
   )}
 </Portal>
@@ -46,8 +46,7 @@ const failed = ceremony.status === 'error' || consentFailed;
   .home { display: grid; gap: var(--sp-24); justify-items: start; padding-top: var(--sp-48); }
   .home h1 { margin: 0; font-size: var(--fs-28); font-weight: var(--fw-800); letter-spacing: var(--track-tight); line-height: 1.15; }
   .cohort { margin: 0; font-size: var(--fs-15); font-weight: var(--fw-800); color: var(--muted); }
-  .next, .again { display: inline-flex; align-items: center; min-height: 44px; font-size: var(--fs-15); color: var(--ink, inherit); text-underline-offset: 3px; }
+  .pill.ghost { background: var(--white); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
   .help { margin: 0; font-size: var(--fs-15); color: var(--muted); }
-  .help a { display: inline-flex; align-items: center; min-height: 44px; }
-  .consent { display: inline-flex; align-items: center; min-height: 44px; font-size: var(--fs-15); color: var(--muted); text-underline-offset: 3px; }
+  .help a { display: inline-flex; align-items: center; min-height: 44px; color: inherit; text-underline-offset: 3px; }
 </style>
