@@ -1,0 +1,76 @@
+---
+import type { NextStepsConfig } from '../../data/next-steps';
+interface Props { config: NextStepsConfig }
+const { config } = Astro.props;
+const draft = config.prompts.map((p) => `${p}\n\n`).join('');
+---
+<div class="ns" data-next-steps data-subject={config.subject}>
+  <nav class="ns-bar" aria-label="Progress">
+    <p class="ns-count" data-count aria-live="polite">Step 1 of 2</p>
+    <ol>
+      {config.steps.map((s, i) => <li data-dot={i + 1}><span>{i + 1}</span>{s}</li>)}
+    </ol>
+  </nav>
+  <section class="ns-step" data-step="1" aria-labelledby="ns-h1">
+    {config.logo && <img src={config.logo} alt="" class="ns-logo" />}
+    <h1 id="ns-h1">{config.steps[0]}</h1>
+    <ul>{config.legal.map((l) => <li>{l}</li>)}</ul>
+    <div class="ns-actions"><button type="button" class="pill" data-go="2">Next</button></div>
+  </section>
+  <section class="ns-step" data-step="2" aria-labelledby="ns-h2" hidden>
+    <h2 id="ns-h2">{config.steps[1]}</h2>
+    <label class="ns-label" for="ns-body">Message to your mentor</label>
+    <textarea id="ns-body" rows="14">{draft}</textarea>
+    <div class="ns-actions">
+      <button type="button" class="ns-back" data-go="1">Back</button>
+      <button type="button" class="pill" data-send>Send</button>
+    </div>
+  </section>
+</div>
+<script>
+  import { gmailComposeUrl } from '../../lib/portal/gmail';
+  const root = document.querySelector<HTMLElement>('[data-next-steps]')!;
+  const steps = [...root.querySelectorAll<HTMLElement>('[data-step]')];
+  const dots = [...root.querySelectorAll<HTMLElement>('[data-dot]')];
+  function show(n: number) {
+    steps.forEach((s) => { s.hidden = Number(s.dataset.step) !== n; });
+    dots.forEach((d) => d.toggleAttribute('data-on', Number(d.dataset.dot) <= n));
+    root.querySelector('[data-count]')!.textContent = `Step ${n} of ${steps.length}`;
+    root.style.setProperty('--ns-p', String(n / steps.length));
+  }
+  const fromHash = () => (location.hash === '#step-2' ? 2 : 1);
+  root.querySelectorAll<HTMLElement>('[data-go]').forEach((b) => b.addEventListener('click', () => {
+    location.hash = `step-${b.dataset.go}`;
+  }));
+  addEventListener('hashchange', () => show(fromHash()));
+  show(fromHash());
+  root.querySelector('[data-send]')!.addEventListener('click', () => {
+    const body = (root.querySelector('#ns-body') as HTMLTextAreaElement).value;
+    window.open(gmailComposeUrl({ subject: root.dataset.subject!, body }), '_blank', 'noopener');
+  });
+</script>
+<style>
+  .ns { display: grid; gap: var(--sp-24); width: min(960px, calc(100vw - 2 * var(--gutter))); position: relative; left: 50%; transform: translateX(-50%); }
+  .ns-bar { display: grid; gap: var(--sp-12); align-content: start; }
+  .ns-count { margin: 0; font-size: var(--fs-13); color: var(--muted); }
+  .ns-bar ol { list-style: none; margin: 0; padding: 0; display: flex; gap: var(--sp-8); }
+  .ns-bar li { flex: 1; display: flex; align-items: center; gap: var(--sp-8); padding-top: var(--sp-8); border-top: 4px solid var(--line); font-size: var(--fs-13); color: var(--muted); }
+  .ns-bar li span { display: none; }
+  .ns-bar li[data-on] { border-top-color: var(--ink); color: var(--ink); font-weight: var(--fw-600); }
+  .ns-step { display: grid; gap: var(--sp-16); align-content: start; padding: var(--sp-24); border-radius: var(--r-20); background: var(--panel); border: 1px solid var(--line); min-width: 0; }
+  .ns-step[hidden] { display: none; }
+  .ns-step h1, .ns-step h2 { margin: 0; font-size: var(--fs-22); font-weight: var(--fw-600); letter-spacing: var(--track-tight); }
+  .ns-step ul { margin: 0; padding-left: var(--sp-24); display: grid; gap: var(--sp-12); font-size: var(--fs-15); }
+  .ns-logo { height: 32px; width: auto; justify-self: start; }
+  .ns-label { font-size: var(--fs-13); color: var(--muted); }
+  textarea { width: 100%; font: inherit; font-size: var(--fs-16, 16px); padding: var(--sp-12); border: 1px solid var(--line); border-radius: var(--r-12); background: var(--white); color: var(--ink); resize: vertical; }
+  .ns-actions { display: flex; gap: var(--sp-12); justify-content: flex-end; align-items: center; }
+  .ns-back { min-height: 44px; min-width: 44px; padding: 0 var(--sp-16); border: 0; background: none; font: inherit; font-size: var(--fs-15); color: var(--ink); cursor: pointer; }
+  button { cursor: pointer; border: 0; font-family: inherit; }
+  @media (min-width: 900px) {
+    .ns { grid-template-columns: 280px 1fr; align-items: start; }
+    .ns-bar ol { flex-direction: column; gap: var(--sp-16); }
+    .ns-bar li { border-top: 0; border-left: 4px solid var(--line); padding: var(--sp-4) 0 var(--sp-4) var(--sp-12); }
+    .ns-bar li[data-on] { border-left-color: var(--ink); }
+  }
+</style>

@@ -1,0 +1,11 @@
+---
+import Portal from '../../layouts/Portal.astro';
+import NextSteps from '../../components/portal/NextSteps.astro';
+import { nextStepsFor } from '../../data/next-steps';
+
+export const prerender = false;
+const config = nextStepsFor(Astro.url.searchParams.get('partner'));
+---
+<Portal title="Next steps">
+  <NextSteps config={config} />
+</Portal>
