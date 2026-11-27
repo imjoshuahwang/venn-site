@@ -1,4 +1,4 @@
-// Phone QA for #133: slideshow + guiding questions on the dev fixture, at SE / iPhone 15 / Pixel 7. Boots its own dev server.
+// Phone QA for #133: guiding questions on the dev fixture, at SE / iPhone 15 / Pixel 7. Boots its own dev server.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -24,8 +24,6 @@ before(async () => {
 after(() => server?.kill('SIGTERM'));
 
 const csp = JSON.parse(fs.readFileSync('vercel.json', 'utf8')).headers.flatMap((h) => h.headers).find((h) => h.key === 'Content-Security-Policy').value;
-const counterIs = (n) => page_waitCount(n);
-const page_waitCount = (n) => (page) => page.waitForFunction((k) => document.querySelector('[data-count]').textContent.startsWith(String(k)), n);
 
 test('fixture logo origin is inside CSP img-src', () => {
   const img = csp.split(';').map((s) => s.trim().split(/\s+/)).find(([n]) => n === 'img-src').slice(1);
@@ -33,7 +31,7 @@ test('fixture logo origin is inside CSP img-src', () => {
 });
 
 for (const [name, engine, slug] of PHONES) {
-  test(`${name}: slides, arrows, reduced motion, guiding save and closed state`, async () => {
+  test(`${name}: guiding save and closed state`, async () => {
     const browser = await engine.launch();
     try {
       const ctx = await browser.newContext({ ...devices[name], reducedMotion: 'no-preference' });
@@ -43,22 +41,7 @@ for (const [name, engine, slug] of PHONES) {
       await page.route(LOGO, (r) => r.fulfill({ contentType: 'image/png', body: PNG }));
       await page.goto(url('state=signed'));
 
-      const logo = page.locator('[data-slides] img').first();
-      await logo.waitFor();
-      assert.ok(await logo.evaluate((i) => i.complete && i.naturalWidth > 0), 'logo renders');
-      assert.equal(await page.locator('[data-slide]').count(), 3);
-
-      for (const sel of ['[data-next]', '[data-prev]']) {
-        const bb = await page.locator(sel).boundingBox();
-        assert.ok(bb.width >= 44 && bb.height >= 44, 'controls 44px');
-      }
-      await page.locator('[data-next]').click(); await counterIs(2)(page);
-      await page.locator('[data-prev]').click(); await counterIs(1)(page);
-      await page.locator('[data-track]').focus();
-      await page.keyboard.press('ArrowRight'); await counterIs(2)(page);
-      await page.keyboard.press('ArrowLeft'); await counterIs(1)(page);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'no horizontal scroll');
-      await page.locator('[data-slides]').screenshot({ path: `qa/portal-shots/133-slides-${slug}.png` });
 
       await page.locator('[data-guiding] textarea[name=goal]').fill('Ship a pilot this term.');
       await page.locator('[data-guiding] [data-save]').click();
@@ -85,7 +68,8 @@ for (const [name, engine, slug] of PHONES) {
       const rctx = await browser.newContext({ ...devices[name], reducedMotion: 'reduce' });
       const rp = await rctx.newPage();
       await rp.goto(url('state=signed'));
-      assert.equal(await rp.locator('[data-track]').evaluate((e) => getComputedStyle(e).scrollBehavior), 'auto');
+      assert.equal(await rp.locator('[data-guiding]').isVisible(), true, 'guiding renders under reduced motion');
+      assert.equal(await rp.locator('[data-track]').count(), 0, 'slideshow is gone');
       assert.deepEqual(errors, []);
     } finally { await browser.close(); }
   });

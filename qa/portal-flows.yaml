@@ -322,14 +322,12 @@
     - expect-visible [data-cohort] [data-letter]
     - expect-visible [data-cohort] [data-orgs]
     - screenshot cohort
-- name: cohort-slides-and-questions
+- name: cohort-questions
   on: /portal/login
   steps:
     - sign-in contact+portal-cohort@joinvenn.org
     - expect-url /portal
     - goto /portal/result
-    - expect-visible [data-slides]
-    - tap [data-next]
     - fill textarea[name=goal] Test answer
     - tap [data-guiding] [data-save]
     - expect-visible [data-guiding] [data-status]

@@ -1,10 +1,8 @@
 ---
 export const prerender = false;
 import Portal from '../../../layouts/Portal.astro';
-import CohortSlides from '../../../components/portal/results/CohortSlides.astro';
 import SharePill from '../../../components/portal/SharePill.astro';
 import GuidingQuestions from '../../../components/portal/GuidingQuestions.astro';
-import { logoUrl } from '../../../data/mou';
 import { STUB_GUIDING } from '../../../lib/portal/guiding';
 import { Waitlist, NotThisSeason, ResultState, Peer, Cohort } from '../../../components/portal/results';
 import { peerView } from '../../../data/portal-peer';
@@ -32,7 +30,6 @@ const peer = peerView(stubPeer(peerState), peerState === 'both' ? STUB_CONTACT :
 <Portal title="Result fixture">
   {state === 'loading' || state === 'error' ? <ResultState state={state} />
     : outcome === 'cohort' ? <Cohort result={cohortResult} view={cohortView} full={state === 'full'} endpoint={mouEndpoint}>
-      <CohortSlides slot="slides" cohort={cohortRow} firstName="Maya" logo={logoUrl(cohortRow.logo_path, import.meta.env.PUBLIC_SUPABASE_URL)} />
       <GuidingQuestions slot="guidingQuestions" resultId={cohortResult.id} answers={state === 'empty-answers' ? {} : STUB_GUIDING} endpoint={guidingEndpoint} closed={q.get('gfail') === 'closed-load'} />
     </Cohort>
     : outcome === 'peer' ? <Peer view={state === 'empty' ? null : peer} endpoint={peerEndpoint} />
