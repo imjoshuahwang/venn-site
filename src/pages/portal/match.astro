@@ -3,7 +3,7 @@ export const prerender = false;
 import Portal from '../../layouts/Portal.astro';
 import Stage from '../../components/portal/match/Stage.astro';
 import Card from '../../components/portal/match/Card.astro';
-import { getMyMatch, type MyMatch } from '../../lib/portal/match-rpc';
+import { getMyMatch, getMyIncoming, type MyMatch, type Incoming } from '../../lib/portal/match-rpc';
 import { peerTile, stateLabel } from '../../lib/portal/match-stage.mjs';
 import { searchLine } from '../../data/match-facts';
 
@@ -14,17 +14,38 @@ const fixture = (viewed: boolean): MyMatch => ({
   fit: { you_do: 'You run a robotics club of 14 that builds one working tool a term.', they_do: 'Daniel leads a STEM collective that gets teams from idea to a real user.', together: ['Swap how each club picks a first project.', 'Share one build night over video.'], common: ['Robotics', 'Small teams', 'Teaching tools'], ask: 'How does your club get new members to finish a first build?' },
   peer_first_name: 'Daniel', peer_org: 'Ohio STEM Collective', peer_region: 'Ohio', peer_project: 'Robotics',
 } as MyMatch);
+const invitedFixture = { match_id: 1, state: 'requested', requester_first_name: 'Daniel', requester_org: 'Ohio STEM Collective', requester_region: 'Ohio', requester_project: 'Robotics', message: 'We run build nights for new members and would love to swap how our clubs pick a first project.', learn: 'How you get members to finish a first build.', expires_at: '2026-12-04T00:00:00Z', own_region: 'Texas' } as Incoming;
 let m: MyMatch | null = null;
+let inc: Incoming | null = null;
 let failed = false;
 try {
-  m = stub ? (stub === 'unmatched' ? ({ status: 'unmatched' } as MyMatch) : fixture(stub === 'replay')) : await getMyMatch(Astro.locals.supabase);
+  if (stub === 'invited') inc = invitedFixture;
+  else if (!stub) { const i = await getMyIncoming(Astro.locals.supabase).catch(() => null); if (i?.state === 'requested') inc = i; }
+  if (!inc) m = stub ? (stub === 'unmatched' ? ({ status: 'unmatched' } as MyMatch) : fixture(stub === 'replay')) : await getMyMatch(Astro.locals.supabase);
 } catch { failed = true; }
 const you = { name: stub ? 'Maya' : 'You', org: stub ? 'Lincoln HS Robotics Club' : '', region: stub ? 'Texas' : (m?.own_region ?? '') };
 const peer = { first_name: m?.peer_first_name, headline: m?.peer_project, org: m?.peer_org, region: m?.peer_region, field: m?.peer_project };
 const config = JSON.stringify({ status: m?.status ?? null, viewed: !!m?.viewed_at, stub: !!stub, home: you.region || null, tile: peerTile(peer), who: { name: peer.first_name, org: peer.org, headline: peer.headline } });
 ---
 <Portal title="Your match">
-  {failed ? <p role="alert">We could not load your match. Reload to try again.</p> : (
+  {inc ? (
+    <div class="match">
+      <section class="mcard" data-invite>
+        <header>
+          <h1>{inc.requester_first_name}</h1>
+          <p>{[inc.requester_project, inc.requester_org, inc.requester_region].filter(Boolean).join(', ')}</p>
+        </header>
+        <p data-invite-line>{inc.requester_first_name} would like to connect.</p>
+        {inc.message && <blockquote class="mquote">{inc.message}</blockquote>}
+        {inc.learn && <dl><dt>Wants to learn</dt><dd>{inc.learn}</dd></dl>}
+        <div class="mrow" data-invite-actions>
+          <button class="pill" type="button" data-answer="accept">Accept</button>
+          <button class="pill ghost" type="button" data-answer="decline">Decline</button>
+        </div>
+        <p role="status" data-invite-result hidden></p>
+      </section>
+    </div>
+  ) : failed ? <p role="alert">We could not load your match. Reload to try again.</p> : (
     <div class="match" data-match data-config={config} data-search={searchLine()}>
       <Stage you={you} />
       <Card peer={peer} fit={m?.fit ?? {}} label={stateLabel(m?.status ?? '')} unmatched={!m || m.status === 'unmatched'} />
@@ -60,6 +81,8 @@ const config = JSON.stringify({ status: m?.status ?? null, viewed: !!m?.viewed_a
   .mcard dd { margin: 0; line-height: 1.4; } .mcard ul { margin: 0; padding-left: 1.1em; }
   .mtagrow { display: flex; flex-wrap: wrap; gap: 6px; } .mtagrow span { background: var(--green); border-radius: var(--r-pill); padding: 4px 12px; font-size: var(--fs-13); }
   .match .pill { border: 0; cursor: pointer; font-family: inherit; } .match .pill.ghost { background: var(--white); color: var(--ink); border: 1px solid var(--line); }
+  .mquote { margin: 0; padding-left: var(--sp-16); border-left: 2px solid var(--line); line-height: 1.4; }
+  .mrow { display: flex; flex-wrap: wrap; gap: var(--sp-8); } .mrow .pill { min-height: 44px; min-width: 44px; }
   @keyframes mfade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
   @keyframes mfade-o { from { opacity: 0; } to { opacity: 1; } }
   @media (prefers-reduced-motion: reduce) { .match *, .match { animation: none !important; } .mpair { transition: none; transform: none !important; } .match .mcard { animation: mfade-o var(--dur-3) var(--ease) !important; } }
@@ -68,6 +91,23 @@ const config = JSON.stringify({ status: m?.status ?? null, viewed: !!m?.viewed_a
 <script>
   import { BEATS, ROW, plan, lowEnd, wheelTiles, openerLine, finalY } from '../../lib/portal/match-stage.mjs';
 
+  const invite = document.querySelector<HTMLElement>('[data-invite]');
+  if (invite) {
+    const WORDS: Record<string, string> = { accepted: 'You said yes. We will send you both an intro.', declined: 'Declined.', busy: 'You already have a match in progress.', expired: 'This ask has expired.' };
+    const stubbed = location.search.includes('stub=') && !location.search.includes('probe');
+    invite.querySelectorAll<HTMLButtonElement>('[data-answer]').forEach((b) => b.addEventListener('click', async () => {
+      const buttons = invite.querySelectorAll<HTMLButtonElement>('[data-answer]'); buttons.forEach((x) => (x.disabled = true));
+      let outcome = 'error';
+      try {
+        if (stubbed) outcome = b.dataset.answer === 'accept' ? 'accepted' : 'declined';
+        else { const r = await fetch('/portal/api/match', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'answer', choice: b.dataset.answer }) }); if (r.ok) outcome = (await r.json()).outcome; }
+      } catch { /* shown below */ }
+      if (outcome === 'error') { buttons.forEach((x) => (x.disabled = false)); }
+      const out = invite.querySelector<HTMLElement>('[data-invite-result]')!;
+      out.textContent = WORDS[outcome] ?? 'We could not save that. Try again.'; out.hidden = false;
+      if (outcome !== 'error') invite.querySelector<HTMLElement>('[data-invite-actions]')!.hidden = true;
+    }));
+  }
   const root = document.querySelector<HTMLElement>('[data-match]');
   if (root) {
     const cfg = JSON.parse(root.dataset.config!);
