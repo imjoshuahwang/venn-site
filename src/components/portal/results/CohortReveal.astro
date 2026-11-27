@@ -1,10 +1,11 @@
 ---
 import { statLine, STOOD_OUT } from '../../../data/reveal-facts';
 import { popupTitle, type RevealPartner } from '../../../data/reveal-partners';
+import RevealActions from './RevealActions.astro';
 // #226: Play -> dark forest gray -> stat line types -> "But you stood out." -> popup with pastel confetti.
 // Everything partner-specific comes from `partner` (src/data/reveal-partners.ts); this component is never forked per company.
 // It auto-plays only until the ceremony is done (`done` = ceremony_done_at set); after that the letter shows with a small Replay.
-const { partner, resultId, done = false, stub = false } = Astro.props as { partner: RevealPartner; resultId: number; done?: boolean; stub?: boolean };
+const { partner, resultId, done = false, stub = false, org = '', birthday = null } = Astro.props as { partner: RevealPartner; resultId: number; done?: boolean; stub?: boolean; org?: string; birthday?: string | null };
 const stat = statLine();
 const title = popupTitle(partner);
 ---
@@ -21,9 +22,8 @@ const title = popupTitle(partner);
     <img src={partner.logo} alt={`${partner.name} logo`} width="200" height="120" data-popup-logo />
     <h2 id="rv-title" data-popup-title>{title}</h2>
     <p class="line" data-popup-line>{partner.line}</p>
-    <!-- #227: share card and letter render here, between the title and the portal action. -->
-    <div data-reveal-extra></div>
-    <a class="pill go" href="/portal" data-reveal-next>Go to my portal</a>
+    <div data-reveal-extra>{partner.copy && <RevealActions partner={partner} org={org} birthday={birthday} />}</div>
+    {!partner.copy && <a class="pill go" href="/portal" data-reveal-next>Go to my portal</a>}
   </div>
 </div>
 <script>

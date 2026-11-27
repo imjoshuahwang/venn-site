@@ -1,0 +1,155 @@
+---
+import { linkedinAllowed, fillOrg } from '../../../lib/portal/accept-card';
+import type { RevealPartner } from '../../../data/reveal-partners';
+// #227: the checklist after the reveal popup. One primary action per screen. Everything said comes from partner.copy.
+// The share card is rendered as soon as the popup shows, so the Share tap hands navigator.share a finished File.
+const { partner, org = '', birthday = null } = Astro.props as { partner: RevealPartner; org?: string; birthday?: string | null };
+const c = partner.copy!;
+const li = linkedinAllowed(birthday);
+const items = [c.items.share, ...(li ? [c.items.experience] : []), c.items.phone, c.items.mou, c.items.email];
+const post = fillOrg(c.linkedin.post, org);
+const cardSpec = JSON.stringify({ headline: c.card.headline, title: c.card.sub(partner.cohortTitle), org, partnerName: partner.name, partnerLogo: partner.logo, vennLogo: '/Venn_Horizontal_Logo_Light.png' });
+const next = `/portal/next-steps?partner=${partner.key}`;
+---
+<div class="ra" data-actions data-card={cardSpec} data-post={post} data-linkedin={li ? '1' : '0'}>
+  <section data-screen="intro">
+    <p class="assoc">{c.association}</p>
+    <p class="body">{c.intro.body}</p>
+    <ol class="list">{items.map((t) => <li>{t}</li>)}</ol>
+    <button type="button" class="pill" data-primary data-reveal-next data-go>Start</button>
+  </section>
+  <section data-screen="share" hidden>
+    <h3>{c.items.share}</h3>
+    <img class="preview" data-preview alt="" width="1080" height="1350" hidden />
+    <button type="button" class="pill" data-primary data-share-btn disabled>Share</button>
+    <p class="note" data-share-state role="status" aria-live="polite"></p>
+    <div class="manual" data-share-manual hidden>
+      <a class="text" data-download download="venn-accepted.png" href="#">Download image</a>
+      <input readonly value="https://joinvenn.org/" aria-label="Link to copy" data-url />
+    </div>
+    <button type="button" class="text" data-go>Next</button>
+  </section>
+  <section data-screen="letter" hidden>
+    <h3>{c.letter.title}</h3>
+    {c.letter.paragraphs.map((p) => <p class="body">{p}</p>)}
+    <p class="note">{c.letter.mentor}</p>
+    <button type="button" class="pill" data-primary data-go>{c.letter.button}</button>
+  </section>
+  {li && <>
+    <section data-screen="experience" hidden>
+      <h3>{c.linkedin.expTitle}</h3>
+      <ol class="steps">{c.linkedin.expSteps.map((t) => <li>{t}</li>)}</ol>
+      <button type="button" class="copy" data-copy={c.linkedin.title}><span class="k">Title</span><span class="v">{c.linkedin.title}</span><span class="s" data-copy-state>Copy</span></button>
+      {org && <button type="button" class="copy" data-copy={org}><span class="k">Company</span><span class="v">{org}</span><span class="s" data-copy-state>Copy</span></button>}
+      <a class="pill" data-primary data-event="linkedin_opened" href="https://www.linkedin.com/in/me/edit/forms/position/new/" target="_blank" rel="noopener noreferrer">{c.linkedin.expButton}</a>
+      <button type="button" class="text" data-go>Next</button>
+    </section>
+    <section data-screen="post" hidden>
+      <h3>{c.linkedin.postTitle}</h3>
+      <ol class="steps">{c.linkedin.postSteps.map((t) => <li>{t}</li>)}</ol>
+      <a class="pill" data-primary data-event="linkedin_opened" data-post-link href={`https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(post)}`} target="_blank" rel="noopener noreferrer">{c.linkedin.postButton}</a>
+      <button type="button" class="text" data-go>Next</button>
+    </section>
+  </>}
+  <section data-screen="phone" hidden>
+    <h3>{c.items.phone}</h3>
+    <a class="pill" data-primary href="/portal">{c.items.phone}</a>
+    <button type="button" class="text" data-go>Next</button>
+  </section>
+  <section data-screen="mou" hidden>
+    <h3>{c.items.mou}</h3>
+    <a class="pill" data-primary href="/portal/result">{c.items.mou}</a>
+    <button type="button" class="text" data-go>Next</button>
+  </section>
+  <section data-screen="email" hidden>
+    <h3>{c.items.email}</h3>
+    <a class="pill" data-primary href={next}>{c.items.email}</a>
+  </section>
+</div>
+<script>
+  import { renderAcceptCard } from '../../../lib/portal/accept-card';
+  import { shareUrl } from '../../../lib/portal/share-card';
+  import { track } from '../../../lib/portal/track';
+  const root = document.querySelector<HTMLElement>('[data-actions]');
+  const rv = document.querySelector<HTMLElement>('[data-cohort-reveal]');
+  if (root && rv) {
+    const $ = <T extends HTMLElement>(s: string) => root.querySelector<T>(s)!;
+    const screens = [...root.querySelectorAll<HTMLElement>('[data-screen]')];
+    let at = 0;
+    const show = (i: number) => { at = i; screens.forEach((s, j) => { s.hidden = j !== i; }); screens[i].querySelector<HTMLElement>('[data-primary]')?.focus({ preventScroll: true }); };
+    root.addEventListener('click', (e) => { if ((e.target as HTMLElement).closest('[data-go]') && at < screens.length - 1) show(at + 1); });
+    root.querySelectorAll<HTMLElement>('[data-event]').forEach((a) => a.addEventListener('click', () => track(a.dataset.event as 'linkedin_opened')));
+
+    // One-tap copies for the Experience entry.
+    root.querySelectorAll<HTMLElement>('[data-copy]').forEach((b) => b.addEventListener('click', async () => {
+      const s = b.querySelector<HTMLElement>('[data-copy-state]')!;
+      try { await navigator.clipboard.writeText(b.dataset.copy!); s.textContent = 'Copied'; } catch { s.textContent = 'Press and hold the text to copy'; }
+      setTimeout(() => { s.textContent = 'Copy'; }, 2500);
+    }));
+
+    // Share: the PNG is built when the popup shows. The tap only reads `file`, never awaits before navigator.share.
+    const btn = $<HTMLButtonElement>('[data-share-btn]');
+    const state = $('[data-share-state]');
+    const url = shareUrl();
+    let file: File | null = null;
+    let objectUrl = '';
+    const say = (t: string) => { state.textContent = t; };
+    const manual = () => {
+      $('[data-share-manual]').hidden = false;
+      $<HTMLAnchorElement>('[data-download]').href = objectUrl;
+      say('Save the image and paste this link into your post.');
+    };
+    const download = () => {
+      const a = document.createElement('a'); a.href = objectUrl; a.download = 'venn-accepted.png';
+      document.body.appendChild(a); a.click(); a.remove();
+      say('Image saved to your downloads.');
+    };
+    const copyLink = () => {
+      if (!navigator.clipboard?.writeText) { manual(); return; }
+      navigator.clipboard.writeText(url).then(() => say('Link copied.'), manual);
+    };
+    const fallback = () => { if (matchMedia('(pointer: fine)').matches) download(); else copyLink(); };
+    btn.addEventListener('click', () => {
+      if (!file) return;
+      track('share_tapped');
+      const data = { files: [file], url, title: 'Venn', text: root.dataset.post ?? '' };
+      if (typeof navigator.share === 'function' && navigator.canShare?.(data)) {
+        navigator.share(data).then(() => { track('share_done'); say('Shared.'); }, (e: Error) => { if (e?.name !== 'AbortError') fallback(); });
+      } else fallback();
+    });
+    let started = false;
+    const prepare = async () => {
+      if (started) return; started = true;
+      try {
+        const blob = await renderAcceptCard(JSON.parse(root.dataset.card!));
+        file = new File([blob], 'venn-accepted.png', { type: 'image/png' });
+        objectUrl = URL.createObjectURL(blob);
+        const img = $<HTMLImageElement>('[data-preview]'); img.src = objectUrl; img.alt = 'Your share card'; img.hidden = false;
+        btn.disabled = false;
+      } catch { say('The image did not load. Reload to try again.'); started = false; }
+    };
+    new MutationObserver(() => { if (rv.dataset.state === 'popup') void prepare(); }).observe(rv, { attributes: true, attributeFilter: ['data-state'] });
+    if (rv.dataset.state === 'popup') void prepare();
+  }
+</script>
+<style>
+  .ra section { display: grid; gap: var(--sp-16); justify-items: center; text-align: center; }
+  .ra section[hidden] { display: none; }
+  .ra h3 { margin: 0; font-size: var(--fs-22); font-weight: var(--fw-600); letter-spacing: var(--track-tight); }
+  .ra p { margin: 0; }
+  .body { font-size: var(--fs-17); }
+  .assoc, .note { font-size: var(--fs-15); color: var(--muted); }
+  .list, .steps { margin: 0; padding-left: var(--sp-24); display: grid; gap: var(--sp-8); text-align: left; font-size: var(--fs-15); }
+  .list { font-size: var(--fs-17); }
+  .preview { width: min(100%, 240px); height: auto; border-radius: var(--r-12); border: 1px solid var(--line); }
+  .preview[hidden], .manual[hidden] { display: none; }
+  .manual { display: grid; gap: var(--sp-8); justify-items: center; width: 100%; }
+  .manual input { width: 100%; box-sizing: border-box; min-height: 44px; padding: 0 var(--sp-12); font: inherit; font-size: 16px; border: 1px solid var(--line); border-radius: var(--r-12); background: var(--white); color: var(--ink); }
+  .pill { border: 0; cursor: pointer; font-family: inherit; }
+  .pill:disabled { opacity: 0.5; cursor: default; }
+  .text { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; padding: 0 var(--sp-16); border: 0; background: none; font: inherit; font-size: var(--fs-15); color: var(--ink); text-decoration: underline; cursor: pointer; }
+  .copy { display: grid; grid-template-columns: auto 1fr; gap: 0 var(--sp-12); align-items: center; width: 100%; min-height: 56px; padding: var(--sp-8) var(--sp-16); border: 1px solid var(--line); border-radius: var(--r-12); background: var(--panel); color: var(--ink); font: inherit; text-align: left; cursor: pointer; box-sizing: border-box; }
+  .copy .k { grid-row: 1; font-size: var(--fs-13); color: var(--muted); }
+  .copy .v { grid-column: 1 / -1; font-size: var(--fs-15); font-weight: var(--fw-600); overflow-wrap: anywhere; }
+  .copy .s { grid-row: 1; grid-column: 2; justify-self: end; font-size: var(--fs-13); color: var(--muted); }
+</style>
