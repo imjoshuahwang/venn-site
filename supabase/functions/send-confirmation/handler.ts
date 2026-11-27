@@ -72,7 +72,7 @@ function safeEqual(a: string, b: string): boolean {
 type Rest = (path: string, init?: RequestInit) => Promise<Response>;
 
 // The whole request path. index.ts wires it to Deno.serve and Deno.env; tests pass a fake env and stub fetch.
-export async function handle(req: Request, env: Env): Promise<Response> {
+export async function handle(req: Request, env: Env, deps: { resolve?: Parameters<typeof mailable>[1] } = {}): Promise<Response> {
   const SUPABASE_URL = env("SUPABASE_URL")!;
   const KEY = env("SUPABASE_SERVICE_ROLE_KEY")!;
   const rest: Rest = (path, init = {}) =>
@@ -117,7 +117,7 @@ export async function handle(req: Request, env: Env): Promise<Response> {
   const domain = email.slice(email.lastIndexOf("@") + 1).toLowerCase();
   if (TYPO_DOMAINS.has(domain)) return json({ skipped: "typo_domain" });
   if (ROLE_LOCALS.has(email.slice(0, email.lastIndexOf("@")).toLowerCase().split("+")[0])) return json({ skipped: "role_address" });
-  if (!(await mailable(domain))) return json({ skipped: "no_mx" });
+  if (!(await mailable(domain, deps.resolve))) return json({ skipped: "no_mx" });
 
   // Same address applied earlier: that application gets the email, not this one.
   if (row.email_key) {
