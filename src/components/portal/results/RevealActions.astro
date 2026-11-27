@@ -3,7 +3,7 @@ import { linkedinAllowed, fillOrg } from '../../../lib/portal/accept-card';
 import type { RevealPartner } from '../../../data/reveal-partners';
 // #227: the checklist after the reveal popup. One primary action per screen. Everything said comes from partner.copy.
 // The share card is rendered as soon as the popup shows, so the Share tap hands navigator.share a finished File.
-const { partner, org = '', birthday = null } = Astro.props as { partner: RevealPartner; org?: string; birthday?: string | null };
+const { cfg: partner, org = '', birthday = null } = Astro.props as { partner: RevealPartner; org?: string; birthday?: string | null };
 const c = partner.copy!;
 const li = linkedinAllowed(birthday);
 const items = [c.items.share, ...(li ? [c.items.experience] : []), c.items.phone, c.items.mou, c.items.email];
@@ -76,7 +76,7 @@ const next = `/portal/next-steps?partner=${partner.key}`;
     const $ = <T extends HTMLElement>(s: string) => root.querySelector<T>(s)!;
     const screens = [...root.querySelectorAll<HTMLElement>('[data-screen]')];
     let at = 0;
-    const show = (i: number) => { at = i; screens.forEach((s, j) => { s.hidden = j !== i; }); screens[i].querySelector<HTMLElement>('[data-primary]')?.focus({ preventScroll: true }); };
+    const show = (i: number) => { at = i; screens.forEach((s, j) => { s.hidden = j !== i; }); rv.dataset.step = screens[i].dataset.screen ?? ''; screens[i].querySelector<HTMLElement>('[data-primary]')?.focus({ preventScroll: true }); };
     root.addEventListener('click', (e) => { if ((e.target as HTMLElement).closest('[data-go]') && at < screens.length - 1) show(at + 1); });
     root.querySelectorAll<HTMLElement>('[data-event]').forEach((a) => a.addEventListener('click', () => track(a.dataset.event as 'linkedin_opened')));
 
@@ -144,7 +144,7 @@ const next = `/portal/next-steps?partner=${partner.key}`;
   .preview { width: min(100%, 240px); height: auto; border-radius: var(--r-12); border: 1px solid var(--line); }
   .preview[hidden], .manual[hidden] { display: none; }
   .manual { display: grid; gap: var(--sp-8); justify-items: center; width: 100%; }
-  .manual input { width: 100%; box-sizing: border-box; min-height: 44px; padding: 0 var(--sp-12); font: inherit; font-size: 16px; border: 1px solid var(--line); border-radius: var(--r-12); background: var(--white); color: var(--ink); }
+  .manual input { width: 100%; box-sizing: border-box; min-height: 44px; padding: 0 var(--sp-12); font: inherit; font-size: var(--fs-17); border: 1px solid var(--line); border-radius: var(--r-12); background: var(--white); color: var(--ink); }
   .pill { border: 0; cursor: pointer; font-family: inherit; }
   .pill:disabled { opacity: 0.5; cursor: default; }
   .text { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; padding: 0 var(--sp-16); border: 0; background: none; font: inherit; font-size: var(--fs-15); color: var(--ink); text-decoration: underline; cursor: pointer; }

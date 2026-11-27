@@ -9,11 +9,20 @@ const text = kind === 'peer' ? `${line} Venn matched me with another founder.` :
   <p class="share-line">{line}</p>
   <button type="button" class="pill" data-share-btn>Share</button>
   <span class="share-state" data-share-state role="status" aria-live="polite"></span>
+  <div class="share-manual" data-share-manual hidden>
+    <a data-download download="venn.png" href="#">Download image</a>
+    <input readonly value="https://joinvenn.org/" aria-label="Link to copy" />
+  </div>
 </div>
 <style>
   .share { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-12); margin-top: var(--sp-32); }
   .share-line { margin: 0; flex: 1 1 100%; font-size: var(--fs-15); color: var(--muted); }
   .share-state { font-size: var(--fs-15); }
+  .share-manual { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-12); flex: 1 1 100%; }
+  .share-manual[hidden] { display: none; }
+  .share-manual a { display: inline-flex; align-items: center; min-height: 44px; color: var(--ink); }
+  .share-manual input { flex: 1 1 200px; min-height: 44px; padding: 0 var(--sp-12); font: inherit; font-size: var(--fs-17); border: 1px solid var(--line); border-radius: var(--r-12); background: var(--white); color: var(--ink); box-sizing: border-box; }
+  button.pill:disabled { opacity: 0.5; cursor: default; }
   button.pill { border: 0; cursor: pointer; font-family: inherit; }
 </style>
 <script>
@@ -21,24 +30,28 @@ const text = kind === 'peer' ? `${line} Venn matched me with another founder.` :
   document.querySelectorAll<HTMLElement>('[data-share]').forEach((root) => {
     const btn = root.querySelector<HTMLButtonElement>('[data-share-btn]')!;
     const state = root.querySelector<HTMLElement>('[data-share-state]')!;
-    btn.addEventListener('click', async () => {
-      const url = shareUrl();
-      let file: File | null = null;
-      try {
-        const blob = await renderCard(cardSpec({ name: root.dataset.name, label: root.dataset.label }));
-        file = new File([blob], 'venn.png', { type: 'image/png' });
-        if (navigator.canShare?.({ files: [file] })) {
-          await navigator.share({ files: [file], url, title: 'Venn', text: root.dataset.text });
-          return;
-        }
-      } catch (e) {
-        if ((e as Error).name === 'AbortError') return;
-      }
-      try {
-        await navigator.clipboard.writeText(url);
-        state.textContent = 'Copied';
-        setTimeout(() => (state.textContent = ''), 2500);
-      } catch {}
+    const manual = root.querySelector<HTMLElement>('[data-share-manual]')!;
+    const download = root.querySelector<HTMLAnchorElement>('[data-download]')!;
+    const url = shareUrl();
+    let file: File | null = null;
+    const say = (t: string) => { state.textContent = t; };
+    const showManual = () => { manual.hidden = false; say('Save the image and paste this link into your post.'); };
+    // The card is built before any tap, so the tap itself only reads `file` and never awaits a render (iOS drops the user activation after one).
+    btn.disabled = true;
+    renderCard(cardSpec({ name: root.dataset.name, label: root.dataset.label })).then((blob) => {
+      file = new File([blob], 'venn.png', { type: 'image/png' });
+      download.href = URL.createObjectURL(blob);
+      btn.disabled = false;
+    }, () => { btn.disabled = false; showManual(); });
+    const copyLink = () => {
+      if (!navigator.clipboard?.writeText) { showManual(); return; }
+      navigator.clipboard.writeText(url).then(() => { say('Copied'); setTimeout(() => say(''), 2500); }, showManual);
+    };
+    btn.addEventListener('click', () => {
+      const data = file ? { files: [file], url, title: 'Venn', text: root.dataset.text } : null;
+      if (data && typeof navigator.share === 'function' && navigator.canShare?.(data)) {
+        navigator.share(data).catch((e: Error) => { if (e?.name !== 'AbortError') copyLink(); });
+      } else copyLink();
     });
   });
 </script>

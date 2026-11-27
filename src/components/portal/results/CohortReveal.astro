@@ -7,6 +7,7 @@ import RevealActions from './RevealActions.astro';
 // It auto-plays only until the ceremony is done (`done` = ceremony_done_at set); after that the letter shows with a small Replay.
 const { partner, resultId, done = false, stub = false, org = '', birthday = null } = Astro.props as { partner: RevealPartner; resultId: number; done?: boolean; stub?: boolean; org?: string; birthday?: string | null };
 const stat = statLine();
+const hasCopy = Boolean(partner.copy);
 const title = popupTitle(partner);
 ---
 <div class="rv" data-cohort-reveal data-state="idle" data-stat-text={stat} data-result-id={resultId} data-done={done ? '1' : '0'} data-stub={stub ? '1' : '0'} data-logo={partner.logo} hidden>
@@ -22,8 +23,8 @@ const title = popupTitle(partner);
     <img src={partner.logo} alt={`${partner.name} logo`} width="200" height="120" data-popup-logo />
     <h2 id="rv-title" data-popup-title>{title}</h2>
     <p class="line" data-popup-line>{partner.line}</p>
-    <div data-reveal-extra>{partner.copy && <RevealActions partner={partner} org={org} birthday={birthday} />}</div>
-    {!partner.copy && <a class="pill go" href="/portal" data-reveal-next>Go to my portal</a>}
+    <div data-reveal-extra>{hasCopy && <RevealActions cfg={partner} org={org} birthday={birthday} />}</div>
+    {!hasCopy && <a class="pill go" href="/portal" data-reveal-next>Go to my portal</a>}
   </div>
 </div>
 <script>
@@ -41,7 +42,7 @@ const title = popupTitle(partner);
     const skipped = new Promise<void>((r) => { skipNow = r; });
     const wait = (ms: number) => Promise.race([new Promise((r) => setTimeout(r, ms)), skipped]);
     const set = (s: string) => { root.dataset.state = s; };
-    const inertOthers = () => document.querySelectorAll('body > *:not(main), main > *:not([data-cohort-reveal])').forEach((el) => { (el as HTMLElement).inert = true; });
+    const inertOthers = () => document.querySelectorAll('body > *:not(main), main > *:not([data-cohort-reveal])').forEach((el) => { (el as HTMLElement).inert = true; (el as HTMLElement).style.visibility = 'hidden'; });
     const open = () => { root.hidden = false; document.documentElement.style.overflow = 'hidden'; };
 
     // Finish is sent once, when the popup is reached. A failed POST never blocks; one beacon retry on pagehide.
@@ -143,6 +144,7 @@ const title = popupTitle(partner);
   .stood { margin: 0; padding-bottom: 8svh; font-size: var(--fs-28); font-weight: var(--fw-800); letter-spacing: var(--track-tight); opacity: 0; transition: opacity var(--dur-4) var(--ease); }
   .rv[data-state='stood'] .stood { opacity: 1; }
   .story { transition: opacity var(--dur-4) var(--ease); }
+  .rv[data-step]:not([data-step='intro']) [data-popup-logo], .rv[data-step]:not([data-step='intro']) [data-popup-title] { display: none; }
   .rv[data-state='popup'] .story { opacity: 0; }
   .popup { position: relative; width: min(100%, 420px); display: grid; justify-items: center; gap: var(--sp-16); padding: var(--sp-32) var(--sp-24); border-radius: var(--r-24); background: #fff; color: var(--ink); text-align: center; max-height: 100%; overflow-y: auto; box-sizing: border-box; animation: up var(--dur-4) var(--ease) both; z-index: 2; }
   .popup[hidden] { display: none; }

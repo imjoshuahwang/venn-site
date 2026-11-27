@@ -56,8 +56,8 @@ export function ageOn(birthday: string | null | undefined, today: Date = new Dat
   if (today.getUTCMonth() + 1 < mo || (today.getUTCMonth() + 1 === mo && today.getUTCDate() < d)) age--;
   return age >= 0 && age < 130 ? age : null;
 }
-/** Hidden only when we know the birthday and it is under 16. Main has no birthday column yet (#223 adds one): until then nobody is known, so nobody is hidden. */
-export const linkedinAllowed = (birthday: string | null | undefined, today?: Date) => { const a = ageOn(birthday, today); return a === null || a >= 16; };
+/** LinkedIn's minimum age is 16: shown only when the birthday is known and the student is 16 or older. An unknown birthday hides it (C2 default; main has no birthday column yet, #223). */
+export const linkedinAllowed = (birthday: string | null | undefined, today?: Date) => { const a = ageOn(birthday, today); return a !== null && a >= 16; };
 
 export const composerUrl = (text: string) => `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(text)}`;
 export const EXPERIENCE_URL = 'https://www.linkedin.com/in/me/edit/forms/position/new/';
