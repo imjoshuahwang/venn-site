@@ -4,7 +4,7 @@ import { execSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-// Cloudflare's always-pass test keys must never ship; a production build with no key configured has to fail closed instead.
+// Run with `npm run test:build` (full production build, kept out of `npm test`). Cloudflare's always-pass test keys must never ship; a production build with no key configured has to fail closed instead.
 function walk(dir, out = []) {
   // Skip symlinks: the Vercel adapter links node_modules into the function dir, and that link can dangle in a worktree.
   for (const e of readdirSync(dir, { withFileTypes: true })) {

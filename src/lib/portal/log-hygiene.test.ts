@@ -11,3 +11,10 @@ for (const f of FILES) {
     for (const l of lines) assert.doesNotMatch(l, /@[a-z0-9.-]+\.[a-z]{2,}|\.email\b|\$\{(to|email|parent_email)\}|applications\.email/i, l);
   });
 }
+
+// The match migration must not log or notify with addresses: no raise/notice text carrying an email, and no raw token column.
+test('matches migration logs no email and stores no raw token', () => {
+  const sql = readFileSync('supabase/migrations/20261127020000_matches.sql', 'utf8');
+  for (const l of sql.split('\n').filter((x) => /raise (notice|warning|info|log)|\bRAISE\s+EXCEPTION/i.test(x))) assert.doesNotMatch(l, /email|phone|%I|%L/i, l);
+  assert.doesNotMatch(sql, /\b(token|raw_token)\s+text\b/i);
+});

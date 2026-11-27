@@ -15,7 +15,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
   context.locals.supabase = createServerClient(context);
   context.locals.user = await getUser(context);
 
-  if (!context.locals.user && !isPublicPortalPath(pathname)) {
+  // Dev only: `?stub=` fixtures (result.astro) render without a session. import.meta.env.DEV is false in every build.
+  const devStub = import.meta.env.DEV && context.url.searchParams.has('stub');
+  if (!context.locals.user && !devStub && !isPublicPortalPath(pathname)) {
     const n = safeNext(pathname + context.url.search);
     return done(context.redirect(n ? `/portal/login?next=${encodeURIComponent(n)}` : '/portal/login', 302));
   }

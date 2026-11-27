@@ -344,7 +344,7 @@
     - expect-content Sign in with a different email
     - expect-content contact@joinvenn\.org
     - screenshot none
-- name: cohort-guiding-questions
+- name: cohort-questions
   on: /portal/login
   steps:
     - sign-in contact+portal-cohort@joinvenn.org

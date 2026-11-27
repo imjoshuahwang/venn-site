@@ -1,4 +1,4 @@
-// #172: six outlet cohorts exist as additive inserts with 6 slides each.
+// #172: six outlet cohorts exist as additive inserts with 6 slides each, (slides are row data only; the slideshow UI is gone, #226).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -26,3 +26,4 @@ test('all six outlets exist with six slides each and no contact info', () => {
     assert.doesNotMatch(all, /Venn article/i);
   }
 });
+

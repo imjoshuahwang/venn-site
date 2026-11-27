@@ -65,6 +65,11 @@ for (const [name, engine, slug] of PHONES) {
       assert.equal(await page.locator('[data-guiding] [data-save]').isVisible(), false, 'save hidden when closed on load');
       assert.equal(await page.locator('[data-guiding] textarea[name=goal]').isDisabled(), true);
 
+      const rctx = await browser.newContext({ ...devices[name], reducedMotion: 'reduce' });
+      const rp = await rctx.newPage();
+      await rp.goto(url('state=signed'));
+      assert.equal(await rp.locator('[data-guiding]').isVisible(), true, 'guiding renders under reduced motion');
+      assert.equal(await rp.locator('[data-track]').count(), 0, 'slideshow is gone');
       assert.deepEqual(errors, []);
     } finally { await browser.close(); }
   });

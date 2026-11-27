@@ -1,6 +1,6 @@
 // Walks the four results journeys on PROD at phone (390x844) and tablet (820x1180) width, as the fictional is_test applicants (#192). Usage: npm run qa:results [-- --out DIR] [--only aws,quadron] [--device phone|tablet]
-// Each journey: action link (same generateLink + redirect the email uses) -> set password -> user in auth.users -> consent -> result -> fresh-context sign-in with that password.
-// Auth, link and routing problems FAIL.
+// Each journey: action link (same generateLink + redirect the email uses) -> set password -> user in auth.users -> consent -> result -> reveal Play -> fresh-context sign-in with that password.
+// Content in the slides/mailto area belongs to other builders, so a mismatch there is reported as MISMATCH, not a failure. Auth, link and routing problems FAIL.
 // Run after `node scripts/portal/seed-test-results.mjs`. Never touches a non-test row: it refuses any email whose application is not is_test.
 import { mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -141,14 +141,14 @@ export async function walk({ slug, sb, browser, outDir, makeLink, device = 'phon
       await p.waitForTimeout(1500);
     }
     if (!p.url().includes('/portal/result')) await p.goto(`${SITE}/portal/result`, { waitUntil: 'networkidle' });
-    await audit('result', null);
+    await audit('result', slug === 'aws' || slug === 'quadron' ? '[data-reveal-play]' : null);
     await shot('result');
     const body = await text();
     check(slug === 'peer' ? 'result page has no error state' : 'result page shows the test letter, no error state', (slug === 'peer' || body.includes(`Test letter for ${slug}`)) && !(await p.locator('[role=alert]:visible').count()), '');
 
     const J = JOURNEYS[slug];
     if (slug === 'aws' || slug === 'quadron') {
-      check('cohort page present', (await p.locator('[data-cohort]').count()) > 0, '');
+      check('reveal Play button present', (await p.locator('[data-reveal-play]').count()) > 0, '', true);
     } else if (slug === 'peer') {
       check(`partner ${J.partner} shown`, (await p.locator('[data-peer]').count()) > 0 && body.includes(J.partner), '');
       check('share button present', (await p.locator('[data-share-btn]').count()) > 0, '');
