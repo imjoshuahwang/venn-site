@@ -52,8 +52,8 @@
 .parent-request label { font-size: var(--fs-15); }
 .parent-request [data-parent-error] { margin: 0; font-size: var(--fs-15); color: var(--err); }
 .parent-request .pill { margin-top: var(--sp-12); border: 0; font-family: inherit; cursor: pointer; }
-.parent-request input, .text-josh input[type='tel'] { width: 100%; box-sizing: border-box; height: 44px; padding: 0 var(--sp-12); border: 1px solid var(--line); border-radius: var(--r-12); background: var(--white); color: var(--ink); font: inherit; font-size: var(--fs-17); }
-.parent-request input:focus-visible, .text-josh input[type='tel']:focus-visible { border-color: var(--ink); outline: 2px solid var(--ink); outline-offset: 1px; }
+.parent-request input, .text-josh input[type='tel'] { width: 100%; box-sizing: border-box; height: 44px; padding: 0 var(--sp-12); border: 1px solid var(--line); border-radius: var(--r-12); background: var(--white); background-clip: padding-box; -webkit-appearance: none; appearance: none; box-shadow: none; color: var(--ink); font: inherit; font-size: var(--fs-17); }
+.parent-request input:focus-visible, .text-josh input[type='tel']:focus-visible { border-color: var(--ink); outline: 2px solid var(--ink); outline-offset: 1px; box-shadow: none; }
 .parent-request input:disabled, .text-josh input[type='tel']:disabled { color: var(--muted); }
 /* Ceremony (#117). Scoped under .ceremony so it never touches the result pages' own .card styles. */
 @media (prefers-reduced-motion: reduce) { .ceremony * { transition: none !important; animation: none !important; } }

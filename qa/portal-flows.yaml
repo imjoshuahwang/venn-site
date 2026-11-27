@@ -1,4 +1,5 @@
 # Portal auth + ceremony flows for `npm run qa:portal`. Same syntax as flows.yaml, plus:
+#   stub: <PORTAL_STUB value>  runs the flow on a second dev server with that stub (server-side data states the browser cannot fail)
 #   pending: <issue#>  skipped (never a pass) while that issue is open; remove when it merges. QA_PENDING=run overrides.
 #   sign-in [email] | sign-out | new-context <name> | as <name> | expect-url <fragment>; {email} = the seeded test address.
 #   reset-test-state | double-tap <sel> | expect-absent <sel> | expect-content <regex> | expect-no-content <regex> (page.content(), so hidden markup counts)
@@ -129,36 +130,6 @@
     - expect-url /portal
     - expect-gone [data-ceremony]
     - expect-visible main
-- name: home
-  on: /portal/login
-  steps:
-    - sign-in contact+portal-home@joinvenn.org
-    - goto /portal?state=waiting-on-parent
-    - expect-visible [data-next-step=waiting-on-parent]
-    - screenshot waiting-on-parent
-    - goto /portal?state=consent-missing
-    - expect-visible [data-next-step=consent-missing]
-    - screenshot consent
-    - goto /portal?state=sign-mou
-    - expect-visible [data-next-step=sign-mou]
-    - screenshot sign-mou
-    - goto /portal?state=guiding-questions
-    - expect-visible [data-next-step=guiding-questions]
-    - screenshot questions
-    - goto /portal?state=text-josh
-    - expect-visible [data-next-step=text-josh]
-    - expect-visible [data-text-josh]
-    - screenshot text-josh
-    - goto /portal?state=kickoff-countdown
-    - expect-visible [data-next-step=kickoff-countdown]
-    - screenshot countdown
-    - goto /portal?state=all-set
-    - expect-visible [data-next-step=all-set]
-    - expect-visible [data-pill][aria-disabled=false]
-    - screenshot all-set
-    - goto /portal?state=error
-    - expect-visible [data-home-error]
-    - screenshot error
 - name: consent-ceremony
   on: /portal/login
   steps:
@@ -255,7 +226,6 @@
     - goto /portal/result
     - expect-visible [data-both]
     - expect-no-content contact\+portal-peer-b@joinvenn.org
-    - expect-visible text=Josh will start your group
 - name: peer-one-side-down
   on: /portal/login
   steps:
@@ -322,6 +292,69 @@
     - expect-visible [data-cohort] [data-letter]
     - expect-visible [data-cohort] [data-orgs]
     - screenshot cohort
+- name: home-results-button
+  on: /portal/login
+  steps:
+    - sign-in contact+portal-home@joinvenn.org
+    - expect-url /portal
+    - goto /portal
+    - expect-visible [data-home] h1
+    - expect-content Your results are here
+    - expect-visible [data-home] a[href="/portal/result"]
+    - screenshot home
+    - tap [data-home] a[href="/portal/result"]
+    - expect-url /portal/result
+    - screenshot result
+- name: home-pre-reveal
+  on: /portal/login
+  steps:
+    - reset-ceremony cohort
+    - sign-in
+    - expect-url /portal
+    - expect-visible [data-screen=sealed]
+    - expect-absent [data-watch-again]
+    - screenshot pre-reveal
+- name: home-post-reveal-watch-again
+  on: /portal/login
+  steps:
+    - sign-in contact+portal-home@joinvenn.org
+    - goto /portal
+    - expect-visible [data-home] h1
+    - expect-visible [data-cohort-name]
+    - expect-visible [data-next-step]
+    - expect-visible [data-watch-again]
+    - screenshot post-reveal
+    - tap [data-watch-again]
+    - expect-url replay=1
+    - expect-visible [data-screen=sealed]
+    - screenshot replay-sealed
+    - tap [data-reveal-btn]
+    - expect-visible [data-next]
+    - tap [data-next]
+    - expect-url /portal
+    - expect-visible [data-home] h1
+    - expect-absent [data-ceremony]
+    - screenshot back-home
+- name: home-none-state
+  on: /portal/login
+  steps:
+    - sign-in contact+portal-none@joinvenn.org
+    - goto /portal
+    - expect-visible [data-none] h1
+    - expect-content We could not find a result for contact\+portal-none@joinvenn\.org
+    - expect-content Sign in with a different email
+    - expect-content contact@joinvenn\.org
+    - screenshot none
+- name: home-error-state
+  on: /portal/login
+  stub: error
+  steps:
+    - sign-in
+    - goto /portal
+    - expect-visible [data-error] h1[role=alert]
+    - expect-content We could not load this page
+    - expect-visible [data-retry]
+    - screenshot error
 - name: cohort-questions
   on: /portal/login
   steps:

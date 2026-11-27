@@ -78,13 +78,13 @@ export function resetCeremony(slug, execFile = execFileSync) {
 }
 
 // ---- runner ----
-const DEVICES = ['iPhone SE', 'iPhone 15', 'Pixel 7'];
+const DEVICES = ['iPhone SE', 'iPhone 15', 'Pixel 7', 'Galaxy S9+'];
 const CLS_PORTAL = 0.05;
 const unq = (s) => s.trim().replace(/^(["'])(.*)\1$/, '$2');
 
 // Starts astro dev wired to the local stack; resolves { url, stop }.
-async function startDev(env) {
-  const port = 4333, url = `http://127.0.0.1:${port}`;
+async function startDev(env, port = 4333) {
+  const url = `http://127.0.0.1:${port}`;
   const child = spawn('npx', ['astro', 'dev', '--host', '127.0.0.1', '--port', String(port)], { env: { ...process.env, ...env, PORTAL_JOSH_PHONE: process.env.PORTAL_JOSH_PHONE || '+16505550100' }, stdio: 'ignore' });
   for (let i = 0; i < 120; i++) {
     if (await fetch(url).then(() => true, () => false)) return { url, stop: () => child.kill() };
@@ -202,16 +202,19 @@ export async function main(argv = process.argv.slice(2)) {
   const browsers = {};
   for (const n of new Set(devices.map((d) => d.browser))) browsers[n] = await { chromium, webkit }[n].launch();
   let failed = 0;
+  const stubs = {}; // `stub: error` flows read server-side data, so the browser cannot fail it: they run on a second dev server with PORTAL_STUB set
   try {
     for (const flow of run) for (const d of devices) {
       clearRateLimits();
-      const r = await runPortalFlow({ flow, device: d, browser: browsers[d.browser], base, login });
+      if (flow.stub && !stubs[flow.stub]) stubs[flow.stub] = await startDev({ ...localSupabaseEnv(execFileSync('supabase', ['status', '-o', 'json'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })), PORTAL_STUB: flow.stub }, 4334);
+      const r = await runPortalFlow({ flow, device: d, browser: browsers[d.browser], base: flow.stub ? stubs[flow.stub].url : base, login });
       if (!r.pass) failed++;
       console.log(`${r.pass ? 'PASS' : 'FAIL'}  ${flow.name}  ${d.name}  ${r.details}`);
     }
   } finally {
     await Promise.all(Object.values(browsers).map((b) => b.close()));
     dev?.stop();
+    for (const x of Object.values(stubs)) x.stop();
   }
   for (const f of skipped) for (const d of devices) console.log(`PENDING  ${f.name}  ${d.name}  ${f.reason}`);
   console.log(`\n${run.length * devices.length - failed} pass, ${failed} fail, ${skipped.length * devices.length} pending`);
