@@ -67,6 +67,12 @@ begin
   select count(*) into n from public.parent_consent_context(t);
   if n <> 1 then raise exception 'signed token lost its context'; end if;
 
+  -- an expired unsigned token returns nothing
+  update public.parent_consents set signed_at = null, expires_at = now() - interval '1 minute' where user_id = hs;
+  select count(*) into n from public.parent_consent_context(t);
+  if n <> 0 then raise exception 'expired token returned a row'; end if;
+  update public.parent_consents set signed_at = now() where user_id = hs;
+
   -- no result with a cohort yet: no row (page falls back to generic copy)
   delete from public.results where application_id = app;
   insert into public.results (application_id, outcome, status) values (app, 'peer', 'approved');

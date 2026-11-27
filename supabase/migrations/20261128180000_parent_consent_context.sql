@@ -1,5 +1,5 @@
 -- Parent page context (#284): the child's first name and cohort name for a valid, unsigned or signed token. Nothing else about the child (#239).
--- parent_consent_state keeps returning text; sign_parent_consent still calls it. Empty for an unknown token.
+-- parent_consent_state keeps returning text; sign_parent_consent still calls it. Empty for an unknown or expired unsigned token.
 create function public.parent_consent_context(p_token text) returns table (first_name text, cohort_name text)
 language sql stable security definer set search_path = public, pg_temp as $$
   select split_part(btrim(a.name), ' ', 1), c.name
@@ -9,6 +9,7 @@ language sql stable security definer set search_path = public, pg_temp as $$
   join public.results r on r.application_id = a.id
   join public.cohorts c on c.id = r.cohort_id
   where pc.token_hash = encode(sha256(convert_to(p_token, 'utf8')), 'hex')
+    and (pc.signed_at is not null or pc.expires_at > now())
   order by r.created_at desc
   limit 1
 $$;
