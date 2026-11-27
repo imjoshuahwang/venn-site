@@ -1,0 +1,216 @@
+---
+export const prerender = false;
+import Portal from '../../../layouts/Portal.astro';
+// Throwaway prototype (#244): the whole match moment on fixture data, no DB, no API, no send. Public on purpose so the PR preview opens it.
+const you = { name: 'Maya', org: 'Lincoln HS Robotics Club', region: 'Texas' };
+const them = { name: 'Daniel', org: 'Ohio STEM Collective', region: 'Ohio', field: 'Robotics' };
+const fit = {
+  you_do: 'You run a robotics club of 14 that builds one working tool a term.',
+  they_do: 'Daniel leads a STEM collective that gets teams from idea to a real user.',
+  together: ['Swap how each club picks a first project.', 'Share one build night over video.'],
+  common: ['Robotics', 'Small teams', 'Teaching tools'],
+  ask: 'How does your club get new members to finish a first build?',
+};
+const draft = `Hi Daniel, I'm Maya from Lincoln HS Robotics Club in Texas. I saw your collective gets teams to a real user, and we are working on that exact step. Could we compare how our clubs pick a first project?`;
+const tiles = ['Debate, Kenya', 'Film, Texas', 'Robotics, Ohio', 'Music, India', 'Biology, Brazil', 'Writing, Germany', 'Law, Nigeria', 'Chess, Poland', 'Design, Japan', 'Climate, Chile', 'Coding, Texas', 'Math, Ghana', 'Theater, Spain', 'Finance, Peru'];
+const config = JSON.stringify({ you, them, tiles, draft });
+const line = 'Searching 223 partner organizations across 21 countries, reaching 500,320 students';
+---
+<Portal title="Match prototype">
+  <div class="m" data-m data-config={config} data-beat="stage">
+    <section class="stage" data-stage>
+      <p class="line" data-line aria-live="polite" data-full={line}></p>
+      <div class="pair" data-pair>
+        <button class="half l" type="button" data-left aria-label="You">
+          <span class="who" data-who-l hidden><b>{you.name}</b><i>{you.org}</i><i>{you.region}</i></span>
+        </button>
+        <button class="half r" type="button" data-right aria-label="Your match">
+          <span class="win" data-win><span class="strip" data-strip></span></span>
+          <span class="who" data-who-r hidden><b>{them.name}</b><i>{them.org}</i><i>{them.region}</i></span>
+        </button>
+        <span class="tag tl" data-tag-l>this is you</span>
+        <span class="tag tr" data-tag-r>this is them</span>
+      </div>
+    </section>
+
+    <section class="card" data-card hidden>
+      <header class="chip"><b>{them.name}</b><span>{them.org}, {them.region}</span></header>
+      <dl>
+        <dt>You do</dt><dd>{fit.you_do}</dd>
+        <dt>They do</dt><dd>{fit.they_do}</dd>
+        <dt>Together</dt><dd><ul>{fit.together.map((t) => <li>{t}</li>)}</ul></dd>
+        <dt>In common</dt><dd class="tags">{fit.common.map((t) => <span>{t}</span>)}</dd>
+        <dt>Ask</dt><dd>{fit.ask}</dd>
+      </dl>
+      <button class="pill" type="button" data-to-compose>Let's write an email together</button>
+    </section>
+
+    <form class="card" data-compose hidden>
+      <label>Your message<textarea name="msg" rows="7" data-msg maxlength="600">{draft}</textarea></label>
+      <label>What I want to learn<input name="learn" data-learn placeholder="One thing" maxlength="120" /></label>
+      <button class="pill" type="submit">Send</button>
+    </form>
+
+    <section class="card note" data-end hidden role="status">
+      <h1 data-end-h></h1>
+      <p data-end-p></p>
+      <button class="pill ghost" type="button" data-end-btn hidden></button>
+    </section>
+
+    <nav class="sw" aria-label="Prototype states">
+      <button type="button" data-go="replay">replay</button>
+      <button type="button" data-state="requested">requested</button>
+      <button type="button" data-state="accepted">accepted</button>
+      <button type="button" data-state="declined">declined</button>
+      <button type="button" data-state="expired">expired</button>
+      <button type="button" data-state="unmatched">unmatched</button>
+    </nav>
+  </div>
+</Portal>
+
+<style is:global>
+  .m { --forest: #1d2823; --forest-2: #2a3832; --mist: #dfe8e3; display: grid; gap: var(--sp-16); padding-bottom: var(--sp-64); }
+  .m [hidden] { display: none !important; }
+  .m .stage { background: var(--forest); color: var(--mist); border-radius: var(--r-20); padding: var(--sp-32) var(--sp-16); min-height: 560px; display: grid; grid-template-rows: auto 1fr; gap: var(--sp-24); overflow: hidden; transition: opacity var(--dur-3) var(--ease), min-height var(--dur-3) var(--ease); }
+  .m .line { margin: 0; min-height: 4.2em; font-size: var(--fs-17); line-height: 1.4; color: var(--mist); transition: opacity var(--dur-3); }
+  .m .pair { position: relative; display: flex; justify-content: center; align-items: center; gap: 8px; transition: transform var(--dur-3) var(--ease); }
+  .m .half { all: unset; box-sizing: border-box; width: 132px; height: 264px; background: var(--forest-2); position: relative; overflow: hidden; cursor: pointer; display: grid; place-items: center; text-align: center; transition: transform var(--dur-3) var(--ease), opacity var(--dur-3) var(--ease); }
+  .m .half:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
+  .m .half.l { border-radius: 0 132px 132px 0; background: #35463f; }
+  .m .half.r { border-radius: 132px 0 0 132px; }
+  .m .win { position: absolute; inset: 0; overflow: hidden; -webkit-mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent); mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent); }
+  .m .strip { position: absolute; left: 0; right: 0; top: 0; display: grid; will-change: transform; }
+  .m .strip i { display: grid; place-items: center; height: 56px; padding: 0 20px; font-style: normal; font-size: var(--fs-15); font-weight: var(--fw-600); color: var(--mist); opacity: 0.85; }
+  .m .who { position: absolute; inset: 0; display: grid; align-content: center; justify-items: center; gap: 4px; padding: 0 20px; font-size: var(--fs-13); }
+  .m .who b { font-size: var(--fs-22); font-weight: var(--fw-800); }
+  .m .who i { font-style: normal; opacity: 0.8; line-height: 1.25; }
+  .m .tag { position: absolute; bottom: -40px; font-size: var(--fs-15); font-weight: var(--fw-600); opacity: 0; transition: opacity var(--dur-3); }
+  .m .tl { left: 4px; } .m .tr { right: 4px; }
+  .m[data-beat="rise"] .tag, .m[data-beat="lift"] .tag { opacity: 1; }
+  .m[data-beat="rise"] .pair, .m[data-beat="lift"] .pair { transform: translateY(-24px); }
+  .m[data-beat="lift"] .half.l, .m[data-beat="lift"] .line { opacity: 0; }
+  .m[data-beat="lift"] .tag { opacity: 0; }
+  .m[data-beat="lift"] .stage { opacity: 0; pointer-events: none; }
+  .m[data-beat="card"] .stage, .m[data-beat="compose"] .stage, .m[data-beat="end"] .stage { display: none; }
+  .m .card { background: var(--panel); border-radius: var(--r-20); padding: var(--sp-24); display: grid; gap: var(--sp-16); justify-items: start; animation: mfade var(--dur-3) var(--ease); }
+  .m .chip { display: grid; gap: 2px; } .m .chip b { font-size: var(--fs-28); font-weight: var(--fw-800); letter-spacing: -0.02em; } .m .chip span { color: var(--muted); font-size: var(--fs-15); }
+  .m dl { margin: 0; display: grid; gap: var(--sp-8); }
+  .m dt { font-size: var(--fs-13); font-weight: var(--fw-600); color: var(--muted); margin-top: var(--sp-8); }
+  .m dd { margin: 0; color: var(--ink); line-height: 1.4; } .m ul { margin: 0; padding-left: 1.1em; }
+  .m .tags { display: flex; flex-wrap: wrap; gap: 6px; } .m .tags span { background: var(--green); border-radius: var(--r-pill); padding: 4px 12px; font-size: var(--fs-13); }
+  .m .pill { all: unset; box-sizing: border-box; cursor: pointer; background: var(--ink); color: #fff; border-radius: var(--r-pill); padding: 14px 22px; min-height: 48px; font-weight: var(--fw-600); text-align: center; }
+  .m .pill.ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink); }
+  .m label { display: grid; gap: 6px; width: 100%; font-size: var(--fs-13); font-weight: var(--fw-600); color: var(--muted); }
+  .m textarea, .m input { font: inherit; font-size: 16px; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: var(--r-12); padding: 12px; width: 100%; box-sizing: border-box; }
+  .m .note h1 { margin: 0; font-size: var(--fs-28); font-weight: var(--fw-800); letter-spacing: -0.02em; line-height: 1.15; } .m .note p { margin: 0; color: var(--body); }
+  .m .sw { position: sticky; bottom: 0; display: flex; gap: 6px; overflow-x: auto; padding: 10px 2px calc(10px + env(safe-area-inset-bottom)); background: linear-gradient(transparent, var(--white) 30%); }
+  .m .sw button { all: unset; cursor: pointer; flex: none; font-size: var(--fs-13); font-weight: var(--fw-600); padding: 10px 14px; min-height: 24px; border-radius: var(--r-pill); background: var(--panel); color: var(--ink); }
+  .m .sw button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+  @keyframes mfade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .m *, .m { animation: none !important; transition: opacity var(--dur-2) !important; } .m .pair { transform: none !important; } }
+</style>
+
+<script is:inline>
+  (() => {
+    const root = document.querySelector('[data-m]');
+    const { them, tiles } = JSON.parse(root.dataset.config);
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const $ = (s) => root.querySelector(s);
+    const ROW = 56;
+    const full = $('[data-line]').dataset.full;
+    const params = new URLSearchParams(location.search);
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    let run = 0; // bumps on every jump so a stale timeline stops itself
+    const seq = [...tiles.slice(0, 11), ...tiles.slice(0, 11), `${them.field}, ${them.region}`];
+    const strip = $('[data-strip]');
+    seq.forEach((t) => { const i = document.createElement('i'); i.textContent = t; strip.appendChild(i); });
+    const finalY = -(seq.length - 1) * ROW + (264 / 2 - ROW / 2);
+
+    const beat = (name) => {
+      root.dataset.beat = name;
+      $('[data-card]').hidden = name !== 'card';
+      $('[data-compose]').hidden = name !== 'compose';
+      $('[data-end]').hidden = name !== 'end';
+      $('[data-stage]').hidden = false;
+    };
+    const mark = (key, val) => root.querySelectorAll('.sw button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset[key] === val)));
+    const setLine = (s) => { $('[data-line]').textContent = s; };
+    const stripAt = (y) => { strip.style.transform = `translateY(${y}px)`; };
+
+    async function type(id) {
+      if (reduced) return setLine(full);
+      for (let i = 1; i <= full.length; i++) { if (id !== run) return; setLine(full.slice(0, i)); await sleep(18); }
+    }
+    async function spin(id) {
+      if (reduced) { stripAt(finalY); return; }
+      const a = strip.animate([{ transform: 'translateY(0)' }, { transform: `translateY(${finalY - 10}px)`, offset: 0.93 }, { transform: `translateY(${finalY}px)` }], { duration: 3400, easing: 'cubic-bezier(0.15, 0.7, 0.2, 1)', fill: 'forwards' });
+      // a click on every tile that passes the centre
+      let last = -1;
+      const tick = () => {
+        if (id !== run || a.playState !== 'running') return;
+        const y = new DOMMatrixReadOnly(getComputedStyle(strip).transform).m42;
+        const n = Math.round(-y / ROW);
+        if (n !== last) { last = n; try { navigator.vibrate && navigator.vibrate(6); } catch {} }
+        requestAnimationFrame(tick);
+      };
+      tick();
+      await a.finished.catch(() => {});
+      strip.getAnimations().forEach((x) => { x.commit && x.commit(); x.cancel(); });
+      stripAt(finalY);
+    }
+    function showWho() {
+      $('[data-who-l]').hidden = false; $('[data-who-r]').hidden = false; $('[data-win]').style.opacity = '0';
+    }
+    function resetStage() {
+      strip.getAnimations().forEach((x) => x.cancel());
+      stripAt(0); $('[data-win]').style.opacity = '1';
+      $('[data-who-l]').hidden = true; $('[data-who-r]').hidden = true; setLine('');
+      $('[data-line]').style.opacity = ''; 
+    }
+
+    async function play() {
+      const id = ++run;
+      resetStage(); beat('stage'); mark('state', null);
+      await type(id); if (id !== run) return;
+      await sleep(reduced ? 200 : 500); if (id !== run) return;
+      beat('wheel'); await spin(id); if (id !== run) return;
+      beat('stop'); await sleep(reduced ? 200 : 700); if (id !== run) return;
+      showWho(); beat('rise');
+    }
+    function jump(name) {
+      run++; resetStage(); setLine(full);
+      if (name === 'wheel' || name === 'stop') { stripAt(name === 'stop' ? finalY : -ROW * 6); }
+      if (name === 'stop' || name === 'rise' || name === 'lift') { stripAt(finalY); }
+      if (name === 'rise' || name === 'lift') showWho();
+      beat(name);
+    }
+
+    const ends = {
+      requested: ['Sent to ' + them.name, 'You will hear back within 72 hours. Venn shares no contact details until you both say yes.'],
+      accepted: [them.name + ' said yes', 'Venn sent you both an intro email. Check your inbox.'],
+      declined: [them.name + ' cannot this time', 'No reason given, and none needed. We can find you someone else.', 'Find another match'],
+      expired: ['No reply in 72 hours', 'It happens. We can find you someone else.', 'Find another match'],
+      unmatched: ['No one fits well enough yet', 'We will tell you when someone does.'],
+    };
+    function end(state) {
+      run++; const [h, p, b] = ends[state];
+      $('[data-end-h]').textContent = h; $('[data-end-p]').textContent = p;
+      const btn = $('[data-end-btn]'); btn.hidden = !b; btn.textContent = b || '';
+      beat('end'); mark('state', state);
+    }
+
+    $('[data-right]').addEventListener('click', () => { if (root.dataset.beat === 'rise') { beat('lift'); setTimeout(() => { if (root.dataset.beat === 'lift') beat('card'); }, reduced ? 200 : 700); } });
+    $('[data-left]').addEventListener('click', () => { if (root.dataset.beat === 'rise') $('[data-right]').click(); });
+    $('[data-to-compose]').addEventListener('click', () => { beat('compose'); $('[data-msg]').focus({ preventScroll: true }); });
+    $('[data-compose]').addEventListener('submit', (e) => { e.preventDefault(); end('requested'); });
+    root.querySelectorAll('[data-state]').forEach((b) => b.addEventListener('click', () => end(b.dataset.state)));
+    $('[data-go="replay"]').addEventListener('click', play);
+    $('[data-end-btn]').addEventListener('click', play);
+
+    const b = params.get('beat'), s = params.get('state');
+    if (s && ends[s]) end(s);
+    else if (b === 'card' || b === 'compose') { jump('lift'); beat(b); }
+    else if (['stage', 'wheel', 'stop', 'rise', 'lift'].includes(b)) jump(b);
+    else play();
+  })();
+</script>
