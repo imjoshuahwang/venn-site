@@ -43,15 +43,13 @@ const config = JSON.stringify({ status: m?.status ?? null, viewed: !!m?.viewed_a
   .mhalf:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
   .mhalf.l { border-radius: 0 132px 132px 0; background: #35463f; }
   .mhalf.r { border-radius: 132px 0 0 132px; background: var(--forest-2); }
-  .mwin { position: absolute; inset: 0; overflow: hidden; -webkit-mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent); mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent); }
+  .mwin { position: absolute; inset: 0; overflow: hidden; -webkit-mask-image: linear-gradient(transparent 29%, #000 39%, #000 61%, transparent 71%); mask-image: linear-gradient(transparent 29%, #000 39%, #000 61%, transparent 71%); }
   .mstrip { position: absolute; left: 0; right: 0; top: 0; display: grid; will-change: transform; }
   .mstrip:not([data-run]) i:nth-child(n+6) { visibility: hidden; }
-  .mstrip i { display: grid; place-items: center; height: 56px; padding: 0 20px; font-style: normal; font-size: var(--fs-15); font-weight: var(--fw-600); }
+  .mstrip i { display: grid; place-items: center; height: 56px; padding: 0 14px 0 0; justify-items: end; font-style: normal; font-size: 12px; font-weight: var(--fw-600); white-space: nowrap; }
   .mwho { position: absolute; inset: 0; display: grid; align-content: center; justify-items: center; gap: 4px; padding: 0 20px; font-size: var(--fs-13); }
   .mwho b { font-size: var(--fs-22); font-weight: var(--fw-800); }
   .mwho i { font-style: normal; opacity: 0.8; line-height: 1.25; }
-  .mtags { display: flex; justify-content: space-around; margin: 0; font-size: var(--fs-15); font-weight: var(--fw-600); opacity: 0; transition: opacity var(--dur-3); }
-  .match[data-beat="rise"] .mtags { opacity: 1; }
   .mconf { position: fixed; top: 0; width: 8px; height: 12px; pointer-events: none; z-index: 3; }
   .mcard { background: var(--panel); border-radius: var(--r-20); padding: var(--sp-24); display: grid; gap: var(--sp-16); justify-items: start; animation: mfade var(--dur-3) var(--ease); }
   .mcard h1 { margin: 0; font-size: var(--fs-28); font-weight: var(--fw-800); letter-spacing: -0.02em; line-height: 1.15; }
@@ -62,7 +60,8 @@ const config = JSON.stringify({ status: m?.status ?? null, viewed: !!m?.viewed_a
   .mtagrow { display: flex; flex-wrap: wrap; gap: 6px; } .mtagrow span { background: var(--green); border-radius: var(--r-pill); padding: 4px 12px; font-size: var(--fs-13); }
   .match .pill { border: 0; cursor: pointer; font-family: inherit; } .match .pill.ghost { background: var(--white); color: var(--ink); border: 1px solid var(--line); }
   @keyframes mfade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-  @media (prefers-reduced-motion: reduce) { .match *, .match { animation: none !important; } .mpair { transition: none; transform: none !important; } }
+  @keyframes mfade-o { from { opacity: 0; } to { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .match *, .match { animation: none !important; } .mpair { transition: none; transform: none !important; } .match .mcard { animation: mfade-o var(--dur-3) var(--ease) !important; } }
 </style>
 
 <script>
@@ -94,7 +93,7 @@ const config = JSON.stringify({ status: m?.status ?? null, viewed: !!m?.viewed_a
       const id = ++run;
       const low = lowEnd(navigator as never, drops);
       const p = plan({ status: cfg.status, viewedAt: cfg.viewed, reduced, low, replay });
-      if (p.screen !== 'stage') { showCard(); return; }
+      if (p.screen !== 'stage' || p.kind === 'reduced') { showCard(); return; }
       const b = (BEATS as Record<string, typeof BEATS.full>)[p.kind!];
       $('[data-card]').hidden = true; $('[data-stage]').hidden = false; root.dataset.beat = 'stage';
       $('[data-pair]').classList.remove('up'); $('[data-who]').hidden = true; $('[data-win]').style.opacity = '1';
@@ -123,7 +122,6 @@ const config = JSON.stringify({ status: m?.status ?? null, viewed: !!m?.viewed_a
       who.hidden = false; $('[data-win]').style.opacity = '0';
       root.dataset.beat = 'rise'; $('[data-pair]').classList.add('up');
       if (b.confetti) confetti(b.confetti);
-      if (reduced) { await sleep(b.lift); if (id === run) showCard(); }
     }
     const lift = async () => {
       if (root.dataset.beat !== 'rise') return;

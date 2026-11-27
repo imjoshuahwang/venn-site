@@ -45,6 +45,7 @@ test('first view: wheel keeps your side visible, rise, tap to card', async () =>
   assert.match(await page.locator('[data-left]').innerText(), /Maya/, 'your side shows while the wheel spins');
   await shot(page, 'wheel'); assert.ok(await noOverflow(page));
   await beat(page, 'rise');
+  assert.equal(await page.locator('[data-tags]').count(), 0, 'no You / Your peer tags');
   assert.equal(await page.locator('[data-line]').innerText(), 'Finding your peer in Texas. Searching 223 partner organizations across 21 countries, reaching 500,320 students');
   const who = await page.locator('[data-who]').innerText();
   assert.match(who, /Daniel/); assert.doesNotMatch(who, /Daniel[ \t]+[A-Z]/, 'first name only');
@@ -62,6 +63,9 @@ test('first view: wheel keeps your side visible, rise, tap to card', async () =>
 test('replay: lands on the card, Replay plays the stage again', async () => {
   const { ctx, page } = await open('replay');
   assert.equal(await page.locator('[data-card]').isVisible(), true);
+  for (const t of ['You do', 'They do', 'Together', 'In common', 'Ask']) assert.ok((await page.locator('[data-card]').innerText()).toLowerCase().includes(t.toLowerCase()), t);
+  assert.equal(await page.locator('[data-compose-open]').isVisible(), true);
+  assert.ok(await noOverflow(page));
   await shot(page, 'replay');
   await page.locator('[data-replay]').tap();
   await page.locator('[data-stage]').waitFor({ state: 'visible' });
@@ -70,7 +74,9 @@ test('replay: lands on the card, Replay plays the stage again', async () => {
 
 test('reduced motion: crossfade to the card, no confetti', async () => {
   const { ctx, page } = await open('first', 'reduce');
-  await page.locator('[data-card]').waitFor({ state: 'visible', timeout: 10000 });
+  await page.locator('[data-card]').waitFor({ state: 'visible', timeout: 1500 });
+  assert.equal(await page.locator('[data-stage]').isVisible(), false, 'no typing or rise first');
+  assert.equal(await page.locator('[data-line]').innerText(), '');
   assert.equal(await page.locator('[data-confetti]').count(), 0);
   await shot(page, 'reduced'); await ctx.close();
 });
