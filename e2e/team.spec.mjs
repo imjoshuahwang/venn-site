@@ -4,6 +4,7 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync, spawn } from 'node:child_process';
 import { chromium, devices } from 'playwright';
+import { localServerEnv } from '../scripts/qa/portal.mjs';
 import { createClient } from '@supabase/supabase-js';
 
 const st = JSON.parse(execFileSync('supabase', ['status', '-o', 'json'], { stdio: ['ignore', 'pipe', 'ignore'] }).toString().replace(/^[^{]*/, ''));
@@ -21,7 +22,7 @@ let server, browser;
 
 before(async () => {
   server = spawn('npx', ['astro', 'dev', '--host', '127.0.0.1', '--port', String(PORT)], {
-    env: { ...process.env, PUBLIC_SUPABASE_URL: API, PUBLIC_SUPABASE_ANON_KEY: st.ANON_KEY },
+    env: localServerEnv(API, st.ANON_KEY),
     stdio: 'ignore',
   });
   for (let i = 0; i < 120; i++) {
