@@ -14,9 +14,12 @@ export const TEST_APPLICANTS = [
   { slug: 'nts', name: 'Nia Test Season', outcome: 'not_this_season' },
 ].map((a) => ({ ...a, email: `${BOX}+${a.slug}@gmail.com` }));
 
+// Test-only copy: this builder is called for is_test applicants only, and the real letter path never writes it.
+export const testLetter = (slug) => `Test letter for ${slug}.`;
+
 export const approvedRow = (a, applicationId, cohortId) => ({
   application_id: applicationId, season: SEASON, outcome: a.outcome, cohort_id: cohortId ?? null, status: 'approved',
-  approved_at: new Date().toISOString(), letter: `Test letter for ${a.slug}. This is a fictional applicant used to check the results journey.`,
+  approved_at: new Date().toISOString(), letter: testLetter(a.slug),
   why_matched: a.outcome === 'peer' ? 'Test peer pair.' : null, emailed_at: null,
 });
 
@@ -34,7 +37,7 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
     if (app && !app.is_test) throw new Error(`${a.email} belongs to a non-test application; refusing`);
     app ??= ok(await sb.from('applications').insert({ role: 'student', name: a.name, email: a.email, working_on: 'Fictional test applicant', source: 'test', is_test: true }).select('id').single(), `insert ${a.slug}`);
     const have = ok(await sb.from('results').select('id,status').eq('application_id', app.id).eq('season', SEASON).maybeSingle(), `find result ${a.slug}`);
-    if (have) ok(await sb.from('results').update({ emailed_at: null }).eq('id', have.id), `reset ${a.slug}`);
+    if (have) ok(await sb.from('results').update({ emailed_at: null, letter: testLetter(a.slug) }).eq('id', have.id), `reset ${a.slug}`);
     else rid[a.slug] = ok(await sb.from('results').insert(approvedRow(a, app.id, cohorts[a.cohort])).select('id').single(), `result ${a.slug}`).id;
     rid[a.slug] ??= have.id;
   }
