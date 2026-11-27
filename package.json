@@ -6,7 +6,7 @@
     "dev": "astro dev --host 0.0.0.0 --port 8000",
     "build": "astro build",
     "preview": "astro preview --host 0.0.0.0 --port 8000",
-    "test:e2e": "node --test --test-concurrency=1 e2e/consent.spec.mjs e2e/onboarding.spec.mjs e2e/team.spec.mjs e2e/share.spec.mjs e2e/accept-share.spec.mjs e2e/next-steps.spec.mjs",
+    "test:e2e": "node --test --test-concurrency=1 e2e/consent.spec.mjs e2e/onboarding.spec.mjs e2e/team.spec.mjs e2e/share.spec.mjs e2e/accept-share.spec.mjs e2e/next-steps.spec.mjs e2e/minor-mou.spec.mjs",
     "qa:mobile": "node scripts/mobile-qa.mjs",
     "delete-request": "node scripts/portal/delete.mjs",
     "test": "node --test scripts/qa/*.test.mjs scripts/portal/*.test.mjs src/scripts/portal/*.test.ts src/lib/portal/*.test.ts src/lib/match/*.test.ts supabase/functions/match-sweep/*.test.ts supabase/functions/resend-webhook/*.test.ts scripts/match/*.test.mjs src/data/*.test.ts src/components/portal/results/*.test.mjs scripts/vercel-ignore.test.mjs",

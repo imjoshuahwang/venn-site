@@ -1,0 +1,12 @@
+---
+import Portal from '../../../layouts/Portal.astro';
+import MouMinor from '../../../components/portal/MouMinor.astro';
+
+export const prerender = false;
+const { data: state, error } = await Astro.locals.supabase.rpc('minor_mou_state');
+if (!error && state && (!state.minor || state.confirmed)) return Astro.redirect('/portal');
+---
+<Portal title="Your MOU">
+  {error || !state ? <p role="alert">We could not load this page. Reload to try again.</p>
+    : <MouMinor state={state} email={Astro.locals.user?.email ?? ''} />}
+</Portal>
