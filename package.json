@@ -10,7 +10,7 @@
     "test:e2e:outlets": "node --test --test-concurrency=1 e2e/outlets.spec.mjs",
     "qa:mobile": "node scripts/mobile-qa.mjs",
     "delete-request": "node scripts/portal/delete.mjs",
-    "test": "node --test scripts/qa/*.test.mjs scripts/portal/*.test.mjs src/scripts/portal/*.test.ts src/lib/portal/*.test.ts src/data/*.test.ts",
+    "test": "node --test scripts/qa/*.test.mjs scripts/portal/*.test.mjs scripts/match/*.test.mjs src/scripts/portal/*.test.ts src/lib/portal/*.test.ts src/data/*.test.ts",
     "test:build": "node --test scripts/portal/build-no-test-keys.build.mjs",
     "qa:portal": "node scripts/qa/portal.mjs",
     "qa:results": "node scripts/qa/results-journeys.mjs",
