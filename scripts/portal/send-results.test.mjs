@@ -129,3 +129,29 @@ test('SEND_ALLOWLIST unset or not matching refuses before any claim, fetch or lo
   assert.ok(lines.some((l) => l.includes('not_allowlisted')));
   assert.ok(!lines.join().includes('example.com'));
 });
+
+import { renderNts, nextLink, makeNtsLink, NTS_SUBJECT } from './send-results.mjs';
+const ntsTemplate = readFileSync(new URL('../../supabase/templates/results-not-this-season.html', import.meta.url), 'utf8');
+
+test('warm no: short, human, one link to the no-account page, no sign-in or dates', () => {
+  const { html, text } = renderNts(ntsTemplate, { name: 'Ada <b>Lovelace', link: nextLink('TOK') });
+  assert.equal((html.match(/<a /g) ?? []).length, 1);
+  assert.match(html, /Hi Ada,/);
+  assert.match(html, /href="https:\/\/joinvenn\.org\/next\/TOK"/);
+  assert.equal((html.match(/<p>/g) ?? []).length, 4); // greeting, two sentences-paragraphs, sign-off
+  assert.doesNotMatch(html + text, /password|sign in|20\d\d|{{|\b(Street|Ave)\b/i);
+  assert.ok(text.split('\n\n').slice(1, 3).join(' ').split(/(?<=\.)\s/).length <= 4);
+  assert.match(NTS_SUBJECT, /application/);
+});
+
+test('a not_this_season row gets the warm no and only a token hash is stored', async () => {
+  const sb = fakeSb({ claimed: true }); const bodies = [];
+  const r = await sendOne({ allowlist: '*', sb, row: { ...row(7, 'a@x.com'), outcome: 'not_this_season' }, template, ntsTemplate, from: 'f', resendKey: 'k', fetchImpl: async (_u, o) => { bodies.push(JSON.parse(o.body)); return { ok: true, json: async () => ({ id: 'i' }) }; } });
+  assert.equal(r, 'sent');
+  assert.equal(bodies[0].subject, NTS_SUBJECT);
+  const tok = /\/next\/([\w-]+)/.exec(bodies[0].text)[1];
+  const upd = sb.calls.find(([t, v]) => t === 'results' && v.next_token_hash);
+  assert.notEqual(upd[1].next_token_hash, tok);
+  assert.match(upd[1].next_token_hash, /^[0-9a-f]{64}$/);
+  assert.ok(!sb.calls.some(([t]) => t === 'portal_links'));
+});
