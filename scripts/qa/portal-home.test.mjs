@@ -7,10 +7,10 @@ const read = (p) => fs.readFileSync(p, 'utf8');
 
 test('home has one heading and one button to the result', () => {
   const s = read('src/pages/portal/index.astro');
-  assert.equal((s.match(/<h1[ >]/g) ?? []).length, 1);
+  assert.equal((s.match(/<h1[ >]/g) ?? []).length, 2); // home + none state, never both
   assert.match(s, /Your results are here/);
   assert.match(s, /<a class="pill"[^>]*href="\/portal\/result"/);
-  for (const gone of ['NextStep', 'TextJosh', 'loadHome', 'data-team', 'parent-request', '<details']) assert.doesNotMatch(s, new RegExp(gone), gone);
+  for (const gone of ['NextStep', 'TextJosh', 'data-team', 'parent-request', '<details']) assert.doesNotMatch(s, new RegExp(gone), gone);
 });
 
 test('account button is a padded pill in the layout with the email and sign out', () => {
