@@ -47,7 +47,7 @@ test('first view: wheel keeps your side visible, rise, tap to card', async () =>
   await beat(page, 'rise');
   assert.equal(await page.locator('[data-line]').innerText(), 'Finding your peer in Texas. Searching 223 partner organizations across 21 countries, reaching 500,320 students');
   const who = await page.locator('[data-who]').innerText();
-  assert.match(who, /Daniel/); assert.doesNotMatch(who, /Daniel \w+\s*\n?\s*$/m.test(who) ? /^$/ : /Daniel [A-Z][a-z]+$/);
+  assert.match(who, /Daniel/); assert.doesNotMatch(who, /Daniel[ \t]+[A-Z]/, 'first name only');
   await shot(page, 'rise');
   await page.locator('[data-right]').tap();
   await page.locator('[data-card]').waitFor({ state: 'visible' });
@@ -55,7 +55,7 @@ test('first view: wheel keeps your side visible, rise, tap to card', async () =>
   for (const t of ['You do', 'They do', 'Together', 'In common', 'Ask', "Let's write an email together"]) assert.ok(text.toLowerCase().includes(t.toLowerCase()), t);
   await shot(page, 'card'); assert.ok(await noOverflow(page));
   await page.locator('[data-compose-open]').tap();
-  assert.equal(await page.locator('[data-compose-mount]').isVisible(), true);
+  assert.equal(await page.locator('[data-compose-mount]').evaluate((e) => !e.hidden), true, 'mount opens for #248 (empty until then)');
   await ctx.close();
 });
 

@@ -19,7 +19,7 @@ let failed = false;
 try {
   m = stub ? (stub === 'unmatched' ? ({ status: 'unmatched' } as MyMatch) : fixture(stub === 'replay')) : await getMyMatch(Astro.locals.supabase);
 } catch { failed = true; }
-const you = { name: stub ? 'Maya' : 'You', org: stub ? 'Lincoln HS Robotics Club' : '', region: stub ? 'Texas' : '' };
+const you = { name: stub ? 'Maya' : 'You', org: stub ? 'Lincoln HS Robotics Club' : '', region: stub ? 'Texas' : (m?.own_region ?? '') };
 const peer = { first_name: m?.peer_first_name, headline: m?.peer_project, org: m?.peer_org, region: m?.peer_region, field: m?.peer_project };
 const config = JSON.stringify({ status: m?.status ?? null, viewed: !!m?.viewed_at, stub: !!stub, home: you.region || null, tile: peerTile(peer), who: { name: peer.first_name, org: peer.org, headline: peer.headline } });
 ---
@@ -45,6 +45,7 @@ const config = JSON.stringify({ status: m?.status ?? null, viewed: !!m?.viewed_a
   .mhalf.r { border-radius: 132px 0 0 132px; background: var(--forest-2); }
   .mwin { position: absolute; inset: 0; overflow: hidden; -webkit-mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent); mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent); }
   .mstrip { position: absolute; left: 0; right: 0; top: 0; display: grid; will-change: transform; }
+  .mstrip:not([data-run]) i:nth-child(n+6) { visibility: hidden; }
   .mstrip i { display: grid; place-items: center; height: 56px; padding: 0 20px; font-style: normal; font-size: var(--fs-15); font-weight: var(--fw-600); }
   .mwho { position: absolute; inset: 0; display: grid; align-content: center; justify-items: center; gap: 4px; padding: 0 20px; font-size: var(--fs-13); }
   .mwho b { font-size: var(--fs-22); font-weight: var(--fw-800); }
@@ -97,7 +98,7 @@ const config = JSON.stringify({ status: m?.status ?? null, viewed: !!m?.viewed_a
       const b = (BEATS as Record<string, typeof BEATS.full>)[p.kind!];
       $('[data-card]').hidden = true; $('[data-stage]').hidden = false; root.dataset.beat = 'stage';
       $('[data-pair]').classList.remove('up'); $('[data-who]').hidden = true; $('[data-win]').style.opacity = '1';
-      strip.getAnimations().forEach((a) => a.cancel());
+      delete strip.dataset.run; strip.getAnimations().forEach((a) => a.cancel());
       const tiles = wheelTiles(cfg.tile);
       strip.replaceChildren(...tiles.map((t: string) => Object.assign(document.createElement('i'), { textContent: t })));
       const end = finalY(tiles.length);
@@ -108,7 +109,7 @@ const config = JSON.stringify({ status: m?.status ?? null, viewed: !!m?.viewed_a
       const lineEl = $('[data-line]'); lineEl.textContent = '';
       if (b.type) { frames(); for (let i = 1; i <= line.length; i++) { if (id !== run) return; lineEl.textContent = line.slice(0, i); await sleep(b.type); } } else lineEl.textContent = line;
       await sleep(b.hold); if (id !== run) return;
-      root.dataset.beat = 'wheel';
+      root.dataset.beat = 'wheel'; strip.dataset.run = '';
       if (b.spin) {
         const a = strip.animate([{ transform: 'translateY(0)' }, { transform: `translateY(${end - 10}px)`, offset: 0.93 }, { transform: `translateY(${end}px)` }], { duration: b.spin, easing: 'cubic-bezier(0.15, 0.7, 0.2, 1)', fill: 'forwards' });
         await a.finished.catch(() => {}); if (id !== run) return;
