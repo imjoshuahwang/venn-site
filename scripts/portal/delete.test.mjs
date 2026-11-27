@@ -17,6 +17,10 @@ const DATA = {
   guiding_answers: [{ id: 60, result_id: 10 }],
   portal_links: [{ id: 70, user_id: UID }],
   rs_events: [{ id: 80, email: 'a.b@gmail.com' }],
+  match_pool: [{ result_id: 10 }, { result_id: 99 }],
+  matches: [{ id: 90, requester_result_id: 10, peer_result_id: 99 }, { id: 91, requester_result_id: 98, peer_result_id: 99 }],
+  match_events: [{ id: 95, match_id: 90 }, { id: 96, match_id: 91 }],
+  match_blocks: [{ peer_result_id: 99, application_id: 1 }, { peer_result_id: 99, application_id: 2 }],
 };
 
 // Stub client: reads work, any write-shaped call throws.
@@ -63,7 +67,7 @@ test('refuses without --email and has no --execute', () => {
 test('plan covers every table, with ids and zero counts', async () => {
   const plan = await buildPlan(stub(), 'a.b@gmail.com');
   assert.deepEqual(Object.keys(plan.tables), TABLES);
-  for (const t of ['applications', 'results', 'peer_matches', 'mou_signatures', 'consents', 'parent_consents', 'team_members', 'guiding_answers', 'portal_links', 'auth.users', 'rs_events']) assert.ok(t in plan.tables, t);
+  for (const t of ['applications', 'results', 'peer_matches', 'mou_signatures', 'consents', 'parent_consents', 'team_members', 'guiding_answers', 'portal_links', 'auth.users', 'rs_events', 'match_pool', 'matches', 'match_events', 'match_blocks']) assert.ok(t in plan.tables, t);
   assert.ok(!('apply_events' in plan.tables));
   assert.deepEqual(plan.tables.applications, [1]);
   assert.deepEqual(plan.tables.results, [10]);
@@ -76,6 +80,10 @@ test('plan covers every table, with ids and zero counts', async () => {
   assert.deepEqual(plan.tables.portal_links, [70]);
   assert.deepEqual(plan.tables['auth.users'], [UID]);
   assert.deepEqual(plan.tables.rs_events, [80]);
+  assert.deepEqual(plan.tables.match_pool, [10]);
+  assert.deepEqual(plan.tables.matches, [90]);
+  assert.deepEqual(plan.tables.match_events, [95]);
+  assert.deepEqual(plan.tables.match_blocks, [99]);
   const out = formatPlan(plan);
   assert.match(out, /applications\s+1\b/);
   assert.match(out, /parent_consents\s+0\b/);
