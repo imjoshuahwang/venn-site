@@ -5,8 +5,9 @@ import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { chromium, devices } from 'playwright';
 import { localServerEnv } from '../scripts/qa/portal.mjs';
+import { freePort, stopServer } from '../scripts/qa/dev-server.mjs';
 
-const PORT = 8173;
+const PORT = await freePort();
 const BASE = `http://127.0.0.1:${PORT}`;
 const SHOTS = new URL('../qa/portal-shots/share/', import.meta.url).pathname;
 const VIEWPORTS = { 'iphone-se': 'iPhone SE (3rd gen)', 'iphone-15': 'iPhone 15', 'pixel-7': 'Pixel 7' };
@@ -16,7 +17,7 @@ before(async () => {
   mkdirSync(SHOTS, { recursive: true });
   server = spawn('npx', ['astro', 'dev', '--host', '127.0.0.1', '--port', String(PORT)], {
     env: localServerEnv('http://127.0.0.1:1', 'x', { PORTAL_HOST: 'portal.invalid' }),
-    stdio: 'ignore',
+    stdio: 'ignore', detached: true,
   });
   for (let i = 0; i < 120; i++) {
     if (await fetch(`${BASE}/portal/dev/result?outcome=cohort`).then((r) => r.ok, () => false)) break;
@@ -24,7 +25,7 @@ before(async () => {
   }
   browser = await chromium.launch();
 });
-after(async () => { await browser?.close(); server?.kill(); });
+after(async () => { await browser?.close(); stopServer(server); });
 
 for (const [tag, device] of Object.entries(VIEWPORTS)) {
   test(`share on ${tag}`, async () => {

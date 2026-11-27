@@ -4,14 +4,15 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import * as pw from 'playwright';
 import { localServerEnv } from '../scripts/qa/portal.mjs';
+import { freePort, stopServer } from '../scripts/qa/dev-server.mjs';
 
-const PORT = 8135;
+const PORT = await freePort();
 const BASE = `http://127.0.0.1:${PORT}`;
 let server, browser;
 
 before(async () => {
   server = spawn('npx', ['astro', 'dev', '--host', '127.0.0.1', '--port', String(PORT)], {
-    env: localServerEnv('http://127.0.0.1:1', 'x', { PORTAL_HOST: 'portal.invalid' }), stdio: 'ignore',
+    env: localServerEnv('http://127.0.0.1:1', 'x', { PORTAL_HOST: 'portal.invalid' }), stdio: 'ignore', detached: true,
   });
   for (let i = 0; i < 120; i++) {
     if (await fetch(`${BASE}/intro/fixture-open`).then((r) => r.ok, () => false)) break;
@@ -19,7 +20,7 @@ before(async () => {
   }
   browser = await pw.chromium.launch();
 });
-after(async () => { await browser?.close(); server?.kill(); });
+after(async () => { await browser?.close(); stopServer(server); });
 
 const phone = async () => {
   const { defaultBrowserType, ...d } = pw.devices['iPhone SE (3rd gen)'];
