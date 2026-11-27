@@ -3,7 +3,10 @@ export const PEER_COPY = {
   pill: "I'd be down",
   waiting: 'You are down. Waiting on them.',
   retry: 'That did not go through. Try again.',
-  both: 'You are both down. Josh will start your group.',
+  both: 'You are both down. Venn will introduce you by email from contact@joinvenn.org.',
+  notIn: 'You are not in a cohort this season, and we know that is not the news you hoped for. Seats were few, so we matched you with one other builder whose work fits yours, so you are not doing this season alone.',
+  whyLabel: 'Why you two',
+  relay: 'If you both want to meet, Venn makes the introduction for you. We never share anyone\'s contact details directly, so write to contact@joinvenn.org if you have a question.',
 } as const;
 
 export type PeerRow = {
