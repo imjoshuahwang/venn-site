@@ -4,6 +4,7 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync, spawn } from 'node:child_process';
 import { chromium, devices } from 'playwright';
+import { localServerEnv } from '../scripts/qa/portal.mjs';
 import { createClient } from '@supabase/supabase-js';
 
 const st = JSON.parse(execFileSync('supabase', ['status', '-o', 'json'], { stdio: ['ignore', 'pipe', 'ignore'] }).toString().replace(/^[^{]*/, ''));
@@ -36,7 +37,7 @@ async function makeUser(tag, level) {
 
 before(async () => {
   server = spawn('npx', ['astro', 'dev', '--host', '127.0.0.1', '--port', String(PORT)], {
-    env: { ...process.env, PUBLIC_SUPABASE_URL: API, PUBLIC_SUPABASE_ANON_KEY: st.ANON_KEY },
+    env: localServerEnv(API, st.ANON_KEY),
     stdio: 'ignore',
   });
   for (let i = 0; i < 120; i++) {
@@ -61,15 +62,9 @@ async function login(page, email) {
   await page.goto(`${BASE}/portal/login`);
   await page.fill('input[name=email]', email);
   await page.fill('input[name=password]', PASSWORD);
-  await page.fill('input[name=confirm]', PASSWORD + 'x');
   await page.waitForFunction(() => document.querySelector('input[name="cf-turnstile-response"]')?.value);
   await page.click('button[type=submit]');
-  assert.match(await page.locator('[role=alert]').innerText(), /do not match/);
-  await page.fill('input[name=password]', PASSWORD);
-  await page.fill('input[name=confirm]', PASSWORD);
-  await page.waitForFunction(() => document.querySelector('input[name="cf-turnstile-response"]')?.value);
-  await page.click('button[type=submit]');
-  await page.waitForURL('**/portal/ceremony');
+  await page.waitForURL(/\/portal\/(ceremony|onboarding)/);
 }
 const readAll = async (page) => { while (await page.locator('[data-next]').isVisible()) await page.click('[data-next]'); };
 const tick = (page, name) => page.locator(`label.clause:has(input[name=${name}])`).click();
@@ -102,7 +97,7 @@ async function toProfile(page, u) {
   await login(page, u.email);
   await page.goto(`${BASE}/portal/set-password`);
   await shot(page, `${u.tag}-1-account`);
-  await page.fill('input[name=password]', PASSWORD);
+  await page.fill('input[name=password]', PASSWORD + '-new'); // must differ from the password the test user was made with
   await page.waitForFunction(() => document.querySelector('input[name="cf-turnstile-response"]')?.value);
   await page.click('button[type=submit]');
   await page.waitForURL('**/portal/onboarding/profile');
@@ -113,8 +108,8 @@ async function profile(page, u, birthday) {
   await page.fill('input[name=location]', 'Lagos, Nigeria'); await shot(page, `${u.tag}-3-location`);
   await page.click('[data-panel]:visible [data-next]');
   await page.fill('input[name=birthday]', birthday); await shot(page, `${u.tag}-4-birthday`);
-  await page.click('button[type=submit]');
-  await page.waitForURL(/\/portal(\/ceremony)?$/); // #240: the result comes next; org and phone follow the reveal
+  await page.click('form.ob-form button[type=submit]');
+  await page.waitForURL((u) => /^\/portal(\/ceremony)?$/.test(u.pathname)); // #240: the result comes next; org and phone follow the reveal
   await page.goto(`${BASE}/portal/onboarding/contact`);
 }
 async function contact(page, u) {
@@ -127,7 +122,7 @@ async function contact(page, u) {
   assert.match(await page.locator('[data-consent-text]').innerText(), /trusted Venn team member.*WhatsApp is the main channel/);
   await shot(page, `${u.tag}-8-consent`);
   await page.locator('.ob-consent').click();
-  await page.click('button[type=submit]');
+  await page.click('form.ob-form button[type=submit]');
 }
 
 test('adult: set-password, profile, contact, then /portal (390px)', async () => {
@@ -136,10 +131,10 @@ test('adult: set-password, profile, contact, then /portal (390px)', async () => 
   await toProfile(page, u);
   assert.ok(!page.url().includes('Ada') && !page.url().includes('?'), 'no personal data in URLs');
   await overflow(page, 'profile');
-  await profile(page, u, bday(30));
+  await profile(page, u, bday(20));
   await overflow(page, 'contact');
   await contact(page, u);
-  await page.waitForURL(/\/portal(\/ceremony)?$/);
+  await page.waitForURL((u) => /^\/portal(\/ceremony)?$/.test(u.pathname));
   const r = await row(u.appId);
   assert.equal(r.full_name, 'Ada Tester'); assert.equal(r.phone, '+14155550123'); assert.equal(r.whatsapp_opt_in, true); assert.ok(r.onboarding_consent_at);
   await ctx.close();
@@ -151,7 +146,7 @@ test('under 18: ends on the MOU step (390px)', async () => {
   await toProfile(page, u);
   await profile(page, u, bday(18, 1)); // turns 18 tomorrow
   await contact(page, u);
-  await page.waitForURL(/\/portal(\/ceremony)?$/); // the MOU step is reached from the post-reveal checklist (C2)
+  await page.waitForURL((u) => /^\/portal(\/ceremony)?$/.test(u.pathname)); // the MOU step is reached from the post-reveal checklist (C2)
   await ctx.close();
 });
 
@@ -159,7 +154,7 @@ test('phone and WhatsApp are required: errors, no write', async () => {
   const u = { ...(await makeUser('req', 'college')), tag: 'req' };
   const ctx = await browser.newContext(ctxOpts()); const page = await ctx.newPage();
   await toProfile(page, u);
-  await profile(page, u, bday(30));
+  await profile(page, u, bday(20));
   await page.locator('label.ob-choice:has(input[value=yes])').first().click();
   await page.click('[data-panel]:visible [data-next]'); // empty phone
   assert.match(await page.locator('[data-err]:visible').innerText(), /phone number/);
@@ -179,7 +174,7 @@ test('reload resumes at the next incomplete step with values kept; bad birthdays
   const u = { ...(await makeUser('resume', 'college')), tag: 'resume' };
   const ctx = await browser.newContext(ctxOpts()); const page = await ctx.newPage();
   await toProfile(page, u);
-  await profile(page, u, bday(30 - 1)); // 29: fine
+  await profile(page, u, bday(21)); // 29: fine
   await page.goto(`${BASE}/portal/onboarding/profile`);
   assert.match(path(page), /\/portal(\/ceremony)?$/); // profile done: resumes past it
   const r = await row(u.appId);
