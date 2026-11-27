@@ -40,7 +40,9 @@ def main():
     want = desired(plan); dups = {d["id"]: d["keep_id"] for d in plan["duplicates"]}
     assert not set(want) & set(dups), "plan lists an id as both result and duplicate"
     apps = {a["id"] for a in call("GET", "applications?select=id,is_test&is_test=is.false&limit=5000")}
-    assert apps == set(want) | set(dups), f"plan covers {len(set(want)|set(dups))} of {len(apps)} applicants"
+    assert set(want) | set(dups) <= apps, f"plan names ids that are not applicants: {sorted(set(want) | set(dups) - apps)}"
+    late = sorted(apps - set(want) - set(dups))  # applied after the plan was made: left without a result, for the next plan
+    print(f"applicants {len(apps)}, in plan {len(set(want) | set(dups))}, not in plan (no row written) {late}")
     res = {r["application_id"]: r for r in call("GET", f"results?select=*&season=eq.{SEASON}&limit=5000")}
     approved = [a for a in list(want) + list(dups) if res.get(a, {}).get("status") == "approved"]
     assert not approved, f"approved rows in plan: {approved}"
@@ -62,7 +64,17 @@ def main():
     for a in dup_rows:
         call("PATCH", f"results?application_id=eq.{a}&season=eq.{SEASON}&status=eq.draft", {"outcome": "network_waitlist", "cohort_id": None, "why_matched": f"DUPLICATE of application {dups[a]}: do not approve", "letter": None})
     rows = [r for r in rows if not same(res.get(r['application_id']), r)]  # reruns skip rows already written (the seat-cap trigger counts a row against itself)
-    for i in range(0, len(rows), 100): call("POST", "results?on_conflict=application_id,season", rows[i:i + 100])
+    free = [r for r in rows if r["outcome"] != "cohort"]
+    for i in range(0, len(free), 100): call("POST", "results?on_conflict=application_id,season", free[i:i + 100])
+    seats = [r for r in rows if r["outcome"] == "cohort"]
+    for r in [r for r in seats if res.get(r["application_id"], {}).get("cohort_id") == r["cohort_id"]]:  # same seat: a PATCH, since an upsert's insert half counts the row against itself
+        call("PATCH", f"results?application_id=eq.{r['application_id']}&season=eq.{SEASON}&status=eq.draft", {k: r[k] for k in ("outcome", "why_matched", "letter")})
+        seats.remove(r)
+    # moves: one at a time, in passes: a cohort move lands once the row leaving that cohort has moved
+    while seats:
+        failed = [r for r in seats if not post_seat(r)]
+        if len(failed) == len(seats): sys.exit(f"cohort rows stuck on the seat cap: {[r['application_id'] for r in failed]}")
+        seats = failed
     rid = {r["application_id"]: r["id"] for r in call("GET", f"results?select=id,application_id,status&season=eq.{SEASON}&limit=5000")}
     status = {r["id"]: r["status"] for r in call("GET", f"results?select=id,status&season=eq.{SEASON}&limit=5000")}
     new = {frozenset((rid[a], rid[b])): (rid[a], rid[b], w) for a, b, w in edges}
@@ -97,6 +109,15 @@ def main():
             left.remove(e); prog = True
         if not prog: break  # the rest are blocked by protected rows or a result already in two rows
     print(f"peer_matches: kept {len(keep)}, repointed {placed}, inserted {inserted}, protected stale {len(protected)}, edges blocked (protected or full) {len(left)}, old rows left stale {len(stale)}")
+
+def post_seat(r):
+    req = urllib.request.Request(f"{url}/rest/v1/results?on_conflict=application_id,season", method="POST", data=json.dumps([r]).encode(),
+        headers={"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json", "Prefer": "return=minimal,resolution=merge-duplicates"})
+    try: urllib.request.urlopen(req, timeout=60); return True
+    except urllib.error.HTTPError as e:
+        body = e.read().decode()
+        if "is full" in body: return False
+        sys.exit(f"POST results failed: {e.code} {body[:300]}")
 
 def same(o, r):
     return bool(o) and not o.get('letter') and o['status'] == 'draft' and all(o[k] == r[k] for k in ('outcome', 'cohort_id', 'why_matched'))
