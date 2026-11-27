@@ -18,9 +18,10 @@ test('stat module source never says 22 countries or 9%', () => {
   assert.equal(REVEAL_FACTS.students, 500320);
 });
 
+test('popup line spells out Amazon Web Services', () => { assert.equal(PARTNERS.aws.line, 'Amazon Web Services'); });
 test('popup title is config driven, AWS and Quadron are entries not forks', () => {
-  assert.equal(popupTitle(PARTNERS.aws), 'Welcome to Venn x AWS Fall Cohort 2026');
-  assert.equal(popupTitle(PARTNERS.quadron), 'Welcome to Venn x Quadron Fall Cohort 2026');
+  assert.equal(popupTitle(PARTNERS.aws), 'Accepted into AWS');
+  assert.equal(popupTitle(PARTNERS.quadron), 'Accepted into Quadron');
   assert.equal(PARTNERS.aws.logo, '/logos/aws.svg');
   assert.equal(partnerFor('aws'), PARTNERS.aws);
   assert.equal(partnerFor('nope'), null);

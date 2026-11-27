@@ -6,9 +6,8 @@ import { popupTitle, type RevealPartner } from '../../../data/reveal-partners';
 // It auto-plays only until the ceremony is done (`done` = ceremony_done_at set); after that the letter shows with a small Replay.
 const { partner, resultId, done = false, stub = false } = Astro.props as { partner: RevealPartner; resultId: number; done?: boolean; stub?: boolean };
 const stat = statLine();
-const title = popupTitle(partner).replace(' x ', '\u00a0x\u00a0');
+const title = popupTitle(partner);
 ---
-<button class="replay" type="button" data-reveal-replay hidden>Replay</button>
 <div class="rv" data-cohort-reveal data-state="idle" data-stat-text={stat} data-result-id={resultId} data-done={done ? '1' : '0'} data-stub={stub ? '1' : '0'} data-logo={partner.logo} hidden>
   <button class="play" type="button" data-reveal-play aria-label="Play" disabled>
     <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor" /></svg>
@@ -21,6 +20,7 @@ const title = popupTitle(partner).replace(' x ', '\u00a0x\u00a0');
   <div class="popup" data-popup role="dialog" aria-modal="true" aria-labelledby="rv-title" hidden>
     <img src={partner.logo} alt={`${partner.name} logo`} width="200" height="120" data-popup-logo />
     <h2 id="rv-title" data-popup-title>{title}</h2>
+    <p class="line" data-popup-line>{partner.line}</p>
     <!-- #227: share card and letter render here, between the title and the portal action. -->
     <div data-reveal-extra></div>
     <a class="pill go" href="/portal" data-reveal-next>Go to my portal</a>
@@ -30,7 +30,7 @@ const title = popupTitle(partner).replace(' x ', '\u00a0x\u00a0');
   const root = document.querySelector<HTMLElement>('[data-cohort-reveal]');
   if (root) {
     const $ = <T extends HTMLElement>(s: string) => root.querySelector<T>(s)!;
-    const replayBtn = document.querySelector<HTMLElement>('[data-reveal-replay]')!;
+    const replayBtn = document.querySelector<HTMLElement>('[data-reveal-replay]');
     const text = root.dataset.statText ?? '';
     const stub = root.dataset.stub === '1';
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -124,8 +124,8 @@ const title = popupTitle(partner).replace(' x ', '\u00a0x\u00a0');
       if (!reduced && !document.hidden) confetti();
     });
 
-    replayBtn.addEventListener('click', () => open());
-    if (done) replayBtn.hidden = false;
+    replayBtn?.addEventListener('click', () => open());
+    if (done && replayBtn) replayBtn.hidden = false;
     else open();
   }
 </script>
@@ -149,11 +149,10 @@ const title = popupTitle(partner).replace(' x ', '\u00a0x\u00a0');
   @media (max-height: 500px) { .popup img { height: 72px; } .popup { padding: var(--sp-16) var(--sp-24); gap: var(--sp-8); } }
   .popup img { width: auto; max-width: 220px; height: 120px; object-fit: contain; }
   .popup h2 { margin: 0; font-size: var(--fs-28); font-weight: var(--fw-800); letter-spacing: var(--track-tight); line-height: 1.15; text-wrap: balance; }
+  .popup .line { margin: calc(-1 * var(--sp-8)) 0 0; font-size: var(--fs-17); color: var(--muted); }
   .go { min-height: 44px; display: inline-flex; align-items: center; text-decoration: none; }
   .rv :global(.confetti) { position: absolute; top: 0; width: 10px; height: 14px; border-radius: var(--sp-4); pointer-events: none; z-index: 3; }
   @keyframes up { from { opacity: 0; transform: translateY(24px); } }
-  .replay { display: inline-flex; align-items: center; min-height: 44px; margin-bottom: var(--sp-8); padding: 0 var(--sp-16); border: 1px solid currentColor; border-radius: var(--r-pill); background: none; color: var(--ink); font: inherit; font-size: var(--fs-15); cursor: pointer; }
-  .replay[hidden] { display: none; }
   .play:disabled { opacity: 0.5; cursor: default; }
   @media (prefers-reduced-motion: reduce) {
     .stat { opacity: 0; transition: opacity var(--dur-4) var(--ease); }

@@ -2,10 +2,10 @@
 import { COHORT_COPY, MOU_COPY, safeHttps, logoUrl, mouMode } from '../../../data/mou';
 import MouForm from '../MouForm.astro';
 import ResultState from './ResultState.astro';
-const { result, view, full = false, endpoint = '/portal/mou' } = Astro.props as {
+const { result, view, full = false, endpoint = '/portal/mou', replay = false, accepted = null } = Astro.props as {
   result: { id: number; letter: string | null; cohort: any } | null;
   view: { signature: { typed_name: string; signed_at: string } | null; isLead: boolean; orgCount: number | null } | null;
-  full?: boolean; endpoint?: string;
+  full?: boolean; endpoint?: string; replay?: boolean; accepted?: string | null;
 };
 const letter = typeof result?.letter === 'string' && result.letter.trim() ? result.letter.trim() : null;
 const c = result?.cohort ?? null;
@@ -16,10 +16,10 @@ const facts = [[COHORT_COPY.goal, c?.goal], [COHORT_COPY.criteria, c?.criteria],
 ---
 {!result || !view ? <ResultState state="empty" /> : (
   <article class="cohort" data-cohort>
-    {letter && <section class="letter" data-letter><p>{letter}</p></section>}
+    {letter && <section class="letter" data-letter>{accepted && <h2>{accepted}</h2>}<p>{letter}</p></section>}
     <section class="details" data-details aria-labelledby="cohort-h">
       {logo && <img class="logo" src={logo} alt={COHORT_COPY.logoAlt(c?.company ?? c?.name ?? 'Cohort')} width="48" height="48" />}
-      <h1 id="cohort-h">{c?.name ?? COHORT_COPY.heading}</h1>
+      <div class="head"><h1 id="cohort-h">{c?.name ?? COHORT_COPY.heading}</h1>{replay && <button class="replay" type="button" data-reveal-replay hidden>Watch again</button>}</div>
       {c?.company && <p class="company">{c.company}</p>}
       {view.orgCount != null && <p class="orgs" data-orgs>{MOU_COPY.orgs(view.orgCount)}</p>}
       {facts.length > 0 && <dl>{facts.map(([k, v]) => <><dt>{k}</dt><dd>{v}</dd></>)}</dl>}
@@ -36,6 +36,12 @@ const facts = [[COHORT_COPY.goal, c?.goal], [COHORT_COPY.criteria, c?.criteria],
 )}
 <style>
   .cohort { display: grid; gap: var(--sp-32); animation: rise var(--dur-3) var(--ease) both; }
+  .letter { display: grid; gap: var(--sp-12); padding: var(--sp-24); border: 1px solid var(--line); border-radius: var(--r-24); background: #fff; }
+  .letter h2 { margin: 0; font-size: var(--fs-28); font-weight: var(--fw-800); letter-spacing: var(--track-tight); line-height: 1.15; text-wrap: balance; }
+  .head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-12); width: 100%; }
+  .replay { min-height: 44px; padding: 0 var(--sp-8); border: 0; background: none; color: var(--muted); font: inherit; font-size: var(--fs-15); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; flex-shrink: 0; }
+  .replay[hidden] { display: none; }
+  .replay:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
   .letter p { margin: 0; white-space: pre-line; font-size: var(--fs-17); color: var(--ink); }
   .details { display: grid; gap: var(--sp-12); justify-items: start; }
   .logo { border-radius: var(--r-12); object-fit: contain; }

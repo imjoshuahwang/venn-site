@@ -4,7 +4,7 @@ import Portal from '../../layouts/Portal.astro';
 import SharePill from '../../components/portal/SharePill.astro';
 import GuidingQuestions from '../../components/portal/GuidingQuestions.astro';
 import CohortReveal from '../../components/portal/results/CohortReveal.astro';
-import { partnerFor } from '../../data/reveal-partners';
+import { partnerFor, popupTitle } from '../../data/reveal-partners';
 import { getMyGuidingAnswers, guidingAccess } from '../../lib/portal/guiding';
 import { Waitlist, NotThisSeason, ResultState, Peer, Cohort } from '../../components/portal/results';
 import { pageFor } from '../../data/portal-copy';
@@ -48,7 +48,7 @@ const page = result ? pageFor(result.outcome) : null;
   {failed ? <ResultState state="error" />
     : result?.outcome === 'cohort' ? <>
       {partner && cohort && <CohortReveal partner={partner} resultId={cohort.id} done={!!cohort.ceremony_done_at} stub={!!stub} />}
-      <Cohort result={cohort} view={cohortView}>
+      <Cohort result={cohort} view={cohortView} replay={!!partner} accepted={partner ? popupTitle(partner) : null}>
       {cohort && <GuidingQuestions slot="guidingQuestions" resultId={cohort.id} answers={guiding} closed={access === 'closed'} readonly={access === 'readonly'} />}
     </Cohort></>
     : result?.outcome === 'peer' ? <Peer view={peer} />
