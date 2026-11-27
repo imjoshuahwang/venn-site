@@ -89,3 +89,19 @@ test('authGuard: half-configured Turnstile (secret only, or site key only) skips
   assert.equal(await authGuard('login', req(), { form: f(), store: memoryStore(), fetch: spy, secret: '', siteKey: 'site' }), null);
   assert.equal(called, false);
 });
+
+test('password change with a defer hook hands signOut to it instead of awaiting it', async () => {
+  const calls: string[] = [];
+  let release!: () => void;
+  const gate = new Promise<void>((r) => (release = r));
+  const supabase = { auth: {
+    updateUser: async () => { calls.push('updateUser'); return { error: null }; },
+    signOut: async () => { calls.push('signOut'); await gate; return { error: null }; },
+  } };
+  let deferred: Promise<unknown> | null = null;
+  assert.equal(await changePassword(supabase as never, 'newpassword1', (p) => { deferred = p; }), null); // resolves while signOut is still pending
+  assert.deepEqual(calls, ['updateUser', 'signOut']);
+  assert.ok(deferred);
+  release();
+  await deferred;
+});

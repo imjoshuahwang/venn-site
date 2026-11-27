@@ -61,11 +61,15 @@ export async function authGuard(action: Action, request: Request, deps: GuardDep
   return limited ? RATE_MESSAGE : null;
 }
 
-/** Update the password, then sign out every other device; this one stays signed in. */
-export async function changePassword(supabase: Pick<SupabaseClient, 'auth'>, password: string): Promise<unknown> {
+/**
+ * Update the password, then sign out every other device; this one stays signed in.
+ * With `defer` the sign-out is handed over (e.g. to waitUntil) so the redirect never waits on it.
+ */
+export async function changePassword(supabase: Pick<SupabaseClient, 'auth'>, password: string, defer?: (p: Promise<unknown>) => void): Promise<unknown> {
   const { error } = await supabase.auth.updateUser({ password });
   if (error) return error;
-  await supabase.auth.signOut({ scope: 'others' });
+  const out = Promise.resolve(supabase.auth.signOut({ scope: 'others' })).catch(() => null);
+  if (defer) defer(out); else await out;
   return null;
 }
 
