@@ -30,6 +30,7 @@ export async function getMyResult(supabase: SupabaseClient): Promise<MyResult | 
 
 /** Dev-only stand-in so the real /portal route can be exercised without a database. */
 export function stubResult(outcome: string | null): MyResult | null {
+  if (outcome === 'cohort') return { outcome, letter: null };
   if (outcome === 'network_waitlist' || outcome === 'track_waitlist' || outcome === 'not_this_season') {
     return { outcome, letter: `Dear Applicant,\n\nThank you for applying this Season. This is a stand-in letter for ${outcome}.\n\nThe Venn team` };
   }
@@ -99,3 +100,13 @@ export const STUB_CONTACT: PeerContact = { name: 'Maya', email: 'maya.fixture@ex
 
 /** Dev-only save_phone stand-in: one fixed code per session, whatever the phone, like the real RPC (#132). */
 export const stubSavePhone = (_phone: string, _whatsapp: boolean): string => 'VENN-4F2K';
+
+/** Dev stub for the cohort reveal (#226): `?stub=cohort` is AWS, `&partner=quadron` swaps the config entry. No Supabase reads. */
+export function stubCohort(partner: string | null) {
+  const slug = partner === 'quadron' ? 'quadron' : 'aws';
+  const name = slug === 'quadron' ? 'Quadron' : 'AWS';
+  return {
+    result: { id: 1, letter: null, cohort: { slug, name: `${name} Fall Cohort 2026`, company: name, logo_path: null, goal: null, criteria: null, timeline: null, video_url: null, slides_url: null } },
+    view: { signature: null, isLead: false, orgCount: null },
+  };
+}

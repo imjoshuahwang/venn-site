@@ -30,7 +30,6 @@ const facts = [[COHORT_COPY.goal, c?.goal], [COHORT_COPY.criteria, c?.criteria],
         </p>
       )}
     </section>
-    <div class="slot" data-slot="slides"><slot name="slides" /></div>
     <div class="slot" data-slot="guidingQuestions"><slot name="guidingQuestions" /></div>
     <MouForm resultId={result.id} mode={mouMode(view, full)} signature={view.signature} endpoint={endpoint} />
   </article>

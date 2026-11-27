@@ -1,15 +1,15 @@
 ---
 export const prerender = false;
 import Portal from '../../layouts/Portal.astro';
-import CohortSlides from '../../components/portal/results/CohortSlides.astro';
 import SharePill from '../../components/portal/SharePill.astro';
 import GuidingQuestions from '../../components/portal/GuidingQuestions.astro';
-import { logoUrl } from '../../data/mou';
+import CohortReveal from '../../components/portal/results/CohortReveal.astro';
+import { partnerFor } from '../../data/reveal-partners';
 import { getMyGuidingAnswers, guidingAccess } from '../../lib/portal/guiding';
 import { Waitlist, NotThisSeason, ResultState, Peer, Cohort } from '../../components/portal/results';
 import { pageFor } from '../../data/portal-copy';
 import { peerView, stateOf } from '../../data/portal-peer';
-import { getMyResult, getMyPeers, getCohortView, stubResult } from '../../lib/portal/rpc-adapter';
+import { getMyResult, getMyPeers, getCohortView, stubResult, stubCohort } from '../../lib/portal/rpc-adapter';
 import { getMyResult as getFullResult } from '../../lib/portal/api';
 
 let result = null;
@@ -22,7 +22,9 @@ let firstName = '';
 try {
   const stub = import.meta.env.DEV ? Astro.url.searchParams.get('stub') : null;
   result = stub ? stubResult(stub) : await getMyResult(Astro.locals.supabase);
-  if (result?.outcome === 'cohort' && !stub) {
+  if (result?.outcome === 'cohort' && stub) {
+    ({ result: cohort, view: cohortView } = stubCohort(Astro.url.searchParams.get('partner')));
+  } else if (result?.outcome === 'cohort') {
     const full = await getFullResult(Astro.locals.supabase);
     if (full.error) throw new Error(full.error.message);
     cohort = full.data;
@@ -39,14 +41,16 @@ try {
 }
 if (result && !failed) firstName = ((await Astro.locals.supabase.rpc('get_my_first_name')).data ?? '').split(' ')[0];
 const access = guidingAccess({ isLead: cohortView?.isLead ?? false, cutoff: cohort?.cohort?.guiding_cutoff });
+const partner = partnerFor(cohort?.cohort?.slug);
 const page = result ? pageFor(result.outcome) : null;
 ---
 <Portal title="Your Result">
   {failed ? <ResultState state="error" />
-    : result?.outcome === 'cohort' ? <Cohort result={cohort} view={cohortView}>
-      <CohortSlides slot="slides" cohort={cohort?.cohort} firstName={firstName} logo={logoUrl(cohort?.cohort?.logo_path, import.meta.env.PUBLIC_SUPABASE_URL)} />
+    : result?.outcome === 'cohort' ? <>
+      {partner && <CohortReveal partner={partner} />}
+      <Cohort result={cohort} view={cohortView}>
       {cohort && <GuidingQuestions slot="guidingQuestions" resultId={cohort.id} answers={guiding} closed={access === 'closed'} readonly={access === 'readonly'} />}
-    </Cohort>
+    </Cohort></>
     : result?.outcome === 'peer' ? <Peer view={peer} />
     : page === 'waitlist' ? <Waitlist outcome={result.outcome} letter={result.letter} />
     : page === 'not_this_season' ? <NotThisSeason letter={result.letter} />
