@@ -5,20 +5,24 @@ export const TRIES = 3;
 export const MAX_MESSAGE = 600;
 export const SLOT = '[what I want to learn]';
 const OPEN = ['draft', 'approved', 'revealed', 'requested'];
+// Students tied up by an accepted match, on either side.
+const acceptedIds = (matches) => new Set(matches.filter((m) => m.status === 'accepted').flatMap((m) => [m.requester_result_id, m.peer_result_id]));
 
 export const isMinor = (s) => s.level === 'high_school';
 
 // Peers a student may be offered, best overlap first. Rules mirror matches_guard in the 20261127020000 migration.
-export function eligiblePeers(student, peers, { matches = [], blocks = [], taken = new Map() } = {}) {
+export function eligiblePeers(student, peers, { matches = [], blocks = [], taken = new Map(), asking = new Set() } = {}) {
+  const askers = new Set([...asking, ...matches.filter((m) => m.peer_result_id != null && OPEN.includes(m.status)).map((m) => m.requester_result_id)]);
+  const done = acceptedIds(matches);
   const prior = new Set(matches.filter((m) => m.requester_result_id === student.result_id).map((m) => m.peer_result_id));
   const load = (p) => matches.filter((m) => m.peer_result_id === p.result_id && OPEN.includes(m.status)).length + (taken.get(p.result_id) || 0);
   return peers
     .filter((p) => p.result_id !== student.result_id && p.application_id !== student.application_id)
     .filter((p) => p.season === student.season && !p.opted_out_at && !p.paused_at)
     .filter((p) => isMinor(p) === isMinor(student) && !!p.is_test === !!student.is_test)
-    .filter((p) => !prior.has(p.result_id))
+    .filter((p) => !prior.has(p.result_id) && !askers.has(p.result_id) && !done.has(p.result_id))
     .filter((p) => !blocks.some((b) => b.peer_result_id === p.result_id && b.application_id === student.application_id))
-    .filter((p) => load(p) < (p.max_open ?? 3))
+    .filter((p) => load(p) < (p.max_open ?? 1))
     .map((p) => ({ p, score: overlap(student, p) }))
     .sort((a, b) => b.score - a.score || a.p.result_id - b.p.result_id)
     .map((x) => x.p);
@@ -47,13 +51,16 @@ export const profile = (s) => ({ name: s.name, org: s.org, working_on: s.working
 
 export async function draftAll({ requesters, peers, matches = [], blocks = [], generate, judge, limit }) {
   const open = new Set(matches.filter((m) => [...OPEN, 'unmatched'].includes(m.status)).map((m) => m.requester_result_id));
+  const asked = new Set(matches.filter((m) => OPEN.includes(m.status) && m.peer_result_id != null).map((m) => m.peer_result_id));
+  const done = acceptedIds(matches);
   const taken = new Map();
+  const asking = new Set();
   const out = [];
   let skipped = 0;
   for (const s of requesters) {
     if (limit != null && out.length >= limit) break;
-    if (open.has(s.result_id) || s.opted_out_at || s.paused_at || s.outcome === 'cohort' || s.cohort_id != null) { skipped++; continue; }
-    const cands = eligiblePeers(s, peers, { matches, blocks, taken }).slice(0, TRIES);
+    if (open.has(s.result_id) || done.has(s.result_id) || asked.has(s.result_id) || taken.has(s.result_id) || s.opted_out_at || s.paused_at || s.outcome === 'cohort' || s.cohort_id != null) { skipped++; continue; }
+    const cands = eligiblePeers(s, peers, { matches, blocks, taken, asking }).slice(0, TRIES);
     let row = null;
     for (const p of cands) {
       let d;
@@ -65,6 +72,7 @@ export async function draftAll({ requesters, peers, matches = [], blocks = [], g
       row = { requester_result_id: s.result_id, peer_result_id: p.result_id, status: 'draft', fit: { together: d.fit.together, common: d.fit.common },
         draft_message: d.draft_message, judge_score: (j.fit + j.specificity) / 2 };
       taken.set(p.result_id, (taken.get(p.result_id) || 0) + 1);
+      asking.add(s.result_id);
       break;
     }
     out.push(row || { requester_result_id: s.result_id, peer_result_id: null, status: 'unmatched', fit: {}, draft_message: null, judge_score: null });

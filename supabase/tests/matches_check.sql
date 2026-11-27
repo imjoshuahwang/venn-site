@@ -232,7 +232,11 @@ begin
   perform pg_temp.as_user(uf, 'fay@example.com');
   insert into public.match_pool (result_id) values (ra) on conflict do nothing;
   -- fay (minor, rf) requests ra? ra is a minor in pool; ra's open capacity is fine
+  select coalesce(max(id), 0) into n from public.match_events;
+  alter table public.matches disable trigger matches_guard;  -- legacy fixture: ra already holds an accepted match (#281 forbids this for new rows)
+  update public.matches set status = 'withdrawn' where id = m1;  -- freed for the next fixtures, restored below
   insert into public.matches (requester_result_id, peer_result_id, status) values (rf, ra, 'approved') returning id into m5;
+  alter table public.matches enable trigger matches_guard;
   -- Seed two request_sent events in the last day for fay's application to prove the limiter counts per user.
   insert into public.match_events (match_id, type, actor) values (m5, 'request_sent', 'student'), (m5, 'request_sent', 'student');
   set local role authenticated;
@@ -252,6 +256,7 @@ begin
   reset role;
 
   -- report: requester reports an accepted match -> reported, pair blocked, contact hidden; blocked pair cannot be matched again
+  update public.matches set status = 'accepted' where id = m1; delete from public.match_events where id > n and match_id = m1;  -- back to the accepted fixture
   perform pg_temp.as_user(ua, 'ava@example.com'); set local role authenticated;
   perform public.match_report(m1);
   select * into g from public.get_my_match();
@@ -294,6 +299,71 @@ begin
   if (select status from public.matches where id = m5) <> 'expired' or not exists (select 1 from public.match_events where match_id = m5 and type = 'expired' and actor = 'system') then raise exception 'expiry event'; end if;
   select * into r from public.intro_respond(repeat('e', 64), 'accept');
   if r.outcome <> 'expired' or r.peer_email is not null then raise exception 'accept after expiry'; end if;
+
+  -- #281 one role per student: asker or asked, never both; one accepted peer; no new ask after an accept.
+  declare
+    ux uuid := gen_random_uuid(); uy uuid := gen_random_uuid(); uz uuid := gen_random_uuid(); uw uuid := gen_random_uuid();
+    ax bigint; ay bigint; az bigint; aw bigint; rx bigint; ry bigint; rz bigint; rw bigint; mx bigint; my bigint; mz bigint; rr record;
+    t1 text := repeat('1', 64); t2 text := repeat('2', 64); t3 text := repeat('3', 64);
+  begin
+    perform set_config('request.jwt.claims', '', true);
+    insert into auth.users (id, email, email_confirmed_at) values (ux, 'xan@example.com', now()), (uy, 'yui@example.com', now()), (uz, 'zed@example.com', now()), (uw, 'wes@example.com', now());
+    insert into public.applications (role, level, name, email, org, working_on, source) values ('student', 'college', 'Xan One', 'xan@example.com', 'X U', 'a', '/apply') returning id into ax;
+    insert into public.applications (role, level, name, email, org, working_on, source) values ('student', 'college', 'Yui Two', 'yui@example.com', 'Y U', 'b', '/apply') returning id into ay;
+    insert into public.applications (role, level, name, email, org, working_on, source) values ('student', 'college', 'Zed Three', 'zed@example.com', 'Z U', 'c', '/apply') returning id into az;
+    insert into public.applications (role, level, name, email, org, working_on, source) values ('student', 'college', 'Wes Four', 'wes@example.com', 'W U', 'd', '/apply') returning id into aw;
+    insert into public.results (application_id, outcome, status, phone) values (ax, 'peer', 'approved', '+14155550201') returning id into rx;
+    insert into public.results (application_id, outcome, status, phone) values (ay, 'peer', 'approved', '+14155550202') returning id into ry;
+    insert into public.results (application_id, outcome, status, phone) values (az, 'peer', 'approved', '+14155550203') returning id into rz;
+    insert into public.results (application_id, outcome, status, phone) values (aw, 'peer', 'approved', '+14155550204') returning id into rw;
+    insert into public.match_pool (result_id) values (rx), (ry), (rz), (rw);
+
+    -- case 1: X asks Y; then Y (the asked) cannot ask Z, and nobody can ask X (the asker)
+    insert into public.matches (requester_result_id, peer_result_id, status) values (rx, ry, 'approved') returning id into mx;
+    if not pg_temp.fails(format('insert into public.matches (requester_result_id, peer_result_id) values (%s, %s)', ry, rz), '22023') then raise exception 'asked student was allowed to ask'; end if;
+    if not pg_temp.fails(format('insert into public.matches (requester_result_id, peer_result_id) values (%s, %s)', rz, rx), '22023') then raise exception 'asker was allowed to be asked'; end if;
+
+    -- friendly failure: Y (already asked by X) tries to send a request of their own -> a clear reason, not a constraint error
+    update public.matches set status = 'requested', requested_at = now(), expires_at = now() + interval '72 hours', token_hash = t1 where id = mx;
+    alter table public.matches disable trigger matches_guard;  -- a legacy row that predates the guard
+    insert into public.matches (requester_result_id, peer_result_id, status) values (ry, rz, 'approved') returning id into my;
+    alter table public.matches enable trigger matches_guard;
+    set local role authenticated; perform pg_temp.as_user(uy, 'yui@example.com');
+    begin
+      perform public.match_request(my, 'I build mapping tools for schools and would love to swap notes with you on shipping.');
+      raise exception 'asked student could send a request';
+    exception when others then
+      if sqlstate <> '22023' or sqlerrm !~ 'answer' then raise exception 'unfriendly reason: % %', sqlstate, sqlerrm; end if;
+    end;
+    reset role;
+
+    -- case 2: Y cannot accept while Y has their own open ask (the legacy row); the refusal leaks no contact
+    select * into rr from public.intro_respond(t1, 'accept');
+    if rr.outcome <> 'busy' or rr.requester_email is not null or rr.peer_email is not null or (select status from public.matches where id = mx) <> 'requested' then raise exception 'accept allowed while the peer has their own ask'; end if;
+    delete from public.matches where id = my;
+
+    -- case 3: one peer, three pending asks (capacity lifted for the test); the first accept closes the others with a decline
+    update public.match_pool set max_open = 3 where result_id = ry;
+    update public.matches set request_mailed_at = now() where id = mx;
+    insert into public.matches (requester_result_id, peer_result_id, status, requested_at, expires_at, token_hash, request_mailed_at)
+      values (rz, ry, 'requested', now(), now() + interval '72 hours', t2, now()) returning id into mz;
+    insert into public.matches (requester_result_id, peer_result_id, status, requested_at, expires_at, token_hash, request_mailed_at)
+      values (rw, ry, 'requested', now(), now() + interval '72 hours', t3, now()) returning id into my;
+    select * into rr from public.intro_respond(t2, 'accept');
+    if rr.outcome <> 'accepted' then raise exception 'first accept failed %', rr.outcome; end if;
+    if (select status from public.matches where id = mx) <> 'declined' or (select status from public.matches where id = my) <> 'declined' then raise exception 'other asks not closed on accept'; end if;
+    if (select count(*) from public.match_sweep() where match_id in (mx, my) and action = 'decline') <> 2 then raise exception 'closed asks get no kind notice'; end if;
+    select * into rr from public.intro_respond(t1, 'accept');
+    if rr.outcome <> 'declined' or rr.peer_email is not null then raise exception 'second accept for one peer succeeded'; end if;
+
+    -- case 4: after an accept neither side may start a new ask or be asked
+    if not pg_temp.fails(format('insert into public.matches (requester_result_id, peer_result_id) values (%s, %s)', rz, rx), '22023') then raise exception 'accepted requester asked again'; end if;
+    if not pg_temp.fails(format('insert into public.matches (requester_result_id, peer_result_id) values (%s, %s)', rx, rz), '22023') then raise exception 'accepted requester was asked'; end if;
+    if not pg_temp.fails(format('insert into public.matches (requester_result_id, peer_result_id) values (%s, %s)', rx, ry), '22023') then raise exception 'accepted peer was asked'; end if;
+    set local role authenticated; perform pg_temp.as_user(uz, 'zed@example.com');
+    if not pg_temp.fails(format('select public.match_rematch(%s)', mz), '22023') then raise exception 'rematch after accept'; end if;
+    reset role;
+  end;
 
   -- funnel is service-only and counts distinct matches
   alter role service_role bypassrls;  -- Supabase's service_role bypasses RLS; the local stub role does not

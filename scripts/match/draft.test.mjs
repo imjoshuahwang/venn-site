@@ -77,3 +77,37 @@ test('a peer already matched to this student is never offered again', () => {
   const r = eligiblePeers(mk(1), [mk(2), mk(3)], { matches: [{ requester_result_id: 1, peer_result_id: 2, status: 'declined' }] });
   assert.deepEqual(r.map((p) => p.result_id), [3]);
 });
+
+// #281: one role per student. Mirrors matches_guard in 20261128150000_match_one_role.sql.
+test('a requester with an open ask is never offered as a peer, and an asked student never asks', async () => {
+  const peers = [mk(2), mk(3)];
+  const matches = [{ requester_result_id: 2, peer_result_id: 3, status: 'requested' }];
+  assert.deepEqual(eligiblePeers(mk(1), peers, { matches }).map((p) => p.result_id), [3]);
+  const r = await draftAll({ requesters: [mk(3)], peers, matches, generate: gen, judge: pass });
+  assert.equal(r.skipped, 1);
+  assert.deepEqual(r.matches, []);
+});
+
+test('within one run each student gets one role, asked first', async () => {
+  const pool = [1, 2, 3, 4].map((i) => mk(i, { max_open: 1 }));
+  const r = await draftAll({ requesters: pool, peers: pool, generate: gen, judge: pass });
+  const asking = r.matches.filter((m) => m.status === 'draft').map((m) => m.requester_result_id);
+  const asked = r.matches.filter((m) => m.status === 'draft').map((m) => m.peer_result_id);
+  assert.equal(asking.filter((id) => asked.includes(id)).length, 0);
+  assert.equal(new Set(asked).size, asked.length);
+  assert.ok(r.drafts >= 1);
+});
+
+test('accepted students are out on both sides', async () => {
+  const peers = [mk(2), mk(3)];
+  const matches = [{ requester_result_id: 2, peer_result_id: 9, status: 'accepted' }, { requester_result_id: 8, peer_result_id: 3, status: 'accepted' }];
+  assert.deepEqual(eligiblePeers(mk(1), peers, { matches }).map((p) => p.result_id), []);
+  const r = await draftAll({ requesters: [mk(2), mk(3)], peers: [mk(1)], matches, generate: gen, judge: pass });
+  assert.equal(r.skipped, 2);
+});
+
+test('a peer holds one pending ask by default', async () => {
+  const p = { ...mk(9) }; delete p.max_open;
+  const matches = [{ requester_result_id: 5, peer_result_id: 9, status: 'approved' }];
+  assert.deepEqual(eligiblePeers(mk(1), [p], { matches }), []);
+});
