@@ -200,7 +200,7 @@ for (const [slug, preset] of Object.entries(VIEWPORTS)) {
     await page.waitForURL(`${BASE}/portal`);
     await page.goto(`${BASE}/portal`);
     assert.equal(await page.locator('[data-next-step=waiting-on-parent]').count(), 1);
-    assert.equal(await page.locator('[data-pill]').getAttribute('aria-disabled'), 'true');
+    assert.equal(await page.locator('[data-text-josh]').count(), 0);
     await page.waitForSelector('form.parent-request');
     await shot128(page, 'parent-waiting');
     await checkLayout(page, 'parent-waiting');
