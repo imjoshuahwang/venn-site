@@ -66,7 +66,7 @@ async function run(partner, reducedMotion, tag) {
   assert.doesNotMatch(await page.locator('[data-typed]').textContent(), /%/);
   await shot(page, `${tag}-4-popup`);
   await noOverflow(page, 'popup');
-  assert.equal(await page.locator('[data-popup] a, [data-popup] button').count(), 1, 'popup has one primary action');
+  assert.equal(await page.locator('[data-popup] a:visible, [data-popup] button:visible').count(), 1, 'popup has one primary action');
   assert.match(await page.locator('[data-popup-title]').textContent(), /^Accepted into .+$/);
   assert.ok((await page.locator('[data-popup-logo]').evaluate((i) => i.naturalWidth)) > 0, 'logo loaded');
   assert.deepEqual(errors, []);

@@ -19,6 +19,9 @@ let cohortView = null;
 let guiding = {};
 let failed = false;
 let firstName = '';
+// Main has no org name or birthday yet (#223 adds them). Dev stubs pass ?org= and ?birthday= so every branch can be tested.
+const stubOrg = import.meta.env.DEV && Astro.url.searchParams.get('stub') ? (Astro.url.searchParams.get('org') ?? 'Lincoln High Robotics Club') : '';
+const stubBirthday = import.meta.env.DEV && Astro.url.searchParams.get('stub') ? Astro.url.searchParams.get('birthday') : null;
 const stub = import.meta.env.DEV ? Astro.url.searchParams.get('stub') : null;
 try {
   result = stub ? stubResult(stub) : await getMyResult(Astro.locals.supabase);
@@ -47,7 +50,7 @@ const page = result ? pageFor(result.outcome) : null;
 <Portal title="Your Result">
   {failed ? <ResultState state="error" />
     : result?.outcome === 'cohort' ? <>
-      {partner && cohort && <CohortReveal partner={partner} resultId={cohort.id} done={!!cohort.ceremony_done_at} stub={!!stub} />}
+      {partner && cohort && <CohortReveal partner={partner} resultId={cohort.id} done={!!cohort.ceremony_done_at} stub={!!stub} org={stubOrg} birthday={stubBirthday} />}
       <Cohort result={cohort} view={cohortView} replay={!!partner} accepted={partner ? popupTitle(partner) : null}>
       {cohort && <GuidingQuestions slot="guidingQuestions" resultId={cohort.id} answers={guiding} closed={access === 'closed'} readonly={access === 'readonly'} />}
     </Cohort></>

@@ -480,3 +480,29 @@
     - tap [data-sent-btn]
     - expect-visible [data-done]
     - screenshot done
+- name: accept-share-letter
+  on: /portal/login
+  steps:
+    - goto /portal/result?stub=cohort&birthday=2000-01-01
+    - tap [data-reveal-play]
+    - expect-visible [data-popup]
+    - wait 1500
+    - screenshot 227-popup
+    - tap [data-screen="intro"] [data-go]
+    - expect-visible [data-actions] [data-share-btn]
+    - wait 1500
+    - screenshot 227-share
+    - tap [data-screen="share"] [data-go]
+    - expect-visible [data-screen="letter"]
+    - screenshot 227-letter
+    - tap [data-screen="letter"] [data-go]
+    - expect-visible [data-screen="experience"]
+    - screenshot 227-linkedin-experience
+    - tap [data-screen="experience"] [data-go]
+    - expect-visible [data-screen="post"]
+    - screenshot 227-linkedin-post
+    - tap [data-screen="post"] [data-go]
+    - tap [data-screen="phone"] [data-go]
+    - tap [data-screen="mou"] [data-go]
+    - expect-visible [data-screen="email"]
+    - screenshot 227-email
