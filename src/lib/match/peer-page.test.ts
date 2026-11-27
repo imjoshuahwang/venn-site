@@ -158,3 +158,10 @@ test('accepted copy does not promise mail it cannot guarantee and says what to d
   assert.match(p, /hour/);
   assert.match(p, /contact@joinvenn\.org/);
 });
+
+test('a peer with their own open ask gets the busy page with plain copy', async () => {
+  const p = await submitIntro(TOKEN, fd({ action: 'accept' }), deps(fake('open', 'busy').sb));
+  assert.deepEqual(p, { kind: 'state', state: 'busy' });
+  assert.equal(COPY.busy.h, 'You already have a request open');
+  assert.match(COPY.busy.p ?? '', /finish that first/);
+});

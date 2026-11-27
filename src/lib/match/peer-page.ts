@@ -82,6 +82,7 @@ export const COPY: Record<Outcome, { h: string; p?: string }> = {
   opted_out: { h: 'Done', p: 'You will not get more requests.' },
   expired: { h: 'This request expired' },
   withdrawn: { h: 'This request was withdrawn' },
+  busy: { h: 'You already have a request open', p: 'You asked someone to be your match, so finish that first. You can only be in one match at a time.' },
   unknown: { h: 'This link is not valid' },
 };
 
