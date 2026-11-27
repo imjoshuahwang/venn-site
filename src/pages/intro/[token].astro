@@ -1,0 +1,79 @@
+---
+import { createClient } from '@supabase/supabase-js';
+import Portal from '../../layouts/Portal.astro';
+import { loadIntro, submitIntro, fixtureClient, COPY, type Page } from '../../lib/match/peer-page.ts';
+import { memoryStore, rpcStore, clientIp } from '../../lib/portal/ratelimit.ts';
+import { TURNSTILE_TEST } from '../../lib/portal/turnstile-test-keys.ts';
+
+export const prerender = false;
+const token = Astro.params.token ?? '';
+const fixture = import.meta.env.DEV ? fixtureClient(token) : null;
+const sb = fixture ?? createClient(import.meta.env.PUBLIC_SUPABASE_URL, import.meta.env.SUPABASE_SERVICE_ROLE_KEY ?? 'x', { auth: { persistSession: false } });
+const siteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || (import.meta.env.DEV ? TURNSTILE_TEST.siteKey : '');
+const secret = process.env.TURNSTILE_SECRET_KEY ?? '';
+Astro.response.headers.set('Cache-Control', 'private, no-store');
+Astro.response.headers.set('X-Robots-Tag', 'noindex');
+Astro.response.headers.set('Referrer-Policy', 'same-origin');
+
+let page: Page;
+try {
+  if (Astro.request.method === 'POST') {
+    if (Astro.request.headers.get('origin') !== Astro.url.origin) return new Response('Forbidden', { status: 403 });
+    page = await submitIntro(token, await Astro.request.formData(), {
+      sb, ip: clientIp(Astro.request), store: fixture ? memoryStore() : rpcStore(sb), secret: siteKey && secret ? secret : undefined,
+    });
+  } else page = await loadIntro(sb, token);
+} catch (e) {
+  console.error('intro page failed:', (e as Error).message);
+  return new Response('Something went wrong. Try again in a minute.', { status: 503, headers: { 'content-type': 'text/plain; charset=utf-8' } });
+}
+const widget = !!(siteKey && secret);
+---
+<Portal title="Venn">
+  <section class="intro">
+    {page.kind === 'open' && (
+      <form method="post">
+        <h1>{page.view.requester_first_name} would like an intro</h1>
+        <p class="who">{[page.view.requester_org, page.view.requester_region].filter(Boolean).join(' · ')}</p>
+        {page.view.message && <blockquote>{page.view.message}</blockquote>}
+        {page.view.learn && <p><strong>Wants to learn</strong> {page.view.learn}</p>}
+        {widget && <div class="cf-turnstile" data-sitekey={siteKey} data-appearance="interaction-only"></div>}
+        <div class="row">
+          <button class="pill" type="submit" name="action" value="accept">Accept</button>
+          <button class="pill ghost" type="submit" name="action" value="decline">Not now</button>
+        </div>
+        <div class="row small">
+          <button class="link" type="submit" name="action" value="report">Report</button>
+          <button class="link" type="submit" name="action" value="optout">Stop requests</button>
+        </div>
+      </form>
+    )}
+    {page.kind === 'confirm' && (
+      <form method="post">
+        <h1>{page.action === 'report' ? 'Report this request?' : 'Stop getting requests?'}</h1>
+        <input type="hidden" name="action" value={page.action}><input type="hidden" name="confirm" value="1">
+        {widget && <div class="cf-turnstile" data-sitekey={siteKey} data-appearance="interaction-only"></div>}
+        <div class="row">
+          <button class="pill" type="submit">{page.action === 'report' ? 'Report' : 'Stop'}</button>
+          <a class="pill ghost" href={Astro.url.pathname}>Back</a>
+        </div>
+      </form>
+    )}
+    {page.kind === 'state' && (<><h1>{COPY[page.state].h}</h1>{COPY[page.state].p && <p>{COPY[page.state].p}</p>}</>)}
+    {page.kind === 'refused' && (<><h1>{page.why === 'limited' ? 'Too many tries' : 'Check failed'}</h1><p><a href={Astro.url.pathname}>Back</a></p></>)}
+  </section>
+  {widget && <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>}
+</Portal>
+<style>
+  .intro { display: grid; gap: var(--sp-16); padding-top: var(--sp-48); }
+  h1 { margin: 0; font-size: var(--fs-28); letter-spacing: var(--track-tight); line-height: 1.15; overflow-wrap: anywhere; }
+  p, blockquote { margin: 0; overflow-wrap: anywhere; }
+  form { display: grid; gap: var(--sp-16); }
+  .who { color: var(--muted); }
+  blockquote { padding: var(--sp-16); border-radius: var(--r-12); background: var(--panel); }
+  .row { display: flex; flex-wrap: wrap; gap: var(--sp-12); }
+  .row .pill { flex: 1 1 8rem; border: 0; font-family: inherit; cursor: pointer; }
+  .pill.ghost { background: var(--white); color: var(--ink); border: 1px solid var(--line); }
+  .row.small { gap: var(--sp-16); }
+  .link { min-height: 44px; padding: 0; border: 0; background: none; font: inherit; font-size: var(--fs-15); color: var(--muted); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+</style>
