@@ -2,7 +2,7 @@
 Usage: python3 scripts/portal/apply-plan.py plan.json [--apply] [--backup peer_matches_backup.json]
 plan.json: {cohorts:{slug:[{id,why}]}, pairs:[{ids,why}], nts:[{id,why}], duplicates:[{id,keep_id}]} (application ids).
 Never touches approved rows, never deletes anything. Existing draft rows are replaced in place and their letter cleared.
-Peer pairs of 2 ids make one peer_matches row; a triad (3 ids) makes all three edges AB, AC, BC (migration 20261126020000_peer_triads.sql
+Peer pairs of 2 ids make one peer_matches row; a triad (3 ids) makes all three edges AB, AC, BC (migration 20261126030000_peer_triads.sql
 must be applied first: a result may sit in at most two rows, an unordered pair only once).
 Old peer_matches with activity (a tap, a rematch, an approved side) are protected and kept; unprotected rows already holding a wanted pair
 are kept; the rest are repointed in place (same row id) where no constraint conflicts, else new rows are inserted. Stale rows left over
