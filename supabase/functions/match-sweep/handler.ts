@@ -66,6 +66,7 @@ export async function handle(req: Request, env: Env, deps: { fetch?: typeof fetc
       const rq = row?.requester?.applications, peer = row?.peer?.applications;
       if (!row || !rq || !peer) continue;
       const isTest = rq.is_test || peer.is_test;
+      if (action === "lapsed") { out.skipped++; log(`match ${id} ${row.status} mail not sent: past the 20h retry window (sends were off or failing)`); continue; }
       if (action === "remind" && row.message) {
         if (row.status !== "requested") { out.skipped++; continue; } // the peer answered since the sweep ran: no nudge
         const r = await sendMail(buildRequest(templates, "reminder", { matchId: id, peerEmail: peer.email, peerName: peer.name, requesterName: rq.name, requesterOrg: rq.org, message: row.message, token: await matchToken(tokenSecret, id) }), { env, fetch: f, log, isTest });

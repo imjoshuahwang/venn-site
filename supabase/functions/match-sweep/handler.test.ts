@@ -124,3 +124,11 @@ test('a failed marker after a good send is retried 3 times, and a failed send is
   await call(on, f);
   assert.deepEqual(f.marks, []);
 });
+
+test('a lapsed intro is logged, not sent', async () => {
+  const logs: string[] = [];
+  const s = stub([{ match_id: 5, action: 'lapsed' }], { ...row, status: 'accepted' } as never);
+  await handle(new Request('https://f.example.com/', { method: 'POST', headers: { 'x-webhook-secret': 'sec' } }), (k) => on[k], { fetch: s.fetch, log: (m: string) => logs.push(m) });
+  assert.equal(s.bodies.length, 0);
+  assert.ok(logs.some((l) => l.includes('retry window')));
+});

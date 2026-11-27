@@ -29,12 +29,20 @@ begin
   return query
     select m.id, 'expire'::text from public.matches m
     where m.status = 'expired' and m.request_mailed_at is not null and m.expiry_mailed_at is null;
+  -- A decline after an opt-out is deliberately silent, so opt-outs (which also set declined) never reach the decline branch.
   return query
     select m.id, 'intro'::text from public.matches m
     where m.status = 'accepted' and m.intro_mailed_at is null and m.responded_at > now() - interval '20 hours';
   return query
     select m.id, 'decline'::text from public.matches m
-    where m.status = 'declined' and m.request_mailed_at is not null and m.decline_mailed_at is null and m.responded_at > now() - interval '20 hours';
+    where m.status = 'declined' and m.request_mailed_at is not null and m.decline_mailed_at is null and m.responded_at > now() - interval '20 hours'
+      and not exists (select 1 from public.match_events e where e.match_id = m.id and e.type = 'opted_out');
+  -- Past the window: never sent (Resend would no longer dedupe), reported so the handler can log it once per run.
+  return query
+    select m.id, 'lapsed'::text from public.matches m
+    where (m.status = 'accepted' and m.intro_mailed_at is null and m.responded_at <= now() - interval '20 hours')
+       or (m.status = 'declined' and m.request_mailed_at is not null and m.decline_mailed_at is null and m.responded_at <= now() - interval '20 hours'
+           and not exists (select 1 from public.match_events e where e.match_id = m.id and e.type = 'opted_out'));
 end $$;
 
 create or replace function public.match_mail_done(p_match_id bigint, p_kind text) returns void language plpgsql security definer set search_path = '' as $$
