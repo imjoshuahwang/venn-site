@@ -6,7 +6,7 @@ import { mailable } from "./mailable.ts";
 import { formatDeadline } from "./deadline.ts";
 
 const SITE = "https://joinvenn.org";
-const FROM = "Venn <hello@heyvenn.org>";
+const FROM = "Venn <hello@vennstudentorgs.com>";
 const REPLY_TO = "contact@joinvenn.org";
 
 export type Env = (name: string) => string | undefined;
@@ -147,6 +147,13 @@ export async function handle(req: Request, env: Env): Promise<Response> {
   if (!(await claim.json()).length) return json({ skipped: "already_sent" });
 
   try {
+    // Student mail uses its own key and domain; RESEND_API_KEY (cold lane) is never a fallback. No key = no send.
+    const resendKey = env("STUDENT_RESEND_API_KEY");
+    if (!resendKey) {
+      console.log(`STUDENT_RESEND_API_KEY missing, nothing sent for application ${id}`);
+      await unclaim(rest, id as number);
+      return json({ error: "STUDENT_RESEND_API_KEY is not set" }, 500);
+    }
     const vals = {
       headline: headline(firstName(row.name)),
       refer_link: `${SITE}/refer?code=${encodeURIComponent(row.page_token)}`,
@@ -156,7 +163,7 @@ export async function handle(req: Request, env: Env): Promise<Response> {
       fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${env("RESEND_API_KEY")}`,
+          Authorization: `Bearer ${resendKey}`,
           "Content-Type": "application/json",
           "User-Agent": "venn",
           "Idempotency-Key": `confirm-${id}`,

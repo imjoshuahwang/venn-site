@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { parseArgs, pickRows, render, linkFor, firstName, sendOne, FROM, REPLY_TO } from './send-results.mjs';
+import { parseArgs, pickRows, render, linkFor, firstName, sendOne, run, FROM, REPLY_TO } from './send-results.mjs';
 
 const template = readFileSync(new URL('../../supabase/templates/results-ready.html', import.meta.url), 'utf8');
 const row = (id, email, is_test = false, name = 'Ada Lovelace') => ({ id, applications: { name, email, is_test } });
@@ -63,5 +63,30 @@ test('mail goes From the verified domain with Reply-To contact@joinvenn.org', as
   await sendOne({ sb: fakeSb({ claimed: true }), row: row(1, 'a@x.com'), template, from: FROM, resendKey: 'k', fetchImpl: async (_u, o) => { body = JSON.parse(o.body); return { ok: true }; } });
   assert.equal(REPLY_TO, 'contact@joinvenn.org');
   assert.equal(body.reply_to, 'contact@joinvenn.org');
-  assert.match(body.from, /<hello@heyvenn\.org>$/);
+  assert.match(body.from, /<hello@vennstudentorgs\.com>$/);
+});
+
+test('missing student key: nothing sent, fetch never called, claim never taken', async () => {
+  const sb = fakeSb({ claimed: true });
+  let n = 0;
+  const fetchImpl = async () => { n++; return { ok: true }; };
+  await assert.rejects(sendOne({ sb, row: row(1, 'a@x.com'), template, from: FROM, resendKey: undefined, fetchImpl }), /STUDENT_RESEND_API_KEY/);
+  await assert.rejects(run({ args: { send: true, to: null, test: false }, sb: { ...sb, from: () => ({ select: () => ({ eq() { return this; }, is() { return this; }, order() { return this; }, limit: async () => ({ data: [row(1, 'a@x.com')], error: null }) }) }) }, template, from: FROM, resendKey: '', log() {}, fetchImpl }), /STUDENT_RESEND_API_KEY/);
+  assert.equal(n, 0);
+  assert.equal(sb.calls.length, 0);
+});
+
+test('logs carry row id and resend_id but no applicant email', async () => {
+  const sb = fakeSb({ claimed: true });
+  const pending = [row(5, 'ada.secret@example.com')];
+  const lines = [];
+  const base = sb.from;
+  const sbq = { ...sb, from: (t) => { const f = base(t); return { ...f, select: () => ({ eq() { return this; }, is() { return this; }, order() { return this; }, limit: async () => ({ data: pending, error: null }) }) }; } };
+  const fetchImpl = async () => ({ ok: true, json: async () => ({ id: 're_abc' }) });
+  await run({ args: { send: false, to: null, test: false }, sb: sbq, template, from: FROM, resendKey: 'k', log: (m) => lines.push(m) });
+  await run({ args: { send: true, to: null, test: false }, sb: sbq, template, from: FROM, resendKey: 'k', log: (m) => lines.push(m), fetchImpl, sleep: async () => {} });
+  const out = lines.join('\n');
+  assert.doesNotMatch(out, /ada\.secret|@example\.com/);
+  assert.match(out, /result 5 resend_id=re_abc/);
+  assert.match(out, /sample for result 5/);
 });

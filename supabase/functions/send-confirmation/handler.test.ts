@@ -6,7 +6,7 @@ const ENV: Record<string, string> = {
   SUPABASE_URL: "https://supabase.example.com",
   SUPABASE_SERVICE_ROLE_KEY: "svc",
   WEBHOOK_SECRET: "s3cret",
-  RESEND_API_KEY: "re_fake",
+  STUDENT_RESEND_API_KEY: "re_student",
   SEND_MODE: "all",
 };
 const env = (k: string) => ENV[k];
@@ -66,5 +66,30 @@ test("wrong webhook secret is rejected before any network call", async () => {
   await withFetch(async (calls) => {
     assert.equal((await handle(req("nope"), env)).status, 401);
     assert.equal(calls.length, 0);
+  });
+});
+
+test("handler sends from the student domain with the student key only", async () => {
+  await withFetch(async (calls) => {
+    const res = await handle(req(), env);
+    assert.equal(res.status, 200);
+    const send = calls.find((c) => c.url === "https://api.resend.com/emails")!;
+    const h = send.init!.headers as Record<string, string>;
+    assert.equal(h.Authorization, "Bearer re_student");
+    const body = JSON.parse(String(send.init!.body));
+    assert.equal(body.from, "Venn <hello@vennstudentorgs.com>");
+    assert.equal(body.reply_to, "contact@joinvenn.org");
+  });
+});
+
+test("missing student key sends nothing and releases the claim, even with RESEND_API_KEY set", async () => {
+  await withFetch(async (calls) => {
+    const e = (k: string) => (k === "STUDENT_RESEND_API_KEY" ? undefined : k === "RESEND_API_KEY" ? "re_cold" : ENV[k]);
+    const res = await handle(req(), e);
+    assert.equal(res.status, 500);
+    assert.match(JSON.stringify(await res.json()), /STUDENT_RESEND_API_KEY/);
+    assert.equal(calls.filter((c) => c.url.startsWith("https://api.resend.com/")).length, 0);
+    const last = calls.filter((c) => c.init?.method === "PATCH").at(-1)!;
+    assert.deepEqual(JSON.parse(String(last.init!.body)), { confirmed_at: null });
   });
 });
