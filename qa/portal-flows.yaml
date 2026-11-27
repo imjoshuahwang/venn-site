@@ -335,6 +335,22 @@
     - expect-visible [data-home] h1
     - expect-absent [data-ceremony]
     - screenshot back-home
+- name: home-with-match
+  on: /portal/login
+  steps:
+    - sign-in contact+portal-match@joinvenn.org
+    - goto /portal
+    - expect-visible [data-home] h1
+    - expect-link [data-match-link] /portal/match 44
+    - screenshot home-with-match
+- name: home-no-match
+  on: /portal/login
+  steps:
+    - sign-in contact+portal-home@joinvenn.org
+    - goto /portal
+    - expect-visible [data-home] h1
+    - expect-absent [data-match-link]
+    - screenshot home-no-match
 - name: home-none-state
   on: /portal/login
   steps:

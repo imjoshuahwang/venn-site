@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import net from 'node:net';
 import { spawn } from 'node:child_process';
 import { chromium, webkit } from 'playwright';
+import { localServerEnv } from '../scripts/qa/portal.mjs';
 import { resolveDevices, contextOptions, slug } from '../scripts/qa/devices.mjs';
 
 const SHOTS = process.env.MATCH_SHOTS;
@@ -17,7 +18,7 @@ const freePort = () => new Promise((res) => { const s = net.createServer().liste
 before(async () => {
   const port = await freePort();
   base = `http://localhost:${port}`;
-  server = spawn('npx', ['astro', 'dev', '--port', String(port), '--host', 'localhost'], { stdio: 'ignore', env: { ...process.env, PUBLIC_SUPABASE_URL: process.env.PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321', PUBLIC_SUPABASE_ANON_KEY: process.env.PUBLIC_SUPABASE_ANON_KEY || 'fixture-anon' } });
+  server = spawn('npx', ['astro', 'dev', '--port', String(port), '--host', 'localhost'], { stdio: 'ignore', env: localServerEnv('http://127.0.0.1:54321', 'fixture-anon') });
   for (let i = 0; i < 120; i++) { try { if ((await fetch(`${base}/portal/match?stub=unmatched`)).status < 500) break; } catch {} await new Promise((r) => setTimeout(r, 500)); }
   for (const d of DEVICES) browsers[d.browser] ??= await engines[d.browser].launch();
   if (SHOTS) fs.mkdirSync(SHOTS, { recursive: true });

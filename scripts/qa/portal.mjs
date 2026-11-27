@@ -132,6 +132,13 @@ async function runPortalFlow({ flow, device, browser, base, login }) {
       else if (verb === 'double-tap') await p.locator(unq(rest)).filter({ visible: true }).first().dblclick({ timeout: 10000 });
       else if (verb === 'allow-error') { const [st, ...re] = rest.split(/\s+/); cur.state.allow.push({ status: Number(st), re: new RegExp(unq(re.join(' '))) }); } // scoped to this flow, this context, one status + url
       else if (verb === 'expect-absent') { await p.locator(unq(rest)).filter({ visible: true }).first().waitFor({ state: 'hidden', timeout: 10000 }).catch(() => { throw new Error(`"${rest}" is visible`); }); }
+      else if (verb === 'expect-link') { // expect-link <selector> <path> <min px>: visible, goes to path, at least min x min
+        const [sel, href, min] = rest.split(/\s+/), el = p.locator(unq(sel)).filter({ visible: true }).first();
+        await el.waitFor({ state: 'visible', timeout: 10000 });
+        const b = await el.boundingBox(), got = new URL(await el.getAttribute('href'), base).pathname;
+        if (got !== href) throw new Error(`"${sel}" goes to ${got}, not ${href}`);
+        if (b.width < Number(min) || b.height < Number(min)) throw new Error(`"${sel}" is ${b.width}x${b.height}, under ${min}`);
+      }
       else if (verb === 'expect-content' || verb === 'expect-no-content') {
         const hit = new RegExp(unq(rest), 'i').test(await p.content());
         if (verb === 'expect-content' && !hit) throw new Error(`page has no /${rest}/`);

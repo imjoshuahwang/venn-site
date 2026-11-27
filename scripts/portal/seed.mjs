@@ -80,6 +80,14 @@ for (const p of plan.pairs) {
   }), `pair ${p.a}`);
 }
 
+for (const m of plan.matches) {
+  ok(await sb.from('match_pool').upsert({ result_id: resId[m.peer], is_test: true }, { onConflict: 'result_id' }), `pool ${m.peer}`);
+  const have = ok(await sb.from('matches').select('id').eq('requester_result_id', resId[m.requester]).eq('peer_result_id', resId[m.peer]).maybeSingle(), `find match ${m.requester}`);
+  const row = { season: SEASON, requester_result_id: resId[m.requester], peer_result_id: resId[m.peer], status: m.status, fit: m.fit };
+  if (have) ok(await sb.from('matches').update({ status: m.status, fit: m.fit, viewed_at: null }).eq('id', have.id), `reset match ${m.requester}`);
+  else ok(await sb.from('matches').insert(row), `match ${m.requester}`);
+}
+
 // Signatures: cohort-full-b always holds the one seat of test-cohort-full; --reset-test-state clears every other test signature so mou-sign can rerun.
 {
   const keep = resId['cohort-full-b'];
