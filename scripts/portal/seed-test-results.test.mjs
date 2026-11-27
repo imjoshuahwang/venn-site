@@ -4,7 +4,7 @@ import { TEST_APPLICANTS, approvedRow, testLetter } from './seed-test-results.mj
 
 test('every test applicant mails a plus address of the owner and is one journey', () => {
   for (const a of TEST_APPLICANTS) assert.match(a.email, /^imjoshuahwang\+[a-z0-9]+@gmail\.com$/);
-  assert.deepEqual(TEST_APPLICANTS.map((a) => a.outcome).sort(), ['cohort', 'cohort', 'not_this_season', 'peer', 'peer']);
+  assert.deepEqual(TEST_APPLICANTS.map((a) => a.outcome).sort(), ['cohort', 'cohort', 'network_waitlist', 'not_this_season', 'peer', 'peer']);
   const peers = TEST_APPLICANTS.filter((a) => a.partner);
   for (const p of peers) assert.equal(TEST_APPLICANTS.find((x) => x.slug === p.partner).partner, p.slug);
 });
