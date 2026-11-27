@@ -135,3 +135,32 @@ test("write failure is 500 so svix retries", async () => {
     assert.equal(res.status, 500);
   });
 });
+
+// Bounce alert gate (#251): switch off, failed PATCH, test rows or a non-allowlisted address send nothing.
+async function bounceRun(e: Record<string, string>, o: { patch?: number; isTest?: boolean } = {}) {
+  const real = globalThis.fetch;
+  const urls: string[] = [];
+  globalThis.fetch = (async (url: string | URL | Request) => {
+    const u = String(url);
+    urls.push(u);
+    if (u.includes("rs_events")) return new Response("", { status: 201 });
+    if (u.includes("/rest/v1/matches") && !u.includes("select=")) return new Response("", { status: o.patch ?? 200 });
+    if (u.includes("/rest/v1/matches")) return new Response(JSON.stringify([{ requester: { applications: { is_test: !!o.isTest } }, peer: { applications: { is_test: false } } }]));
+    if (u.includes("api.resend.com")) return new Response("{}");
+    throw new Error(`unexpected ${u}`);
+  }) as typeof fetch;
+  try {
+    const ev = { type: "email.bounced", data: { email_id: "re_1", to: ["a@b.com"], tags: { kind: "match_request", match_id: "7" } } };
+    await handle(req(ev), (k) => ({ ...ENV, ...e })[k], now);
+    return urls.filter((u) => u.includes("api.resend.com")).length;
+  } finally {
+    globalThis.fetch = real;
+  }
+}
+const alertEnv = { MATCH_ALERT_TO: "contact+portal-a@joinvenn.org", STUDENT_RESEND_API_KEY: "k" };
+
+test("bounce alert: switch unset sends nothing", async () => assert.equal(await bounceRun(alertEnv), 0));
+test("bounce alert: switch on and PATCH ok sends one", async () => assert.equal(await bounceRun({ ...alertEnv, MATCH_SENDS_ENABLED: "1" }), 1));
+test("bounce alert: failed PATCH sends nothing", async () => assert.equal(await bounceRun({ ...alertEnv, MATCH_SENDS_ENABLED: "1" }, { patch: 500 }), 0));
+test("bounce alert: test row sends nothing", async () => assert.equal(await bounceRun({ ...alertEnv, MATCH_SENDS_ENABLED: "1" }, { isTest: true }), 0));
+test("bounce alert: non-allowlisted address sends nothing", async () => assert.equal(await bounceRun({ ...alertEnv, MATCH_ALERT_TO: "x@example.com", MATCH_SENDS_ENABLED: "1" }), 0));
