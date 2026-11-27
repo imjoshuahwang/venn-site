@@ -7,7 +7,11 @@ export type PartnerCopy = {
   intro: { title: string; body: string };
   items: { share: string; experience: string; phone: string; mou: string; email: string };
   card: { headline: string; sub: (cohortTitle: string) => string };
-  letter: { title: string; paragraphs: string[]; mentor: string; button: string };
+  letter: {
+    title: string; paragraphs: string[]; mentor: string; button: string;
+    /** A named mentor who asked to talk to the student (#229): a bio link plus a Gmail compose to the Venn mentor address. */
+    dan?: { text: string; linkLabel: string; linkHref: string; actionLabel: string; subject: string };
+  };
   linkedin: {
     /** Experience title, one-tap copy. Needs 16+ (LinkedIn's minimum age). */
     title: string;
@@ -45,10 +49,40 @@ const AWS_COPY: PartnerCopy = {
   },
 };
 
+const QUADRON_ASSOC = 'This is an informal association between Venn and Quadron, not an official, paid or corporate deal.';
+const QUADRON_COPY: PartnerCopy = {
+  ...AWS_COPY,
+  association: QUADRON_ASSOC,
+  card: { headline: 'I got accepted.', sub: (t) => `Venn x Quadron ${t}` },
+  letter: {
+    title: 'What happens next',
+    paragraphs: [
+      'Your club will create an event, a competition or a community benefit. You pick it, and you run it through your organization.',
+      'We match you with a Venn mentor at contact@joinvenn.org. Venn gives you the courses, the curriculum and the materials.',
+    ],
+    mentor: QUADRON_ASSOC,
+    button: 'Next',
+    dan: {
+      text: 'Dan Pratl wants to talk to you.',
+      linkLabel: 'pratl.me',
+      linkHref: 'https://pratl.me',
+      actionLabel: 'Email Venn to talk to Dan',
+      subject: 'Venn x Quadron: I would like to talk to Dan',
+    },
+  },
+  linkedin: {
+    ...AWS_COPY.linkedin,
+    title: 'Venn x Quadron Fellow Fall 2026',
+    post: 'I just joined the Venn x Quadron Fellow Fall 2026 cohort with {org}. It is an informal association, not an official Quadron program.',
+  },
+};
+
+/** Shown when the cohort row names no known company: Venn only, no logo of anyone else, never a default company. */
+export const NEUTRAL: RevealPartner = { key: 'venn', name: 'Venn', cohortTitle: 'Fall Cohort 2026', logo: '/Venn_Horizontal_Logo_Light.png', line: 'Fall Cohort 2026' };
+
 export const PARTNERS: Record<string, RevealPartner> = {
   aws: { key: 'aws', name: 'AWS', cohortTitle: 'Fall Cohort 2026', logo: '/logos/aws.svg', line: 'Amazon Web Services', copy: AWS_COPY },
-  // #229: add `copy` here (logo stays /logos/quadron.svg). No Quadron copy is written in #227.
-  quadron: { key: 'quadron', name: 'Quadron', cohortTitle: 'Fall Cohort 2026', logo: '/logos/quadron.svg', line: 'Fall Cohort 2026' },
+  quadron: { key: 'quadron', name: 'Quadron', cohortTitle: 'Fall Cohort 2026', logo: '/logos/quadron.svg', line: 'Fall Cohort 2026', copy: QUADRON_COPY },
 };
 
 export const partnerFor = (slug: unknown): RevealPartner | null => (typeof slug === 'string' && Object.hasOwn(PARTNERS, slug) ? PARTNERS[slug] : null);

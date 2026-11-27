@@ -46,7 +46,7 @@ after(async () => {
   }
 });
 
-async function openPage(ctxOpts) {
+async function openPage(ctxOpts, partner = 'aws') {
   const ctx = await browser.newContext(ctxOpts);
   await ctx.addInitScript(() => { window.__opened = []; window.open = (...a) => { window.__opened.push(a); return null; }; });
   const page = await ctx.newPage();
@@ -57,7 +57,7 @@ async function openPage(ctxOpts) {
   await page.waitForFunction(() => document.querySelector('input[name="cf-turnstile-response"]')?.value);
   await page.click('button[type=submit]');
   await page.waitForURL('**/portal/ceremony');
-  await page.goto(`${BASE}/portal/next-steps`);
+  await page.goto(`${BASE}/portal/next-steps?partner=${partner}`);
   await page.waitForSelector('[data-step="1"]:not([hidden])');
   return page;
 }
@@ -135,4 +135,25 @@ test('desktop 1280: progress sits left of the step on the same row', async () =>
   assert.ok(bar.x < step.x, 'bar left of step');
   assert.ok(Math.abs(bar.y - step.y) < 20, 'same row');
   await page.screenshot({ path: `${SHOTS}step1-1280.png`, fullPage: true, scale: 'css' });
+});
+
+// #229: Quadron legal lines with the official logo, and no AWS or Amazon on a Quadron or neutral page.
+test('quadron and unknown partners never show AWS copy; quadron shows its logo', async () => {
+  for (const [w, h] of [[393, 852], [360, 740]]) {
+    const q = await openPage({ ...mobile(), viewport: { width: w, height: h } }, 'quadron');
+    const body = await q.locator('body').innerText();
+    assert.match(body, /Quadron logo/);
+    assert.match(body, /informal association/i);
+    assert.doesNotMatch(body, /aws|amazon/i);
+    assert.equal(await q.locator('[data-step="1"] img').getAttribute('src'), '/logos/quadron.svg');
+    assert.equal(await q.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+    await q.screenshot({ path: `${SHOTS}quadron-step1-${w}.png`, fullPage: true, scale: 'css' });
+    await q.click('[data-go="2"]');
+    await q.waitForSelector('[data-step="2"]:not([hidden])');
+    await q.screenshot({ path: `${SHOTS}quadron-step2-${w}.png`, fullPage: true, scale: 'css' });
+    await q.context().close();
+  }
+  const n = await openPage(mobile(), 'unknown-co');
+  assert.doesNotMatch(await n.locator('body').innerText(), /aws|amazon|quadron/i);
+  await n.context().close();
 });

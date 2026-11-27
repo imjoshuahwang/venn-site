@@ -101,10 +101,11 @@ export const STUB_CONTACT: PeerContact = { name: 'Maya', email: 'maya.fixture@ex
 /** Dev-only save_phone stand-in: one fixed code per session, whatever the phone, like the real RPC (#132). */
 export const stubSavePhone = (_phone: string, _whatsapp: boolean): string => 'VENN-4F2K';
 
-/** Dev stub for the cohort reveal (#226): `?stub=cohort` is AWS, `&partner=quadron` swaps the config entry. No Supabase reads. */
+/** Dev stub for the cohort reveal (#226): `?stub=cohort` is AWS, `&partner=quadron` swaps the config entry, any unknown value renders the neutral Venn reveal. No Supabase reads. */
 export function stubCohort(partner: string | null) {
-  const slug = partner === 'quadron' ? 'quadron' : 'aws';
-  const name = slug === 'quadron' ? 'Quadron' : 'AWS';
+  // Any other `partner` value is passed through as an unknown cohort slug, to exercise the neutral reveal.
+  const slug = partner ?? 'aws';
+  const name = slug === 'quadron' ? 'Quadron' : slug === 'aws' ? 'AWS' : 'Venn';
   return {
     result: { id: 1, letter: 'Dear Applicant,\n\nWe picked you for this cohort. The Venn team', ceremony_done_at: null, cohort: { slug, name: `${name} Fall Cohort 2026`, company: name, logo_path: null, goal: null, criteria: null, timeline: null, video_url: null, slides_url: null } },
     view: { signature: null, isLead: false, orgCount: null },
