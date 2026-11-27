@@ -30,13 +30,8 @@ test('quadron: official logo, informal wording, Dan note with a compose action, 
   assert.equal(d.linkHref, 'https://pratl.me');
   assert.match(d.subject, /talk to Dan/);
 });
-test('unknown or missing partner is the neutral Venn reveal, never AWS or Quadron', () => {
-  for (const slug of [undefined, null, '', 'nope', 'constructor', '__proto__', 42]) {
-    const p = partnerFor(slug);
-    assert.equal(p.key, 'venn');
-    assert.equal(p.copy, undefined);
-    for (const s of [popupTitle(p), p.name, p.logo]) assert.doesNotMatch(s, /aws|amazon|quadron|partner/i, s);
-  }
+test('unknown or missing partner renders no company reveal, never AWS or Quadron', () => {
+  for (const slug of [undefined, null, '', 'nope', 'constructor', '__proto__', 42]) assert.equal(partnerFor(slug), null);
 });
 test('aws copy never mentions Quadron', () => {
   for (const s of userFacingStrings(aws)) assert.doesNotMatch(s, /quadron/i, s);

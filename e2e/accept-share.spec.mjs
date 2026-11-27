@@ -149,13 +149,14 @@ test('quadron: Dan note has a clickable compose action, the card is non-blank, a
   await ctx.close();
 });
 
-test('aws page never says Quadron, and an unknown partner is a neutral Venn reveal', async () => {
+test('aws page never says Quadron, and an unknown partner shows no company reveal', async () => {
   const aws = await open(null);
   assert.doesNotMatch(await bodyHtml(aws.page), /quadron/i);
   await aws.ctx.close();
-  const n = await open(null, '&partner=unknown-co');
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const n = { ctx, page: await ctx.newPage() };
+  await n.page.goto(base + URL_('&partner=unknown-co'));
   assert.doesNotMatch(await bodyHtml(n.page), /aws|amazon|quadron/i);
-  assert.equal(await n.page.locator('[data-popup-title]').innerText(), 'Welcome to the Venn Fall Cohort 2026');
-  assert.equal(await n.page.locator('[data-popup] [data-reveal-next]').count(), 1);
+  assert.equal(await n.page.locator('[data-popup-title]').count(), 0);
   await n.ctx.close();
 });
