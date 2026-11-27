@@ -24,6 +24,10 @@ timebox = "720h"
 subject = "Set your Venn password"
 content_path = "./supabase/templates/invite.html"
 
+[auth.email.template.magic_link]
+subject = "Sign in to Venn"
+content_path = "./supabase/templates/magic-link.html"
+
 [auth.email.template.recovery]
 subject = "Reset your Venn password"
 content_path = "./supabase/templates/recovery.html"
