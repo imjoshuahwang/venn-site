@@ -1,4 +1,4 @@
-const PUBLIC = ['/portal/dev/result', '/portal/dev/peer-down', '/portal/dev/mou', '/portal/dev/guiding', '/portal/login', '/portal/set-password', '/portal/reset', '/portal/resend', '/portal/logout'];
+const PUBLIC = ['/portal/dev/result', '/portal/dev/match', '/portal/dev/peer-down', '/portal/dev/mou', '/portal/dev/guiding', '/portal/login', '/portal/set-password', '/portal/reset', '/portal/resend', '/portal/logout'];
 
 export function isPublicPortalPath(pathname: string): boolean {
   const p = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
