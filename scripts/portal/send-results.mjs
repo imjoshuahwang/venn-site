@@ -2,7 +2,7 @@
 // Dry run by default: prints the count and one rendered sample. `--send` sends. `--to a@x,b@y` restricts to those emails.
 // `--test` sends to is_test applicants only (never a real student). Reply-To is always contact@joinvenn.org.
 // Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, RESEND_API_KEY (all loaded by ./env.mjs), optional RESULTS_FROM.
-// From stays on the verified mail.heyvenn.org until joinvenn.org DKIM verifies in Resend, then set RESULTS_FROM or change FROM.
+// From is hello@heyvenn.org (verified apex). mail.heyvenn.org is the cold lane: never send from it here.
 // Usage: node scripts/portal/send-results.mjs [--test] [--to a@x,b@y] [--send]
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
@@ -12,7 +12,7 @@ import { loadEnv } from './env.mjs';
 const TEMPLATE = new URL('../../supabase/templates/results-ready.html', import.meta.url);
 export const SUBJECT = 'Venn Fall 2026 results are out';
 export const SITE = 'https://joinvenn.org';
-export const FROM = 'Venn <contact@mail.heyvenn.org>';
+export const FROM = 'Venn <hello@heyvenn.org>';
 export const REPLY_TO = 'contact@joinvenn.org';
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 

@@ -63,5 +63,5 @@ test('mail goes From the verified domain with Reply-To contact@joinvenn.org', as
   await sendOne({ sb: fakeSb({ claimed: true }), row: row(1, 'a@x.com'), template, from: FROM, resendKey: 'k', fetchImpl: async (_u, o) => { body = JSON.parse(o.body); return { ok: true }; } });
   assert.equal(REPLY_TO, 'contact@joinvenn.org');
   assert.equal(body.reply_to, 'contact@joinvenn.org');
-  assert.match(body.from, /@mail\.heyvenn\.org>$/);
+  assert.match(body.from, /<hello@heyvenn\.org>$/);
 });

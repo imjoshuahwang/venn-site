@@ -6,7 +6,7 @@ import { mailable } from "./mailable.ts";
 import { formatDeadline } from "./deadline.ts";
 
 const SITE = "https://joinvenn.org";
-const FROM = "Venn <hello@joinvenn.org>";
+const FROM = "Venn <hello@heyvenn.org>";
 const REPLY_TO = "contact@joinvenn.org";
 
 export type Env = (name: string) => string | undefined;
