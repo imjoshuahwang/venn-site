@@ -78,7 +78,7 @@ export function resetCeremony(slug, execFile = execFileSync) {
 }
 
 // ---- runner ----
-const DEVICES = ['iPhone SE', 'iPhone 15', 'Pixel 7'];
+const DEVICES = ['iPhone SE', 'iPhone 15', 'Pixel 7', 'Galaxy S8'];
 const CLS_PORTAL = 0.05;
 const unq = (s) => s.trim().replace(/^(["'])(.*)\1$/, '$2');
 
