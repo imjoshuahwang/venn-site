@@ -35,6 +35,7 @@ async function open(stub, reducedMotion = 'no-preference') {
 }
 const shot = (page, n, fullPage = false) => SHOTS && page.screenshot({ path: `${SHOTS}/${slug(dev.name)}-${n}.png`, fullPage });
 const settle = (page) => page.waitForFunction(() => { const c = document.querySelector('[data-card]'); return c && !c.hidden && c.getAnimations().every((a) => a.playState === 'finished') && getComputedStyle(c).opacity === '1'; }, null, { timeout: 5000 });
+const settle_ = (page) => page.waitForFunction(() => { const c = document.querySelector('[data-invite]'); return c && c.getAnimations().every((a) => a.playState === 'finished'); }, null, { timeout: 5000 });
 const MIN_TAP = 44;
 async function taps(page, where) {
   const sizes = await page.evaluate(() => [...document.querySelectorAll('.match button, .match a, .match .pill')].filter((e) => e.offsetParent !== null && !e.closest('[hidden]')).map((e) => { const r = e.getBoundingClientRect(); return { n: e.getAttribute('data-compose-open') !== null ? 'compose' : e.dataset.replay !== undefined ? 'replay' : e.textContent.trim().slice(0, 20) || e.className, w: r.width, h: r.height }; }));
@@ -144,5 +145,27 @@ for (const d of DEVICES) {
     await page.waitForTimeout(400); await shot(page, 'opener-typing');
     const reserve = page.locator('[data-line] s'); assert.equal(await reserve.count(), 1, 'untyped remainder is rendered'); assert.equal(await reserve.getAttribute('aria-hidden'), 'true', 'reserve stays out of the live region');
     await beat(page, 'wheel'); await ctx.close();
+  });
+
+  test(`${d.name}: invited: who asked, Accept and Decline`, async () => { dev = d;
+    const ctx = await browsers[dev.browser].newContext({ ...contextOptions(dev) });
+    const page = await ctx.newPage();
+    await page.goto(`${base}/portal/match?stub=invited`);
+    await page.locator('[data-invite]').waitFor({ state: 'visible' });
+    const text = await page.locator('[data-invite]').innerText();
+    assert.match(text, /Daniel/); assert.match(text, /Ohio STEM Collective/); assert.match(text, /build nights/);
+    assert.equal(await page.locator('[data-stage]').count(), 0, 'no stage for an ask');
+    assert.doesNotMatch(text, /@|\d{3}[-. ]\d{3}/, 'no contact before accept');
+    await settle_(page); await taps(page, 'invited'); await shot(page, 'invited', true); assert.ok(await noOverflow(page));
+    await page.locator('[data-answer="accept"]').tap();
+    await page.locator('[data-invite-result]').waitFor({ state: 'visible' });
+    assert.match(await page.locator('[data-invite-result]').innerText(), /said yes/);
+    assert.equal(await page.locator('[data-invite-actions]').isVisible(), false);
+    await shot(page, 'invited-yes', true); assert.ok(await noOverflow(page)); await ctx.close();
+  });
+  test(`${d.name}: invited: Decline`, async () => { dev = d;
+    const { ctx, page } = await (async () => { const c = await browsers[dev.browser].newContext({ ...contextOptions(dev) }); const p = await c.newPage(); await p.goto(`${base}/portal/match?stub=invited`); return { ctx: c, page: p }; })();
+    await page.locator('[data-answer="decline"]').tap();
+    assert.match(await page.locator('[data-invite-result]').innerText(), /Declined/); await ctx.close();
   });
 }

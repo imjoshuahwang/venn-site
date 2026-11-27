@@ -16,6 +16,12 @@ export type IntroView = {
   message: string | null; learn: string | null; expires_at: string | null;
 };
 
+export type Incoming = {
+  match_id: number; state: MatchStatus; requester_first_name: string | null; requester_org: string | null; requester_region: string | null;
+  requester_project: string | null; message: string | null; learn: string | null; expires_at: string | null; own_region: string | null;
+};
+export type AnswerOutcome = 'accepted' | 'declined' | 'busy' | 'expired' | 'unknown' | MatchStatus;
+
 export type IntroAction = 'accept' | 'decline' | 'report' | 'optout';
 
 async function call<T>(supabase: SupabaseClient, fn: string, args?: Record<string, unknown>): Promise<T> {
@@ -34,6 +40,12 @@ export const matchRequest = (s: SupabaseClient, id: number, message: string, lea
 export const matchWithdraw = (s: SupabaseClient, id: number) => call<void>(s, 'match_withdraw', { p_match_id: id });
 export const matchRematch = (s: SupabaseClient, id: number) => call<number>(s, 'match_rematch', { p_match_id: id });
 export const matchReport = (s: SupabaseClient, id: number) => call<void>(s, 'match_report', { p_match_id: id });
+
+/** The newest ask addressed to the signed-in student. Detail only while open; later only the state word. */
+export const getMyIncoming = async (s: SupabaseClient, season = 'fall-2026') => first(await call<Incoming[]>(s, 'get_my_incoming', { p_season: season }));
+/** Accept or decline an ask from the portal. Returns the outcome word; no contact crosses here. */
+export const matchAnswer = (s: SupabaseClient, id: number, action: 'accept' | 'decline') =>
+  call<AnswerOutcome>(s, 'match_answer', { p_match_id: id, p_action: action });
 
 /** Token page, GET side: read-only. Takes the sha-256 hex of the token, never the token itself. */
 export const introByToken = async (s: SupabaseClient, tokenHash: string) => first(await call<IntroView[]>(s, 'intro_by_token', { p_token_hash: tokenHash }));
