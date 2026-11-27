@@ -42,7 +42,7 @@ export const nextLink = (token) => `${SITE}/next/${token}`;
 // The warm no: three short human lines and one link to the no-account page. No sign-in, no password.
 export function renderNts(template, { name, link }) {
   const html = template.replace('{{ .Name }}', esc(firstName(name))).replace('{{ .Link }}', esc(link));
-  const text = `Hi ${firstName(name)},\n\nThank you for applying to Venn. We had far more applicants than spots this season, and we could not fit you in this time.\n\nWe would still like to keep you in mind. One tap on this link and we will consider you for the next cohort.\n\n${link}\n\nJoshua`;
+  const text = `Hi ${firstName(name)},\n\nThanks for applying to Venn. We got way more applications than we had spots for, so we couldn't fit you in this time.\n\nWe'd still like to keep you in mind. Tap this link and we'll consider you for the next cohort.\n\n${link}\n\nJosh`;
   return { html, text };
 }
 

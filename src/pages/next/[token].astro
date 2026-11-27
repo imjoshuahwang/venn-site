@@ -24,7 +24,7 @@ try {
   } else page = await loadNext(sb, token);
 } catch (e) {
   console.error('next page failed:', (e as Error).message);
-  return new Response('Something went wrong. Try again in a minute.', { status: 503, headers: { 'content-type': 'text/plain; charset=utf-8' } });
+  return new Response('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font-family:system-ui;padding:32px 16px;font-size:17px"><p>Something went wrong. <a href="">Try again</a> in a minute, or email <a href="mailto:contact@joinvenn.org">contact@joinvenn.org</a>.</p>', { status: 503, headers: { 'content-type': 'text/html; charset=utf-8' } });
 }
 const widget = !!(siteKey && secret);
 const name = 'firstName' in page && page.firstName ? `, ${page.firstName}` : '';
@@ -40,7 +40,7 @@ const name = 'firstName' in page && page.firstName ? `, ${page.firstName}` : '';
       </form>
     )}
     {page.kind === 'done' && (<><h1>{COPY.done.h}{name}</h1><p>{COPY.done.p}</p></>)}
-    {(page.kind === 'expired' || page.kind === 'unknown') && (<><h1>{COPY[page.kind].h}</h1><p>{COPY[page.kind].p}</p></>)}
+    {(page.kind === 'expired' || page.kind === 'unknown') && (<><h1>{COPY[page.kind].h}</h1><p>{COPY[page.kind].p}</p><p><a href="mailto:contact@joinvenn.org">contact@joinvenn.org</a></p></>)}
     {page.kind === 'refused' && (<><h1>{page.why === 'limited' ? 'Too many tries' : 'Check failed'}</h1><p><a href={Astro.url.pathname}>Back</a></p></>)}
   </section>
   {widget && <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>}
@@ -48,6 +48,7 @@ const name = 'firstName' in page && page.firstName ? `, ${page.firstName}` : '';
 <style>
   .next { display: grid; gap: var(--sp-16); padding-top: var(--sp-48); }
   h1 { margin: 0; font-size: var(--fs-28); font-weight: var(--fw-800); letter-spacing: var(--track-tight); line-height: 1.15; overflow-wrap: anywhere; }
+  a { color: inherit; }
   p { margin: 0; font-size: var(--fs-17); overflow-wrap: anywhere; }
   form { display: grid; gap: var(--sp-16); }
   .pill { width: 100%; border: 0; font-family: inherit; cursor: pointer; min-height: 56px; }

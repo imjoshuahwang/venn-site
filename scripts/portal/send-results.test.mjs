@@ -146,7 +146,7 @@ test('warm no: short, human, one link to the no-account page, no sign-in or date
 
 test('a not_this_season row gets the warm no and only a token hash is stored', async () => {
   const sb = fakeSb({ claimed: true }); const bodies = [];
-  const r = await sendOne({ sb, row: { ...row(7, 'a@x.com'), outcome: 'not_this_season' }, template, ntsTemplate, from: 'f', resendKey: 'k', fetchImpl: async (_u, o) => { bodies.push(JSON.parse(o.body)); return { ok: true, json: async () => ({ id: 'i' }) }; } });
+  const r = await sendOne({ allowlist: '*', sb, row: { ...row(7, 'a@x.com'), outcome: 'not_this_season' }, template, ntsTemplate, from: 'f', resendKey: 'k', fetchImpl: async (_u, o) => { bodies.push(JSON.parse(o.body)); return { ok: true, json: async () => ({ id: 'i' }) }; } });
   assert.equal(r, 'sent');
   assert.equal(bodies[0].subject, NTS_SUBJECT);
   const tok = /\/next\/([\w-]+)/.exec(bodies[0].text)[1];

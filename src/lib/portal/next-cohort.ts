@@ -34,10 +34,10 @@ export async function submitNext(token: string, d: Deps, response = ''): Promise
 }
 
 export const COPY = {
-  open: { h: 'Thank you for applying', p: 'We had more applicants than spots this season. Tap below and we will consider you for the next cohort.', b: 'Consider me for the next one' },
-  done: { h: 'You are on the list', p: 'We will write to you when the next cohort opens.' },
-  expired: { h: 'This link has expired', p: 'Email contact@joinvenn.org and we will add you.' },
-  unknown: { h: 'This link is not valid', p: 'Email contact@joinvenn.org and we will sort it out.' },
+  open: { h: 'Thanks for applying', p: "We had more applicants than spots this time. Tap below and we'll consider you for the next cohort.", b: 'Consider me for the next one' },
+  done: { h: "You're on the list", p: "We'll write to you when the next cohort opens." },
+  expired: { h: 'This link has expired', p: "Email us and we'll add you." },
+  unknown: { h: 'This link is not valid', p: "Email us and we'll sort it out." },
 } as const;
 
 /** Dev only: fixture tokens `fixture-<state>` give the page data without a database. */
