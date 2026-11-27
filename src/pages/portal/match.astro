@@ -44,7 +44,7 @@ const config = JSON.stringify({ status: m?.status ?? null, viewed: !!m?.viewed_a
   .mhalf:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
   .mhalf.l { border-radius: 0 132px 132px 0; background: #35463f; }
   .mhalf.r { border-radius: 132px 0 0 132px; background: var(--forest-2); }
-  .mwin { position: absolute; inset: 0; overflow: hidden; -webkit-mask-image: linear-gradient(transparent 29%, #000 39%, #000 61%, transparent 71%); mask-image: linear-gradient(transparent 29%, #000 39%, #000 61%, transparent 71%); }
+  .mwin { position: absolute; inset: 0; overflow: hidden; clip-path: inset(29% 0 29% 0); -webkit-mask-image: linear-gradient(transparent 29%, #000 39%, #000 61%, transparent 71%); mask-image: linear-gradient(transparent 29%, #000 39%, #000 61%, transparent 71%); }
   .mstrip { position: absolute; left: 0; right: 0; top: 0; display: grid; will-change: transform; }
   .mstrip:not([data-run]) i:nth-child(n+6) { visibility: hidden; }
   .mstrip i { display: grid; place-items: center; height: 56px; padding: 0 14px 0 0; justify-items: end; font-style: normal; font-size: 12px; font-weight: var(--fw-600); white-space: nowrap; }
