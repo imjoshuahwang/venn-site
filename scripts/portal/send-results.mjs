@@ -11,6 +11,9 @@ import { hashToken, SEASON } from './users.mjs';
 import { loadEnv } from './env.mjs';
 import { sendAllowed } from '../../src/lib/mail/allowlist.ts';
 
+import { randomBytes } from 'node:crypto';
+const NTS_TEMPLATE = new URL('../../supabase/templates/results-not-this-season.html', import.meta.url);
+export const NTS_SUBJECT = 'About your Venn application';
 const TEMPLATE = new URL('../../supabase/templates/results-ready.html', import.meta.url);
 export const SUBJECT = 'Venn Fall 2026 results are out';
 export const SITE = 'https://joinvenn.org';
@@ -35,6 +38,14 @@ export function parseArgs(argv) {
 export const firstName = (name) => String(name ?? '').trim().split(/\s+/)[0] || 'there';
 export const linkFor = (hash, type) => `${SITE}/portal/auth/callback?token_hash=${hash}&type=${type}&next=/portal/set-password`;
 
+export const nextLink = (token) => `${SITE}/next/${token}`;
+// The warm no: three short human lines and one link to the no-account page. No sign-in, no password.
+export function renderNts(template, { name, link }) {
+  const html = template.replace('{{ .Name }}', esc(firstName(name))).replace('{{ .Link }}', esc(link));
+  const text = `Hi ${firstName(name)},\n\nThank you for applying to Venn. We had far more applicants than spots this season, and we could not fit you in this time.\n\nWe would still like to keep you in mind. One tap on this link and we will consider you for the next cohort.\n\n${link}\n\nJoshua`;
+  return { html, text };
+}
+
 export function render(template, { name, link }) {
   const html = template.replace('{{ .Name }}', esc(firstName(name))).replace('{{ .Link }}', esc(link));
   const text = `Hi ${firstName(name)},\n\nVenn Fall 2026 results are out. Your result is waiting in your Venn portal. Use this link to choose a password and sign in with this email address. It works once and expires in 72 hours.\n\n${link}\n\nIf the link stops working, reply to this email and I will send a new one.\n\nJoshua`;
@@ -55,7 +66,7 @@ export function pickRows(rows, to, test = false) {
 
 export async function fetchPending(sb) {
   const { data, error } = await sb.from('results')
-    .select('id, applications!inner(name, email, is_test)')
+    .select('id, outcome, applications!inner(name, email, is_test)')
     .eq('status', 'approved').eq('season', SEASON).is('emailed_at', null).order('id').limit(5000);
   if (error) throw new Error(error.message);
   return data;
@@ -75,9 +86,17 @@ export async function makeLink(sb, email) {
   return linkFor(hash, type);
 }
 
+// A fresh random token per result; only its hash is stored, so the link cannot be rebuilt from the database.
+export async function makeNtsLink(sb, id) {
+  const token = randomBytes(32).toString('base64url');
+  const { error } = await sb.from('results').update({ next_token_hash: hashToken(token), next_token_expires_at: new Date(Date.now() + 60 * 86400e3).toISOString() }).eq('id', id);
+  if (error) throw new Error(error.message);
+  return nextLink(token);
+}
+
 const NO_KEY = 'STUDENT_RESEND_API_KEY is not set: nothing sent';
 
-export async function sendOne({ sb, row, template, from, resendKey, allowlist, fetchImpl = fetch, idemSuffix = '', onId = () => {}, sleep = (ms) => new Promise((x) => setTimeout(x, ms)) }) {
+export async function sendOne({ sb, row, template, ntsTemplate = readFileSync(NTS_TEMPLATE, 'utf8'), from, resendKey, allowlist, fetchImpl = fetch, idemSuffix = '', onId = () => {}, sleep = (ms) => new Promise((x) => setTimeout(x, ms)) }) {
   if (!resendKey) throw new Error(NO_KEY);
   const email = row.applications.email.trim();
   if (!sendAllowed(email, allowlist)) return 'not_allowlisted';
@@ -86,11 +105,13 @@ export async function sendOne({ sb, row, template, from, resendKey, allowlist, f
   if (claim.error) throw new Error(claim.error.message);
   if (!claim.data.length) return 'already';
   try {
-    const { html, text } = render(template, { name: row.applications.name, link: await makeLink(sb, email) });
+    const nts = row.outcome === 'not_this_season';
+    const { html, text } = nts ? renderNts(ntsTemplate, { name: row.applications.name, link: await makeNtsLink(sb, row.id) })
+      : render(template, { name: row.applications.name, link: await makeLink(sb, email) });
     const post = () => fetchImpl('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json', 'Idempotency-Key': `results-ready-${row.id}${idemSuffix}`, 'User-Agent': 'venn-send-results/1' },
-      body: JSON.stringify({ from, to: [email], reply_to: REPLY_TO, subject: SUBJECT, html, text }),
+      body: JSON.stringify({ from, to: [email], reply_to: REPLY_TO, subject: nts ? NTS_SUBJECT : SUBJECT, html, text }),
     });
     // 429 and 5xx: retry up to 3 times with backoff, the same Idempotency-Key so Resend can never double send.
     let r = await post();
