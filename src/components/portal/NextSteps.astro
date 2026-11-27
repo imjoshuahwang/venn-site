@@ -21,7 +21,7 @@ const draft = config.prompts.map((p) => `${p}\n\n`).join('');
   <section class="ns-step" data-step="2" aria-labelledby="ns-h2" hidden>
     <h2 id="ns-h2">{config.steps[1]}</h2>
     <label class="ns-label" for="ns-body">Message to your mentor</label>
-    <textarea id="ns-body" rows="14">{draft}</textarea>
+    <textarea id="ns-body" rows="6">{draft}</textarea>
     <div class="ns-actions">
       <button type="button" class="ns-back" data-go="1">Back</button>
       <button type="button" class="pill" data-send>Send</button>
@@ -65,16 +65,17 @@ const draft = config.prompts.map((p) => `${p}\n\n`).join('');
     root.style.setProperty('--ns-p', String(n / steps.length));
   }
   const fromHash = () => (location.hash === '#step-2' ? 2 : 1);
+  const route = () => { if (location.hash === '#done') finish(); else show(fromHash()); };
   const sent = root.querySelector<HTMLElement>('[data-sent]')!;
   const reveal = () => { sent.hidden = false; };
   root.querySelectorAll<HTMLElement>('[data-go]').forEach((b) => b.addEventListener('click', () => {
     location.hash = `step-${b.dataset.go}`;
   }));
-  addEventListener('hashchange', () => { if (location.hash !== '#done') show(fromHash()); });
+  addEventListener('hashchange', route);
   root.querySelector('[data-sent-btn]')!.addEventListener('click', () => { finish(); });
   const mailto = root.querySelector<HTMLAnchorElement>('[data-mailto]')!;
   mailto.addEventListener('click', () => { mailto.href = mailtoUrl({ subject: root.dataset.subject!, body: body() }); reveal(); });
-  show(fromHash());
+  route();
   root.querySelector('[data-send]')!.addEventListener('click', () => {
     window.open(gmailComposeUrl({ subject: root.dataset.subject!, body: body() }), '_blank', 'noopener');
     finish();
@@ -94,7 +95,7 @@ const draft = config.prompts.map((p) => `${p}\n\n`).join('');
   .ns-step ul { margin: 0; padding-left: var(--sp-24); display: grid; gap: var(--sp-12); font-size: var(--fs-15); }
   .ns-logo { height: 32px; width: auto; justify-self: start; }
   .ns-label { font-size: var(--fs-13); color: var(--muted); }
-  textarea { width: 100%; font: inherit; font-size: var(--fs-16, 16px); padding: var(--sp-12); border: 1px solid var(--line); border-radius: var(--r-12); background: var(--white); color: var(--ink); resize: vertical; }
+  textarea { width: 100%; min-height: 0; font: inherit; font-size: var(--fs-16, 16px); padding: var(--sp-12); border: 1px solid var(--line); border-radius: var(--r-12); background: var(--white); color: var(--ink); resize: vertical; }
   .ns-actions { display: flex; gap: var(--sp-12); justify-content: flex-end; align-items: center; }
   .ns-back { min-height: 44px; min-width: 44px; padding: 0 var(--sp-16); border: 0; background: none; font: inherit; font-size: var(--fs-15); color: var(--ink); cursor: pointer; }
   .ns-alt, .ns-sent p, .ns-done p { margin: 0; font-size: var(--fs-15); color: var(--muted); }
@@ -102,10 +103,12 @@ const draft = config.prompts.map((p) => `${p}\n\n`).join('');
   .ns-sent { display: flex; flex-wrap: wrap; gap: var(--sp-12); align-items: center; justify-content: space-between; }
   .ns-sent .pill { white-space: nowrap; flex-shrink: 0; }
   .ns-sent[hidden] { display: none; }
-  .ns-ticks, .ns-next { margin: 0; padding: 0; display: grid; gap: var(--sp-12); font-size: var(--fs-15); }
-  .ns-ticks { list-style: none; }
-  .ns-ticks li::before { content: '\2713'; margin-right: var(--sp-8); font-weight: var(--fw-600); }
-  .ns-next { list-style-position: inside; }
+  .ns-ticks, .ns-next { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--sp-12); font-size: var(--fs-15); }
+  .ns-next { counter-reset: ns-n; }
+  .ns-ticks li, .ns-next li { display: grid; grid-template-columns: var(--sp-24) 1fr; align-items: baseline; }
+  .ns-ticks li::before { content: '\2713'; font-weight: var(--fw-600); }
+  .ns-next li { counter-increment: ns-n; }
+  .ns-next li::before { content: counter(ns-n) '.'; font-weight: var(--fw-600); }
   .ns-done:focus { outline: none; }
   @media (min-width: 900px) {
     .ns { grid-template-columns: 280px 1fr; align-items: start; }

@@ -33,6 +33,7 @@ test('mailtoUrl: same to, cc, subject, body as Gmail; CRLF-safe encoding', () =>
   const u = new URL(raw);
   assert.equal(u.searchParams.get('cc'), g.searchParams.get('cc'));
   assert.equal(u.searchParams.get('subject'), g.searchParams.get('su'));
-  assert.equal(u.searchParams.get('body'), g.searchParams.get('body'));
+  assert.equal(u.searchParams.get('body'), body.replace(/\n/g, '\r\n'));
+  assert.ok(raw.includes('%0D%0A') && !raw.includes('%0A%0A') && !/%0A/.test(raw.replace(/%0D%0A/g, '')));
   assert.ok(!/\n|\+/.test(raw), 'spaces are %20, not +');
 });

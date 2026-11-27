@@ -119,13 +119,24 @@ test('phone: mailto fallback carries the same to, cc, body; I sent it ends on Ve
   assert.equal(m.pathname, g.searchParams.get('to'));
   assert.equal(m.searchParams.get('cc'), g.searchParams.get('cc'));
   assert.equal(m.searchParams.get('subject'), g.searchParams.get('su'));
-  assert.equal(m.searchParams.get('body'), g.searchParams.get('body'));
+  assert.equal(m.searchParams.get('body').replace(/\r\n/g, '\n'), g.searchParams.get('body'));
+  assert.ok(m.searchParams.get('body').includes('\r\n'));
   await page.goBack();
   await page.waitForSelector('[data-sent]:not([hidden])');
   await page.screenshot({ path: `${SHOTS}mailto-390.png`, fullPage: true, scale: 'css' });
   await page.click('[data-sent-btn]');
   await page.waitForSelector('[data-done]:not([hidden])');
   assert.equal(await page.locator('[data-done] h2').innerText(), "You're in");
+});
+
+test('phone: reloading on #done shows the done state', async () => {
+  const page = await openPage(mobile());
+  await page.goto(`${BASE}/portal/next-steps#done`);
+  await page.reload();
+  await page.waitForSelector('[data-done]:not([hidden])');
+  assert.equal(await page.locator('[data-done] h2').innerText(), "You're in");
+  assert.match(await page.locator('[data-count]').innerText(), /All done/);
+  assert.equal(await page.locator('[data-step="1"]').isVisible(), false);
 });
 
 test('desktop 1280: progress sits left of the step on the same row', async () => {

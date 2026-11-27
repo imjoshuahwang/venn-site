@@ -7,8 +7,8 @@ export function gmailComposeUrl(o: { subject: string; body: string; to?: string;
   return `https://mail.google.com/mail/?view=cm&fs=1&to=${e(o.to ?? MENTOR_TO)}&cc=${e(o.cc ?? MENTOR_CC)}&su=${e(o.subject)}&body=${e(o.body)}`;
 }
 
-/** mailto: fallback with the same to, cc, subject and body as the Gmail URL. */
+/** mailto: fallback with the same to, cc, subject and body as the Gmail URL, newlines as CRLF (RFC 6068). */
 export function mailtoUrl(o: { subject: string; body: string; to?: string; cc?: string }): string {
   const e = encodeURIComponent;
-  return `mailto:${o.to ?? MENTOR_TO}?cc=${e(o.cc ?? MENTOR_CC)}&subject=${e(o.subject)}&body=${e(o.body)}`;
+  return `mailto:${o.to ?? MENTOR_TO}?cc=${e(o.cc ?? MENTOR_CC)}&subject=${e(o.subject)}&body=${e(o.body.replace(/\r?\n/g, '\r\n'))}`;
 }
