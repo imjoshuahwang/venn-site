@@ -89,7 +89,7 @@ export async function sendOne({ sb, row, template, from, resendKey, fetchImpl = 
       headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json', 'Idempotency-Key': `results-ready-${row.id}${idemSuffix}`, 'User-Agent': 'venn-send-results/1' },
       body: JSON.stringify({ from, to: [email], reply_to: REPLY_TO, subject: SUBJECT, html, text }),
     });
-    if (!r.ok) throw new Error(`resend ${r.status} ${(await r.text()).slice(0, 200)}`);
+    if (!r.ok) throw new Error(`resend ${r.status}`);
     try { onId((await r.json?.())?.id); } catch { /* logging only: never fail or release the claim after the mail is sent */ }
     return 'sent';
   } catch (e) {

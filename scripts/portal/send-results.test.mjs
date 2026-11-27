@@ -90,3 +90,11 @@ test('logs carry row id and resend_id but no applicant email', async () => {
   assert.match(out, /result 5 resend_id=re_abc/);
   assert.match(out, /sample for result 5/);
 });
+
+test('a failed send throws the status only, never the response body or an email', async () => {
+  const sb = fakeSb({ claimed: true });
+  await assert.rejects(
+    sendOne({ sb, row: row(1, 'a@x.com'), template, from: FROM, resendKey: 'k', fetchImpl: async () => ({ ok: false, status: 422, text: async () => 'invalid to a@x.com' }) }),
+    (e) => e.message === 'resend 422' && !e.message.includes('@'),
+  );
+});

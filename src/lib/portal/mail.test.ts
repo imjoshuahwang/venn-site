@@ -21,6 +21,7 @@ for (const to of ['mom@gmail.com', 'contact@joinvenn.org', 'contact+portal-x@joi
     assert.equal(await sendParentLink(to, 'https://p/l', { fetch, apiToken: 't', log: (m) => logs.push(m) }), false);
     assert.equal(urls.length, 0);
     assert.equal(logs.length, 1);
+    assert.ok(!logs[0].includes('@'), 'log must not contain the address');
   });
 }
 

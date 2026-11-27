@@ -6,7 +6,7 @@ export async function sendParentLink(
   deps: { fetch?: typeof fetch; apiToken?: string; log?: (m: string) => void } = {},
 ): Promise<boolean> {
   if (!mailAllowed(to, '')) {
-    (deps.log ?? console.log)(`parent mail skipped (not a test inbox): ${to}`);
+    (deps.log ?? console.log)(`parent mail skipped (not a test inbox)`);
     return false;
   }
   const apiToken = deps.apiToken ?? process.env.STUDENT_RESEND_API_KEY;
