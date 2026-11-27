@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { peerView, stateOf, PEER_COPY } from '../../src/data/portal-peer.ts';
-import { peerDown, getMyPeer, createPeerDownOnce } from '../../src/lib/portal/rpc-adapter.ts';
+import { peerDown, getMyPeer, getMyPeers, createPeerDownOnce } from '../../src/lib/portal/rpc-adapter.ts';
 
 const read = (p) => fs.readFileSync(p, 'utf8');
 // A hostile row: extra identifying fields and contact that must never reach the pre-mutual view.
@@ -82,7 +82,7 @@ test('peer page renders applicant text as text and keeps tokens', () => {
 });
 
 test('peer wiring: real /portal uses adapter, fixture route DEV-guarded, endpoint calls adapter', () => {
-  assert.match(read('src/pages/portal/result.astro'), /getMyPeer/);
+  assert.match(read('src/pages/portal/result.astro'), /getMyPeers/);
   assert.match(read('src/pages/portal/dev/result.astro'), /import\.meta\.env\.DEV/);
   assert.match(read('src/pages/portal/peer-down.ts'), /peerDown/);
   assert.match(read('src/pages/portal/dev/peer-down.ts'), /import\.meta\.env\.DEV/);
@@ -91,4 +91,23 @@ test('peer wiring: real /portal uses adapter, fixture route DEV-guarded, endpoin
 test('pre-mutual HTML carries no JSON props or inline data blobs', () => {
   const s = read('src/components/portal/results/Peer.astro');
   assert.doesNotMatch(s, /define:vars|application\/json|JSON\.stringify/);
+});
+
+test('adapter: getMyPeers maps every row (triad), getMyPeer keeps the first, none gives []/null', async () => {
+  const mk = (id, name, mine, theirs, email) => ({ match_id: id, partner_name: name, partner_org: 'Ohio', partner_project: 'p', why_matched: 'w', i_am_down: mine, they_are_down: theirs, partner_email: email });
+  const sb = { rpc: async () => ({ data: [mk(7, 'Maya', true, true, 'm@b.c'), mk(9, 'Bo', false, false, null)], error: null }) };
+  const rows = await getMyPeers(sb);
+  assert.deepEqual(rows.map((r) => r.match_id), [7, 9]);
+  assert.equal(rows[0].contact.email, 'm@b.c');
+  assert.equal(rows[1].contact, undefined);
+  assert.equal((await getMyPeer(sb)).match_id, 7);
+  const none = { rpc: async () => ({ data: [], error: null }) };
+  assert.deepEqual(await getMyPeers(none), []);
+  assert.equal(await getMyPeer(none), null);
+  await assert.rejects(getMyPeers({ rpc: async () => ({ data: null, error: new Error('boom') }) }));
+});
+
+test('peer copy: triad lede says two other builders', () => {
+  assert.match(PEER_COPY.notInTwo, /two other builders/);
+  assert.match(PEER_COPY.notIn, /one other builder/);
 });
