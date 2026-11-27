@@ -64,7 +64,7 @@ async function login(page, email) {
   await page.fill('input[name=email]', email);
   await page.fill('input[name=password]', PASSWORD);
   await page.waitForFunction(() => document.querySelector('input[name="cf-turnstile-response"]')?.value);
-  await page.click('[data-yes]');
+  await page.click('button[type=submit]');
   await page.waitForURL('**/portal/ceremony');
 }
 const readAll = async (page) => { while (await page.locator('[data-next]').isVisible()) await page.click('[data-next]'); };
@@ -103,7 +103,7 @@ for (const [slug, preset] of Object.entries(VIEWPORTS)) {
     await page.waitForSelector('form.consent');
     await shot(page, 'consent-empty');
     await checkLayout(page, 'consent-empty');
-    await page.goto(`${BASE}/portal/consent#page-4`);
+    for (let i = 0; i < 3; i++) await page.click('[data-next]');
     await tick(page, 'highlights');
     await readAll(page);
     assert.equal(await page.locator('[data-yes]').isVisible(), true);
@@ -120,7 +120,9 @@ for (const [slug, preset] of Object.entries(VIEWPORTS)) {
     await page.click('a[href="/portal/consent"]');
     await page.waitForURL(`${BASE}/portal/consent`);
     await page.waitForSelector('form.consent');
-    for (const [n, on] of Object.entries({ coordinator_groups: true, highlights: false, full_name_photo: false, data_use: true, retention: true })) {
+    for (let i = 0; i < 3; i++) await page.click('[data-next]');
+    // The three required clauses are answered by the final Yes and have no box; only the two optional choices show saved state.
+    for (const [n, on] of Object.entries({ highlights: false, full_name_photo: false })) {
       assert.equal(await page.locator(`input[name=${n}]`).isChecked(), on, n);
     }
     await shot(page, 'consent-reopened');
