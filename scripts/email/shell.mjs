@@ -12,6 +12,7 @@ export const PREHEADERS = {
   'match-intro': 'You both said yes. Here is the introduction.',
   'match-declined': 'An update on your match.',
   'match-expired': 'An update on your request.',
+  'results-not-this-season': 'A quick note about your application.',
 };
 
 const FONT = '-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif';
