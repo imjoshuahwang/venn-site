@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import { spawnSync, spawn } from 'node:child_process';
 import * as pw from 'playwright';
 import { createClient } from '@supabase/supabase-js';
+import { localServerEnv } from '../scripts/qa/portal.mjs';
 
 // status exits 1 when an optional service (imgproxy, pooler) is stopped; the JSON is still valid.
 const st = JSON.parse(spawnSync('supabase', ['status', '-o', 'json'], { stdio: ['ignore', 'pipe', 'ignore'] }).stdout.toString().replace(/^[^{]*/, ''));
@@ -19,9 +20,8 @@ const { devices } = pw;
 let server, browser, userId;
 
 before(async () => {
-  const env = { PUBLIC_SUPABASE_URL: API, PUBLIC_SUPABASE_ANON_KEY: st.ANON_KEY, SUPABASE_URL: API, SUPABASE_SERVICE_ROLE_KEY: st.SERVICE_ROLE_KEY };
   server = spawn('npx', ['astro', 'dev', '--host', '127.0.0.1', '--port', String(PORT)], {
-    env: { ...process.env, ...env },
+    env: localServerEnv(API, st.ANON_KEY, { SUPABASE_URL: API, SUPABASE_SERVICE_ROLE_KEY: st.SERVICE_ROLE_KEY }),
     stdio: 'ignore',
   });
   for (let i = 0; i < 120; i++) {

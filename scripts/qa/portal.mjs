@@ -57,6 +57,11 @@ export const TURNSTILE_LOCAL = {
   TURNSTILE_SECRET_KEY: '1x0000000000000000000000000000000AA',
 };
 
+// Env for every e2e `astro dev`: the process env with the Supabase pair and Turnstile test keys forced on top, so real keys in the shell never stall login.
+export function localServerEnv(url, anonKey, extra = {}, base = process.env) {
+  return { ...base, PUBLIC_SUPABASE_URL: url, PUBLIC_SUPABASE_ANON_KEY: anonKey, ...TURNSTILE_LOCAL, ...extra };
+}
+
 // Local DB only: drops the rate-limit counters so one flow's sign-ins never lock out the next.
 export function clearRateLimits(execFile = execFileSync) {
   try {
