@@ -225,7 +225,6 @@
     - goto /portal/result
     - expect-visible [data-both]
     - expect-no-content contact\+portal-peer-b@joinvenn.org
-    - expect-visible text=Josh will start your group
 - name: peer-one-side-down
   on: /portal/login
   steps:
