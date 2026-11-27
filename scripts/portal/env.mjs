@@ -5,7 +5,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 
 export const PROD_SUPABASE_URL = 'https://wirjadichvbmrqzamwtp.supabase.co';
-const ALIAS = { VENN_SUPABASE_SERVICE_ROLE_KEY: 'SUPABASE_SERVICE_ROLE_KEY', VENN_RESEND_API_KEY: 'RESEND_API_KEY' };
+const ALIAS = { VENN_SUPABASE_SERVICE_ROLE_KEY: 'SUPABASE_SERVICE_ROLE_KEY', VENN_RESEND_API_KEY: 'RESEND_API_KEY', VENN_STUDENT_RESEND_API_KEY: 'STUDENT_RESEND_API_KEY' };
 
 export function loadEnv(vars = process['en' + 'v']) {
   const name = ['.', 'env'].join('');

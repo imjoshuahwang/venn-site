@@ -18,6 +18,7 @@ export const POST: APIRoute = async ({ locals, request, redirect }) => {
   const svc = createClient(import.meta.env.PUBLIC_SUPABASE_URL, import.meta.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
   const { data: token, error } = await svc.rpc('request_parent_consent', { p_user_id: locals.user.id, p_parent_email: email });
   if (error || !token) return redirect('/portal?parent=error', 303);
-  const sent = await sendParentLink(email, `${new URL(request.url).origin}/portal/parent/${token}`);
+  let sent = false;
+  try { sent = await sendParentLink(email, `${new URL(request.url).origin}/portal/parent/${token}`); } catch { /* no student key or send failure: same error redirect */ }
   return redirect(sent ? '/portal' : '/portal?parent=error', 303);
 };

@@ -6,7 +6,7 @@ import { mailable } from "./mailable.ts";
 import { formatDeadline } from "./deadline.ts";
 
 const SITE = "https://joinvenn.org";
-const FROM = "Venn <hello@heyvenn.org>";
+const FROM = "Venn <hello@vennstudentorgs.com>";
 const REPLY_TO = "contact@joinvenn.org";
 
 export type Env = (name: string) => string | undefined;
@@ -72,7 +72,7 @@ function safeEqual(a: string, b: string): boolean {
 type Rest = (path: string, init?: RequestInit) => Promise<Response>;
 
 // The whole request path. index.ts wires it to Deno.serve and Deno.env; tests pass a fake env and stub fetch.
-export async function handle(req: Request, env: Env): Promise<Response> {
+export async function handle(req: Request, env: Env, deps: { resolve?: Parameters<typeof mailable>[1]; sleep?: (ms: number) => Promise<void> } = {}): Promise<Response> {
   const SUPABASE_URL = env("SUPABASE_URL")!;
   const KEY = env("SUPABASE_SERVICE_ROLE_KEY")!;
   const rest: Rest = (path, init = {}) =>
@@ -117,7 +117,7 @@ export async function handle(req: Request, env: Env): Promise<Response> {
   const domain = email.slice(email.lastIndexOf("@") + 1).toLowerCase();
   if (TYPO_DOMAINS.has(domain)) return json({ skipped: "typo_domain" });
   if (ROLE_LOCALS.has(email.slice(0, email.lastIndexOf("@")).toLowerCase().split("+")[0])) return json({ skipped: "role_address" });
-  if (!(await mailable(domain))) return json({ skipped: "no_mx" });
+  if (!(await mailable(domain, deps.resolve))) return json({ skipped: "no_mx" });
 
   // Same address applied earlier: that application gets the email, not this one.
   if (row.email_key) {
@@ -147,6 +147,13 @@ export async function handle(req: Request, env: Env): Promise<Response> {
   if (!(await claim.json()).length) return json({ skipped: "already_sent" });
 
   try {
+    // Student mail uses its own key and domain; RESEND_API_KEY (cold lane) is never a fallback. No key = no send.
+    const resendKey = env("STUDENT_RESEND_API_KEY");
+    if (!resendKey) {
+      console.log(`STUDENT_RESEND_API_KEY missing, nothing sent for application ${id}`);
+      await unclaim(rest, id as number);
+      return json({ error: "STUDENT_RESEND_API_KEY is not set" }, 500);
+    }
     const vals = {
       headline: headline(firstName(row.name)),
       refer_link: `${SITE}/refer?code=${encodeURIComponent(row.page_token)}`,
@@ -156,7 +163,7 @@ export async function handle(req: Request, env: Env): Promise<Response> {
       fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${env("RESEND_API_KEY")}`,
+          Authorization: `Bearer ${resendKey}`,
           "Content-Type": "application/json",
           "User-Agent": "venn",
           "Idempotency-Key": `confirm-${id}`,
@@ -172,16 +179,16 @@ export async function handle(req: Request, env: Env): Promise<Response> {
         }),
       });
     let res = await post();
-    // A burst can trip Resend's per-second rate limit (429) or hit a 5xx. Retry ONCE with the same Idempotency-Key
+    // A burst can trip Resend's per-second rate limit (429) or hit a 5xx. Retry up to 3 times with the same Idempotency-Key
     // (Resend dedupes it for 24h, so a retry can never double-send). A daily/monthly quota 429 is not retried:
     // the claim is released below and `venn confirm` sends the row once the quota resets (00:00 UTC).
-    if (res.status === 429 || res.status >= 500) {
+    const sleep = deps.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+    for (let attempt = 1; attempt <= 3 && (res.status === 429 || res.status >= 500); attempt++) {
       const err = await res.clone().json().catch(() => ({}));
-      if (!/quota/.test(String(err?.name ?? ""))) {
-        const wait = Math.min(Math.max(Number(res.headers.get("retry-after")) || 1, 1), 3);
-        await new Promise((r) => setTimeout(r, wait * 1000));
-        res = await post();
-      }
+      if (/quota/.test(String(err?.name ?? ""))) break;
+      const wait = Math.min(Math.max(Number(res.headers.get("retry-after")) || attempt, 1), 4);
+      await sleep(wait * 1000);
+      res = await post();
     }
     if (!res.ok) {
       // Resend answered with an error, so nothing was sent: release the claim so a retry can send.
