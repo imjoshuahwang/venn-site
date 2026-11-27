@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { PARTNERS, userFacingStrings } from './reveal-partners.ts';
+import { PARTNERS, userFacingStrings, partnerFor, popupTitle } from './reveal-partners.ts';
 import { cardLines, linkedinAllowed } from '../lib/portal/accept-card.ts';
 
 const aws = PARTNERS.aws;
@@ -20,9 +20,23 @@ test('LinkedIn is hidden under 16 by birthday and shown only at 16 or older, and
   assert.equal(linkedinAllowed(undefined, today), false);
   assert.equal(linkedinAllowed('not a date', today), false);
 });
-test('quadron has a logo and no copy until #229', () => {
-  assert.equal(PARTNERS.quadron.logo, '/logos/quadron.svg');
-  assert.equal(PARTNERS.quadron.copy, undefined);
+const quad = PARTNERS.quadron;
+test('quadron: official logo, informal wording, Dan note with a compose action, no banned words', () => {
+  assert.equal(quad.logo, '/logos/quadron.svg');
+  for (const s of userFacingStrings(quad)) assert.doesNotMatch(s, /partner|aws|amazon/i, s);
+  assert.match(quad.copy!.association, /informal association/);
+  const d = quad.copy!.letter.dan!;
+  assert.match(d.text, /Dan Pratl wants to talk to you/);
+  assert.equal(d.linkHref, 'https://pratl.me');
+  assert.match(d.subject, /talk to Dan/);
+});
+test('unknown or missing partner is the neutral Venn reveal, never AWS or Quadron', () => {
+  for (const slug of [undefined, null, '', 'nope', 'constructor', '__proto__', 42]) {
+    const p = partnerFor(slug);
+    assert.equal(p.key, 'venn');
+    assert.equal(p.copy, undefined);
+    for (const s of [popupTitle(p), p.name, p.logo]) assert.doesNotMatch(s, /aws|amazon|quadron|partner/i, s);
+  }
 });
 test('aws copy never mentions Quadron', () => {
   for (const s of userFacingStrings(aws)) assert.doesNotMatch(s, /quadron/i, s);

@@ -116,3 +116,46 @@ test('no share and no clipboard shows the manual fallback', async () => {
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/share-manual.png` });
   await ctx.close();
 });
+
+// Body markup only: dev-server style tags carry file paths such as this worktree's name.
+const bodyHtml = (page) => page.evaluate(() => document.body.outerHTML);
+// #229: Quadron variant. The partner comes from the cohort row (stub `partner=` here); unknown is a neutral Venn reveal.
+test('quadron: Dan note has a clickable compose action, the card is non-blank, and no AWS or Amazon anywhere', async () => {
+  const { ctx, page } = await open(stubShare, '&partner=quadron');
+  assert.match(await page.locator('[data-popup-title]').innerText(), /Quadron/);
+  await page.locator('[data-actions] [data-go]').first().tap();
+  const btn = page.locator('[data-actions] [data-share-btn]:enabled');
+  await btn.waitFor();
+  const b64 = await page.evaluate(async () => { const r = await fetch(document.querySelector('[data-preview]').src); const buf = new Uint8Array(await r.arrayBuffer()); let o = ''; buf.forEach((c) => { o += String.fromCharCode(c); }); return btoa(o); });
+  const buf = Buffer.from(b64, 'base64');
+  assert.deepEqual([png(buf).sig, png(buf).w, png(buf).h], ['PNG', ACCEPT_W, ACCEPT_H]);
+  const px = await page.evaluate(async () => { const i = document.querySelector('[data-preview]'); const c = document.createElement('canvas'); c.width = 54; c.height = 68; const g = c.getContext('2d'); g.drawImage(i, 0, 0, 54, 68); const d = g.getImageData(0, 0, 54, 68).data; return new Set(Array.from({ length: d.length / 4 }, (_, k) => `${d[k * 4]},${d[k * 4 + 1]},${d[k * 4 + 2]}`)).size; });
+  assert.ok(px > 8, `quadron card is not blank (${px} colours)`);
+  if (SHOTS) fs.writeFileSync(`${SHOTS}/quadron-share-card.png`, buf);
+  await page.locator('[data-actions] [data-go]:visible').last().tap();
+  const dan = page.locator('[data-dan]');
+  await dan.waitFor({ state: 'visible' });
+  assert.match(await dan.innerText(), /Dan Pratl wants to talk to you/);
+  const compose = dan.locator('[data-dan-compose]');
+  const href = await compose.getAttribute('href');
+  assert.match(href, /^https:\/\/mail\.google\.com\/mail\/\?view=cm&fs=1&to=contact%40joinvenn\.org/);
+  assert.match(decodeURIComponent(href), /talk to Dan/);
+  assert.equal(await dan.locator('[data-dan-bio]').getAttribute('href'), 'https://pratl.me');
+  for (const el of [compose, dan.locator('[data-dan-bio]')]) assert.ok((await el.boundingBox()).height >= 44);
+  assert.equal(await noOverflow(page), true);
+  assert.equal(await page.locator('[data-actions] [data-primary]:visible').count(), 1);
+  assert.doesNotMatch(await bodyHtml(page), /aws|amazon/i);
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/quadron-letter.png` });
+  await ctx.close();
+});
+
+test('aws page never says Quadron, and an unknown partner is a neutral Venn reveal', async () => {
+  const aws = await open(null);
+  assert.doesNotMatch(await bodyHtml(aws.page), /quadron/i);
+  await aws.ctx.close();
+  const n = await open(null, '&partner=unknown-co');
+  assert.doesNotMatch(await bodyHtml(n.page), /aws|amazon|quadron/i);
+  assert.equal(await n.page.locator('[data-popup-title]').innerText(), 'Welcome to the Venn Fall Cohort 2026');
+  assert.equal(await n.page.locator('[data-popup] [data-reveal-next]').count(), 1);
+  await n.ctx.close();
+});

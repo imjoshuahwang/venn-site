@@ -57,7 +57,7 @@ async function openPage(ctxOpts) {
   await page.waitForFunction(() => document.querySelector('input[name="cf-turnstile-response"]')?.value);
   await page.click('button[type=submit]');
   await page.waitForURL('**/portal/ceremony');
-  await page.goto(`${BASE}/portal/next-steps`);
+  await page.goto(`${BASE}/portal/next-steps?partner=aws`);
   await page.waitForSelector('[data-step="1"]:not([hidden])');
   return page;
 }

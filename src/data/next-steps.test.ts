@@ -15,9 +15,19 @@ test('aws config: two steps, legal copy, no logo, 3-4 prompts', () => {
   assert.ok(!('logo' in c) || !c.logo);
 });
 
-test('unknown partner falls back to aws; quadron slot exists for #229', () => {
-  assert.equal(nextStepsFor('nope').partner, 'aws');
-  assert.ok('aws' in NEXT_STEPS);
+test('unknown or missing partner falls back to neutral Venn, never AWS or Quadron', () => {
+  for (const k of ['nope', undefined, null, '']) {
+    const c = nextStepsFor(k);
+    assert.equal(c.partner, 'venn');
+    assert.doesNotMatch(JSON.stringify(c), /aws|amazon|quadron/i);
+  }
+});
+test('quadron config: official logo, no-logo-use line, informal association, no AWS or Amazon', () => {
+  const c = nextStepsFor('quadron');
+  assert.equal(c.logo, '/logos/quadron.svg');
+  assert.ok(c.legal.some((l) => /Quadron logo/.test(l) && /slides/i.test(l) && /promotions/i.test(l)));
+  assert.ok(c.legal.some((l) => /informal association/i.test(l)));
+  assert.doesNotMatch(JSON.stringify(c), /aws|amazon/i);
 });
 
 test('done copy: Venn end state names what happens next', () => {
@@ -29,9 +39,9 @@ test('done copy: Venn end state names what happens next', () => {
 });
 
 test('partner lookup ignores prototype keys', () => {
-  assert.equal(nextStepsFor('constructor').partner, 'aws');
-  assert.equal(nextStepsFor('__proto__').partner, 'aws');
-  assert.equal(nextStepsFor('toString').partner, 'aws');
+  assert.equal(nextStepsFor('constructor').partner, 'venn');
+  assert.equal(nextStepsFor('__proto__').partner, 'venn');
+  assert.equal(nextStepsFor('toString').partner, 'venn');
 });
 
 test('no user-facing copy says partner or partnership', () => {

@@ -1,5 +1,6 @@
 ---
 import { linkedinAllowed, fillOrg } from '../../../lib/portal/accept-card';
+import { gmailComposeUrl } from '../../../lib/portal/gmail';
 import type { RevealPartner } from '../../../data/reveal-partners';
 // #227: the checklist after the reveal popup. One primary action per screen. Everything said comes from partner.copy.
 // The share card is rendered as soon as the popup shows, so the Share tap hands navigator.share a finished File.
@@ -9,6 +10,8 @@ const li = linkedinAllowed(birthday);
 const items = [c.items.share, ...(li ? [c.items.experience] : []), c.items.phone, c.items.mou, c.items.email];
 const post = fillOrg(c.linkedin.post, org);
 const cardSpec = JSON.stringify({ headline: c.card.headline, title: c.card.sub(partner.cohortTitle), org, partnerName: partner.name, partnerLogo: partner.logo, vennLogo: '/Venn_Horizontal_Logo_Light.png' });
+const dan = c.letter.dan;
+const danUrl = dan ? gmailComposeUrl({ subject: dan.subject, body: '' }) : '';
 const next = `/portal/next-steps?partner=${partner.key}`;
 ---
 <div class="ra" data-actions data-card={cardSpec} data-post={post} data-linkedin={li ? '1' : '0'}>
@@ -33,6 +36,11 @@ const next = `/portal/next-steps?partner=${partner.key}`;
     <h3>{c.letter.title}</h3>
     {c.letter.paragraphs.map((p) => <p class="body">{p}</p>)}
     <p class="note">{c.letter.mentor}</p>
+    {dan && <div class="dan" data-dan>
+      <p class="body">{dan.text}</p>
+      <a class="text" data-dan-bio href={dan.linkHref} target="_blank" rel="noopener noreferrer">{dan.linkLabel}</a>
+      <a class="text" data-dan-compose href={danUrl} target="_blank" rel="noopener noreferrer">{dan.actionLabel}</a>
+    </div>}
     <button type="button" class="pill" data-primary data-go>{c.letter.button}</button>
   </section>
   {li && <>
@@ -78,6 +86,7 @@ const next = `/portal/next-steps?partner=${partner.key}`;
     let at = 0;
     const show = (i: number) => { at = i; screens.forEach((s, j) => { s.hidden = j !== i; }); rv.dataset.step = screens[i].dataset.screen ?? ''; screens[i].querySelector<HTMLElement>('[data-primary]')?.focus({ preventScroll: true }); };
     root.addEventListener('click', (e) => { if ((e.target as HTMLElement).closest('[data-go]') && at < screens.length - 1) show(at + 1); });
+    root.querySelector('[data-dan-compose]')?.addEventListener('click', () => track('mentor_compose_opened'));
     root.querySelectorAll<HTMLElement>('[data-event]').forEach((a) => a.addEventListener('click', () => track(a.dataset.event as 'linkedin_opened')));
 
     // One-tap copies for the Experience entry.
@@ -139,6 +148,7 @@ const next = `/portal/next-steps?partner=${partner.key}`;
   .ra h3 { margin: 0; font-size: var(--fs-22); font-weight: var(--fw-600); letter-spacing: var(--track-tight); }
   .ra p { margin: 0; }
   .body { font-size: var(--fs-17); }
+  .dan { display: grid; gap: var(--sp-4); justify-items: center; }
   .assoc, .note { font-size: var(--fs-15); color: var(--muted); }
   .list, .steps { margin: 0; padding-left: var(--sp-24); display: grid; gap: var(--sp-8); text-align: left; font-size: var(--fs-15); }
   .list { font-size: var(--fs-17); }

@@ -24,8 +24,8 @@ test('popup title is config driven, AWS and Quadron are entries not forks', () =
   assert.equal(popupTitle(PARTNERS.quadron), 'Accepted into Quadron');
   assert.equal(PARTNERS.aws.logo, '/logos/aws.svg');
   assert.equal(partnerFor('aws'), PARTNERS.aws);
-  assert.equal(partnerFor('nope'), null);
-  assert.equal(partnerFor(undefined), null);
+  assert.equal(partnerFor('nope').name, 'Venn');
+  assert.equal(partnerFor(undefined).name, 'Venn');
 });
 
 test('slideshow is gone', () => {
