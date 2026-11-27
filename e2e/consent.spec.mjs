@@ -220,9 +220,9 @@ for (const [slug, preset] of Object.entries(VIEWPORTS)) {
     await shot128(pp, 'parent-link');
     await checkLayout(pp, 'parent-link');
     await pp.getByRole('button', { name: 'I agree' }).click();
-    await pp.getByText('this has been signed').waitFor();
+    await pp.getByText('you are all set').waitFor();
     await pp.goto(`${BASE}/portal/parent/${token}`);
-    await pp.getByText('this has been signed').waitFor();
+    await pp.getByText('you are all set').waitFor();
     await shot128(pp, 'parent-reused');
     await parent.close();
     await page.goto(`${BASE}/portal`);
@@ -245,7 +245,7 @@ for (const [slug, preset] of Object.entries(VIEWPORTS)) {
     const parent = await browser.newContext(ctxOpts());
     const pp = await parent.newPage();
     await pp.goto(`${BASE}/portal/parent/${first}`);
-    await pp.getByText('expired or is not valid').waitFor();
+    await pp.getByText('This link has expired').waitFor();
     assert.equal(await pp.getByRole('button', { name: 'I agree' }).count(), 0);
     await shot128(pp, 'parent-expired');
     await checkLayout(pp, 'parent-expired');
@@ -254,7 +254,7 @@ for (const [slug, preset] of Object.entries(VIEWPORTS)) {
     await pp.goto(`${BASE}/portal/parent/${second}`);
     await pp.getByRole('button', { name: 'I agree' }).waitFor();
     await pp.goto(`${BASE}/portal/parent/${first}`);
-    await pp.getByText('expired or is not valid').waitFor();
+    await pp.getByText('This link has expired').waitFor();
     await parent.close();
     await ctx.close();
   });

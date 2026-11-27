@@ -1,7 +1,7 @@
 ---
 import '../styles/portal.css';
 import Icons from '../components/Icons.astro';
-const { title = 'Portal' } = Astro.props;
+const { title = 'Portal', dataLine = true } = Astro.props;
 const user = Astro.locals.user;
 const email = user?.email ?? 'Account';
 ---
@@ -24,7 +24,7 @@ const email = user?.email ?? 'Account';
       </header>
     )}
     <main><slot /></main>
-    <footer class="data-line">Want your data deleted? <a href="mailto:contact@joinvenn.org">Email contact@joinvenn.org</a></footer>
+    {dataLine && <footer class="data-line">Want your data deleted? <a href="mailto:contact@joinvenn.org">Email contact@joinvenn.org</a></footer>}
   </body>
 </html>
 <style is:global>

@@ -27,7 +27,7 @@ begin
   if n <> 0 then raise exception 'anon can use % sequences', n; end if;
   select count(*) into n from pg_proc p join pg_namespace s on s.oid = p.pronamespace
     where s.nspname = 'public' and has_function_privilege('anon', p.oid, 'EXECUTE')
-      and p.proname not in ('submit_application', 'log_apply_event', 'referrer_name', 'referral_status', 'record_step', 'submit_share', 'portal_rate_hit', 'portal_consume_link', 'portal_link_live', 'parent_consent_state', 'sign_parent_consent');
+      and p.proname not in ('submit_application', 'log_apply_event', 'referrer_name', 'referral_status', 'record_step', 'submit_share', 'portal_rate_hit', 'portal_consume_link', 'portal_link_live', 'parent_consent_state', 'sign_parent_consent', 'parent_consent_context');
   if n <> 0 then raise exception 'anon can execute % internal functions', n; end if;
   select count(*) into n from pg_class c join pg_namespace s on s.oid = c.relnamespace
     where s.nspname = 'public' and c.relkind = 'r' and not c.relrowsecurity;
