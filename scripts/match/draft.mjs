@@ -43,7 +43,8 @@ async function load(sb, season) {
   const byId = new Map(flat.map((s) => [s.result_id, s]));
   const pool = ok(await sb.from('match_pool').select('*'), 'match_pool');
   const peers = pool.filter((p) => byId.has(p.result_id)).map((p) => ({ ...byId.get(p.result_id), opted_out_at: p.opted_out_at, paused_at: p.paused_at, max_open: p.max_open, is_test: p.is_test || byId.get(p.result_id).is_test }));
-  const requesters = flat.filter((s) => s.outcome !== 'cohort' && s.cohort_id == null);
+  const poolBy = new Map(pool.map((p) => [p.result_id, p]));
+  const requesters = flat.filter((s) => s.outcome !== 'cohort' && s.cohort_id == null).map((s) => ({ ...s, opted_out_at: poolBy.get(s.result_id)?.opted_out_at, paused_at: poolBy.get(s.result_id)?.paused_at }));
   const matches = ok(await sb.from('matches').select('requester_result_id,peer_result_id,status').eq('season', season), 'matches');
   const blocks = ok(await sb.from('match_blocks').select('peer_result_id,application_id'), 'match_blocks');
   return { requesters, peers, matches, blocks };

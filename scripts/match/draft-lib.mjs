@@ -52,7 +52,7 @@ export async function draftAll({ requesters, peers, matches = [], blocks = [], g
   let skipped = 0;
   for (const s of requesters) {
     if (limit != null && out.length >= limit) break;
-    if (open.has(s.result_id) || s.outcome === 'cohort' || s.cohort_id != null) { skipped++; continue; }
+    if (open.has(s.result_id) || s.opted_out_at || s.paused_at || s.outcome === 'cohort' || s.cohort_id != null) { skipped++; continue; }
     const cands = eligiblePeers(s, peers, { matches, blocks, taken }).slice(0, TRIES);
     let row = null;
     for (const p of cands) {

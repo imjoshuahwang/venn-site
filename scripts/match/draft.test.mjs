@@ -66,3 +66,14 @@ test('the model sees no email', async () => {
   await draftAll({ requesters: [mk(1, { email: 'a@b.co' })], peers: [mk(2, { email: 'c@d.co' })], generate: async (a, b) => { seen = JSON.stringify([a, b]); return good; }, judge: pass });
   assert.ok(!seen.includes('@'));
 });
+
+test('a requester who opted out or paused is skipped', async () => {
+  const r = await draftAll({ requesters: [mk(1, { opted_out_at: 'x' }), mk(2, { paused_at: 'x' })], peers: [mk(9)], generate: gen, judge: pass });
+  assert.equal(r.skipped, 2);
+  assert.deepEqual(r.matches, []);
+});
+
+test('a peer already matched to this student is never offered again', () => {
+  const r = eligiblePeers(mk(1), [mk(2), mk(3)], { matches: [{ requester_result_id: 1, peer_result_id: 2, status: 'declined' }] });
+  assert.deepEqual(r.map((p) => p.result_id), [3]);
+});
