@@ -19,3 +19,17 @@ test('unknown partner falls back to aws; quadron slot exists for #229', () => {
   assert.equal(nextStepsFor('nope').partner, 'aws');
   assert.ok('aws' in NEXT_STEPS);
 });
+
+test('done copy: Venn end state names what happens next', () => {
+  const d = nextStepsFor('aws').done;
+  assert.equal(d.title, "You're in");
+  assert.ok(d.next.length === 2);
+  assert.match(d.next[0], /WhatsApp/);
+  assert.match(d.next[1], /kickoff/i);
+});
+
+test('partner lookup ignores prototype keys', () => {
+  assert.equal(nextStepsFor('constructor').partner, 'aws');
+  assert.equal(nextStepsFor('__proto__').partner, 'aws');
+  assert.equal(nextStepsFor('toString').partner, 'aws');
+});

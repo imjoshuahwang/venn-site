@@ -1,5 +1,6 @@
 ---
 import type { NextStepsConfig } from '../../data/next-steps';
+import { mailtoUrl } from '../../lib/portal/gmail';
 interface Props { config: NextStepsConfig }
 const { config } = Astro.props;
 const draft = config.prompts.map((p) => `${p}\n\n`).join('');
@@ -25,28 +26,58 @@ const draft = config.prompts.map((p) => `${p}\n\n`).join('');
       <button type="button" class="ns-back" data-go="1">Back</button>
       <button type="button" class="pill" data-send>Send</button>
     </div>
+    <p class="ns-alt">No Gmail? <a data-mailto href={mailtoUrl({ subject: config.subject, body: draft })}>Open your mail app instead</a>.</p>
+    <div class="ns-sent" data-sent hidden>
+      <p>Did your email go through?</p>
+      <button type="button" class="pill" data-sent-btn>I sent it</button>
+    </div>
+  </section>
+  <section class="ns-step ns-done" data-done tabindex="-1" aria-labelledby="ns-hd" hidden>
+    <h2 id="ns-hd">{config.done.title}</h2>
+    <p>{config.done.lead}</p>
+    <ol class="ns-ticks">
+      {config.steps.map((s) => <li data-tick>{s}</li>)}
+    </ol>
+    <ol class="ns-next">{config.done.next.map((n) => <li>{n}</li>)}</ol>
   </section>
 </div>
 <script>
-  import { gmailComposeUrl } from '../../lib/portal/gmail';
+  import { gmailComposeUrl, mailtoUrl } from '../../lib/portal/gmail';
   const root = document.querySelector<HTMLElement>('[data-next-steps]')!;
   const steps = [...root.querySelectorAll<HTMLElement>('[data-step]')];
+  const done = root.querySelector<HTMLElement>('[data-done]')!;
+  const body = () => (root.querySelector('#ns-body') as HTMLTextAreaElement).value;
   const dots = [...root.querySelectorAll<HTMLElement>('[data-dot]')];
+  function finish() {
+    steps.forEach((s) => { s.hidden = true; });
+    done.hidden = false;
+    dots.forEach((d) => d.setAttribute('data-on', ''));
+    root.querySelector('[data-count]')!.textContent = 'All done';
+    root.style.setProperty('--ns-p', '1');
+    if (location.hash !== '#done') location.hash = 'done';
+    done.focus();
+  }
   function show(n: number) {
+    done.hidden = true;
     steps.forEach((s) => { s.hidden = Number(s.dataset.step) !== n; });
     dots.forEach((d) => d.toggleAttribute('data-on', Number(d.dataset.dot) <= n));
     root.querySelector('[data-count]')!.textContent = `Step ${n} of ${steps.length}`;
     root.style.setProperty('--ns-p', String(n / steps.length));
   }
   const fromHash = () => (location.hash === '#step-2' ? 2 : 1);
+  const sent = root.querySelector<HTMLElement>('[data-sent]')!;
+  const reveal = () => { sent.hidden = false; };
   root.querySelectorAll<HTMLElement>('[data-go]').forEach((b) => b.addEventListener('click', () => {
     location.hash = `step-${b.dataset.go}`;
   }));
-  addEventListener('hashchange', () => show(fromHash()));
+  addEventListener('hashchange', () => { if (location.hash !== '#done') show(fromHash()); });
+  root.querySelector('[data-sent-btn]')!.addEventListener('click', () => { finish(); });
+  const mailto = root.querySelector<HTMLAnchorElement>('[data-mailto]')!;
+  mailto.addEventListener('click', () => { mailto.href = mailtoUrl({ subject: root.dataset.subject!, body: body() }); reveal(); });
   show(fromHash());
   root.querySelector('[data-send]')!.addEventListener('click', () => {
-    const body = (root.querySelector('#ns-body') as HTMLTextAreaElement).value;
-    window.open(gmailComposeUrl({ subject: root.dataset.subject!, body }), '_blank', 'noopener');
+    window.open(gmailComposeUrl({ subject: root.dataset.subject!, body: body() }), '_blank', 'noopener');
+    finish();
   });
 </script>
 <style>
@@ -66,7 +97,15 @@ const draft = config.prompts.map((p) => `${p}\n\n`).join('');
   textarea { width: 100%; font: inherit; font-size: var(--fs-16, 16px); padding: var(--sp-12); border: 1px solid var(--line); border-radius: var(--r-12); background: var(--white); color: var(--ink); resize: vertical; }
   .ns-actions { display: flex; gap: var(--sp-12); justify-content: flex-end; align-items: center; }
   .ns-back { min-height: 44px; min-width: 44px; padding: 0 var(--sp-16); border: 0; background: none; font: inherit; font-size: var(--fs-15); color: var(--ink); cursor: pointer; }
-  button { cursor: pointer; border: 0; font-family: inherit; }
+  .ns-alt, .ns-sent p, .ns-done p { margin: 0; font-size: var(--fs-15); color: var(--muted); }
+  .ns-alt a { color: var(--ink); }
+  .ns-sent { display: flex; gap: var(--sp-12); align-items: center; justify-content: space-between; }
+  .ns-sent[hidden] { display: none; }
+  .ns-ticks, .ns-next { margin: 0; padding: 0; display: grid; gap: var(--sp-12); font-size: var(--fs-15); }
+  .ns-ticks { list-style: none; }
+  .ns-ticks li::before { content: '\2713'; margin-right: var(--sp-8); font-weight: var(--fw-600); }
+  .ns-next { padding-left: var(--sp-24); }
+  .ns-done:focus { outline: none; }
   @media (min-width: 900px) {
     .ns { grid-template-columns: 280px 1fr; align-items: start; }
     .ns-bar ol { flex-direction: column; gap: var(--sp-16); }

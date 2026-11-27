@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { gmailComposeUrl } from './gmail.ts';
+import { gmailComposeUrl, mailtoUrl } from './gmail.ts';
 
 test('gmailComposeUrl: to, cc, subject set; body round-trips with newlines and &', () => {
   const body = 'Hi Venn,\nWe are A&B Club = 10 people?\n\nThanks #1 100%';
@@ -23,4 +23,16 @@ test('gmailComposeUrl: overrides to/cc', () => {
   const u = new URL(gmailComposeUrl({ subject: 's', body: 'b', to: 'a@x.org', cc: 'c@x.org' }));
   assert.equal(u.searchParams.get('to'), 'a@x.org');
   assert.equal(u.searchParams.get('cc'), 'c@x.org');
+});
+
+test('mailtoUrl: same to, cc, subject, body as Gmail; CRLF-safe encoding', () => {
+  const body = 'Hi,\nA&B Club?\n\nThanks #1 100%';
+  const g = new URL(gmailComposeUrl({ subject: 'S & T', body }));
+  const raw = mailtoUrl({ subject: 'S & T', body });
+  assert.ok(raw.startsWith('mailto:contact@joinvenn.org?'));
+  const u = new URL(raw);
+  assert.equal(u.searchParams.get('cc'), g.searchParams.get('cc'));
+  assert.equal(u.searchParams.get('subject'), g.searchParams.get('su'));
+  assert.equal(u.searchParams.get('body'), g.searchParams.get('body'));
+  assert.ok(!/\n|\+/.test(raw), 'spaces are %20, not +');
 });

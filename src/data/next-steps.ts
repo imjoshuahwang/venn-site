@@ -8,6 +8,7 @@ export interface NextStepsConfig {
   prompts: string[];
   subject: string;
   logo?: string;
+  done: { title: string; lead: string; next: [string, string] };
 }
 
 export const NEXT_STEPS: Record<string, NextStepsConfig> = {
@@ -26,10 +27,15 @@ export const NEXT_STEPS: Record<string, NextStepsConfig> = {
       'What help do you need from us?',
     ],
     subject: 'Venn x AWS Fall Cohort 2026: hello from my organization',
+    done: {
+      title: "You're in",
+      lead: 'Both steps are done. Here is what happens next.',
+      next: ['A Venn team member will message you on WhatsApp.', 'Then your cohort kickoff.'],
+    },
   },
   // quadron: filled by #229 (logo, Dan Pyle note, bio, pratl.me).
 };
 
 export function nextStepsFor(partner: string | null | undefined): NextStepsConfig {
-  return NEXT_STEPS[partner ?? ''] ?? NEXT_STEPS.aws;
+  return partner != null && Object.hasOwn(NEXT_STEPS, partner) ? NEXT_STEPS[partner] : NEXT_STEPS.aws;
 }
