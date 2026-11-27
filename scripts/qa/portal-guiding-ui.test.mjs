@@ -68,7 +68,8 @@ for (const [name, engine, slug] of PHONES) {
       const rctx = await browser.newContext({ ...devices[name], reducedMotion: 'reduce' });
       const rp = await rctx.newPage();
       await rp.goto(url('state=signed'));
-      assert.equal(await rp.locator('[data-track]').evaluate((e) => getComputedStyle(e).scrollBehavior), 'auto');
+      assert.equal(await rp.locator('[data-guiding]').isVisible(), true, 'guiding renders under reduced motion');
+      assert.equal(await rp.locator('[data-track]').count(), 0, 'slideshow is gone');
       assert.deepEqual(errors, []);
     } finally { await browser.close(); }
   });

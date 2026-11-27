@@ -69,7 +69,7 @@ const title = popupTitle(partner);
       for (let i = 1; i <= text.length; i++) { el.textContent = text.slice(0, i); await wait(22); }
       await wait(500);
       set('stood');
-      await wait(1600);
+      await wait(1200);
       $<HTMLElement>('[data-popup]').hidden = false;
       set('popup');
       confetti();
@@ -78,24 +78,26 @@ const title = popupTitle(partner);
   }
 </script>
 <style>
-  .rv { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: var(--sp-24); background: #fff; color: var(--ink); transition: background 0.9s ease, color 0.9s ease; overflow: hidden; }
+  .rv { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: var(--sp-24); background: #fff; color: var(--ink); transition: background var(--dur-5) var(--ease), color var(--dur-5) var(--ease); overflow: hidden; }
   .rv[hidden] { display: none; }
   .rv:not([data-state='idle']) { background: #1f2b26; color: #e7ede9; }
-  .play { display: inline-flex; align-items: center; gap: var(--sp-8); min-height: 56px; padding: 0 var(--sp-32); border: 0; border-radius: var(--r-pill); background: var(--ink); color: #fff; font: inherit; font-size: var(--fs-17); font-weight: var(--fw-600); cursor: pointer; transition: opacity 0.4s ease; }
+  .play { display: inline-flex; align-items: center; gap: var(--sp-8); min-height: 56px; padding: 0 var(--sp-32); border: 0; border-radius: var(--r-pill); background: var(--ink); color: #fff; font: inherit; font-size: var(--fs-17); font-weight: var(--fw-600); cursor: pointer; transition: opacity var(--dur-3) var(--ease); }
   .play:focus-visible, .go:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
   .rv:not([data-state='idle']) .play { opacity: 0; pointer-events: none; position: absolute; }
   .story { position: absolute; inset: 0; padding: var(--sp-24); display: none; flex-direction: column; justify-content: space-between; }
   .rv:not([data-state='idle']) .story { display: flex; }
   .stat { margin: 0; padding-top: 12svh; font-size: var(--fs-22); line-height: 1.4; font-weight: var(--fw-600); overflow-wrap: break-word; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-  .stood { margin: 0; padding-bottom: 8svh; font-size: var(--fs-28); font-weight: var(--fw-800); letter-spacing: var(--track-tight); opacity: 0; transition: opacity 0.8s ease; }
-  .rv[data-state='stood'] .stood, .rv[data-state='popup'] .stood { opacity: 1; }
-  .popup { position: relative; width: min(100%, 420px); display: grid; justify-items: center; gap: var(--sp-16); padding: var(--sp-32) var(--sp-24); border-radius: var(--r-24, 24px); background: #fff; color: var(--ink); text-align: center; animation: up 0.8s ease both; z-index: 2; }
+  .stood { margin: 0; padding-bottom: 8svh; font-size: var(--fs-28); font-weight: var(--fw-800); letter-spacing: var(--track-tight); opacity: 0; transition: opacity var(--dur-4) var(--ease); }
+  .rv[data-state='stood'] .stood { opacity: 1; }
+  .story { transition: opacity var(--dur-4) var(--ease); }
+  .rv[data-state='popup'] .story { opacity: 0; }
+  .popup { position: relative; width: min(100%, 420px); display: grid; justify-items: center; gap: var(--sp-16); padding: var(--sp-32) var(--sp-24); border-radius: var(--r-24); background: #fff; color: var(--ink); text-align: center; animation: up var(--dur-4) var(--ease) both; z-index: 2; }
   .popup[hidden] { display: none; }
   .popup img { width: auto; max-width: 220px; height: 120px; object-fit: contain; }
   .popup h2 { margin: 0; font-size: var(--fs-28); font-weight: var(--fw-800); letter-spacing: var(--track-tight); line-height: 1.15; text-wrap: balance; }
   .go { min-height: 44px; display: inline-flex; align-items: center; text-decoration: none; }
-  .rv :global(.confetti) { position: absolute; top: 0; width: 10px; height: 14px; border-radius: 2px; pointer-events: none; z-index: 3; }
+  .rv :global(.confetti) { position: absolute; top: 0; width: 10px; height: 14px; border-radius: var(--sp-4); pointer-events: none; z-index: 3; }
   @keyframes up { from { opacity: 0; transform: translateY(24px); } }
-  @media (prefers-reduced-motion: reduce) { .rv, .stood, .play { transition: none; } .popup { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .rv, .stood, .story, .play { transition: none; } .popup { animation: none; } }
 </style>

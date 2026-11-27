@@ -9,7 +9,7 @@ export const STOOD_OUT = 'But you stood out.';
 
 const list = (xs: readonly string[]) => `${xs.slice(0, -1).join(', ')}, and ${xs.at(-1)}`;
 
-/** One flowing sentence. The acceptance rate is "about" because the facts file says about 30%. */
+/** One flowing sentence; no acceptance rate until it is sourced (#222). */
 export function statLine(f = REVEAL_FACTS): string {
   return `Venn has reached ${f.students.toLocaleString('en-US')} students across ${f.countries} countries and has worked with ${list(f.pastWork)}.`;
 }
