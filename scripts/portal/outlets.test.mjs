@@ -1,9 +1,8 @@
-// #172: six outlet cohorts exist as additive inserts with 6 slides each, and the slideshow builder renders from the row.
+// #172: six outlet cohorts exist as additive inserts with 6 slides each.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { buildSlides } from '../../src/scripts/portal/slides.ts';
 
 const sql = readFileSync(fileURLToPath(new URL('../../supabase/migrations/20261125010000_outlet_cohorts.sql', import.meta.url)), 'utf8');
 const SLUGS = ['kinetic', 'mercator-post', 'to-be-obsolete', 'thebaytable', 'imperial-review', 'yvette-labs'];
@@ -26,21 +25,4 @@ test('all six outlets exist with six slides each and no contact info', () => {
     assert.doesNotMatch(all, /phone|\d{3}[-. ]\d{3}[-. ]\d{4}|@/i, `${r.slug} leaks contact`);
     assert.doesNotMatch(all, /Venn article/i);
   }
-});
-
-test('slideshow renders every slide from the cohorts row, in order', () => {
-  for (const r of rows) {
-    const out = buildSlides(r);
-    assert.equal(out.length, 6, r.slug);
-    assert.deepEqual(out.map((s) => ({ title: s.title, body: s.body })), r.slides);
-    assert.equal(out[3].title, 'Your role');
-    assert.match(out[3].body, /never have to contact/);
-    assert.match(out[3].body, /Venn is your facilitator/);
-    assert.match(out[5].body, /Venn sets your first goal/);
-  }
-});
-
-test('rows without slides keep the original partner/goal/timeline deck', () => {
-  assert.equal(buildSlides({ company: 'Acme', goal: 'g', timeline: 't' }).length, 3);
-  assert.equal(buildSlides({ company: 'Acme', slides: [] }).length, 1);
 });

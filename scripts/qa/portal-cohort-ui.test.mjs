@@ -5,10 +5,10 @@ import { mouMode, formatSigned, logoUrl, MOU_TEXT, COHORT_COPY } from '../../src
 
 const read = (p) => fs.readFileSync(p, 'utf8');
 
-test('Cohort DOM order: letter, details, slides slot, guidingQuestions slot, MouForm', () => {
+test('Cohort DOM order: letter, details, guidingQuestions slot, MouForm', () => {
   const s = read('src/components/portal/results/Cohort.astro');
   const body = s.slice(s.indexOf('<article'));
-  const at = ['data-letter', 'data-details', 'data-slot="slides"', 'data-slot="guidingQuestions"', '<MouForm'].map((k) => body.indexOf(k));
+  const at = ['data-letter', 'data-details', 'data-slot="guidingQuestions"', '<MouForm'].map((k) => body.indexOf(k));
   assert.ok(at.every((i) => i >= 0), 'all markers present');
   assert.deepEqual([...at].sort((a, b) => a - b), at);
 });

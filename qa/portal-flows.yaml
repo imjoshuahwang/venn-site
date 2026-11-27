@@ -322,14 +322,25 @@
     - expect-visible [data-cohort] [data-letter]
     - expect-visible [data-cohort] [data-orgs]
     - screenshot cohort
-- name: cohort-slides-and-questions
+- name: home-results-button
+  on: /portal/login
+  steps:
+    - sign-in contact+portal-network@joinvenn.org
+    - expect-url /portal
+    - goto /portal
+    - expect-visible [data-home] h1
+    - expect-content Your results are here
+    - expect-visible [data-home] a[href="/portal/result"]
+    - screenshot home
+    - tap [data-home] a[href="/portal/result"]
+    - expect-url /portal/result
+    - screenshot result
+- name: cohort-guiding-questions
   on: /portal/login
   steps:
     - sign-in contact+portal-cohort@joinvenn.org
     - expect-url /portal
     - goto /portal/result
-    - expect-visible [data-slides]
-    - tap [data-next]
     - fill textarea[name=goal] Test answer
     - tap [data-guiding] [data-save]
     - expect-visible [data-guiding] [data-status]

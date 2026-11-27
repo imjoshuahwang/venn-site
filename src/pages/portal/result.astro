@@ -1,10 +1,8 @@
 ---
 export const prerender = false;
 import Portal from '../../layouts/Portal.astro';
-import CohortSlides from '../../components/portal/results/CohortSlides.astro';
 import SharePill from '../../components/portal/SharePill.astro';
 import GuidingQuestions from '../../components/portal/GuidingQuestions.astro';
-import { logoUrl } from '../../data/mou';
 import { getMyGuidingAnswers, guidingAccess } from '../../lib/portal/guiding';
 import { Waitlist, NotThisSeason, ResultState, Peer, Cohort } from '../../components/portal/results';
 import { pageFor } from '../../data/portal-copy';
@@ -44,7 +42,6 @@ const page = result ? pageFor(result.outcome) : null;
 <Portal title="Your Result">
   {failed ? <ResultState state="error" />
     : result?.outcome === 'cohort' ? <Cohort result={cohort} view={cohortView}>
-      <CohortSlides slot="slides" cohort={cohort?.cohort} firstName={firstName} logo={logoUrl(cohort?.cohort?.logo_path, import.meta.env.PUBLIC_SUPABASE_URL)} />
       {cohort && <GuidingQuestions slot="guidingQuestions" resultId={cohort.id} answers={guiding} closed={access === 'closed'} readonly={access === 'readonly'} />}
     </Cohort>
     : result?.outcome === 'peer' ? <Peer view={peer} />
