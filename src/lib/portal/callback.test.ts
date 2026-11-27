@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { handleCallbackGet, handleCallbackPost, sameOrigin, EXPIRED_PATH } from './callback.ts';
+import { handleCallbackGet, handleCallbackPost, sameOrigin, EXPIRED_PATH, CONTINUE_OUTCOMES } from './callback.ts';
 import { POST } from '../../pages/portal/auth/callback.ts';
 
 // A fake link store: `live` is portal_link_live, `used` flips only when portal_consume_link runs.
@@ -30,7 +30,7 @@ const body = { token_hash: 'abc', type: 'recovery', next: '/portal/set-password'
 test('GET on a live link renders the Continue form and touches nothing', async () => {
   const { supabase, calls, st } = mk();
   const r = await handleCallbackGet(u('token_hash=abc&type=recovery&next=/portal/set-password'), supabase);
-  assert.ok('page' in r && r.page.includes('method="post"') && r.page.includes('Continue to your result') && r.page.includes('content="same-origin"'));
+  assert.ok('page' in r && r.page.includes('method="post"') && r.page.includes('Set your password') && r.page.includes('content="same-origin"'));
   assert.deepEqual(calls, []);
   assert.equal(st.used, false);
 });
@@ -96,4 +96,24 @@ test('failed code exchange and a bare callback both go to the expired page', asy
 });
 test('expired page path is the resend page with a friendly flag', () => {
   assert.equal(EXPIRED_PATH, '/portal/resend?expired=1');
+});
+
+const page = async (q: string) => { const r = await handleCallbackGet(u(q), mk().supabase); assert.ok('page' in r); return r.page; };
+test('Continue label follows the outcome, not one fixed string', async () => {
+  assert.match(await page('token_hash=a&type=invite&next=/portal/set-password'), />Set your password</);
+  assert.match(await page('token_hash=a&type=recovery&next=/portal/set-password'), />Set your password</);
+  assert.match(await page('token_hash=a&type=magiclink&next=/portal'), />Open your portal</);
+  assert.match(await page('token_hash=a&type=magiclink&next=/portal/result'), />See your result</);
+  assert.match(await page('token_hash=a&type=magiclink&next=/portal/match'), />See your match</);
+  for (const t of ['invite', 'recovery']) assert.ok(!(await page(`token_hash=a&type=${t}&next=/portal/set-password`)).includes('your result'));
+});
+test('outcomes are data: a registered outcome supplies its own label (for #279)', async () => {
+  CONTINUE_OUTCOMES.unshift({ when: (_t, n) => n.startsWith('/portal/thanks'), label: 'Read your note' });
+  try { assert.match(await page('token_hash=a&type=magiclink&next=/portal/thanks'), />Read your note</); }
+  finally { CONTINUE_OUTCOMES.shift(); }
+});
+test('Continue page is branded and declares color-scheme', async () => {
+  const p = await page('token_hash=a&type=recovery&next=/portal/set-password');
+  assert.match(p, /color-scheme/);
+  assert.match(p, /class="wordmark"[^>]*>Venn</);
 });

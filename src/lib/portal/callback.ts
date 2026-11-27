@@ -42,11 +42,20 @@ export async function handleCallbackPost(form: FormData, supabase: SupabaseClien
   return next;
 }
 
+/** What the Continue button says for where the link leads. First match wins; another outcome (e.g. the #279 thank-you) unshifts its own row. */
+export const CONTINUE_OUTCOMES: { when: (type: string, next: string) => boolean; label: string }[] = [
+  { when: (_t, n) => n.startsWith('/portal/set-password'), label: 'Set your password' },
+  { when: (_t, n) => n.startsWith('/portal/result'), label: 'See your result' },
+  { when: (_t, n) => n.startsWith('/portal/match'), label: 'See your match' },
+];
+export const continueLabel = (type: string, next: string) => CONTINUE_OUTCOMES.find((o) => o.when(type, next))?.label ?? 'Open your portal';
+
 function continuePage(tokenHash: string, type: string, next: string) {
+  const label = continueLabel(type, next);
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="referrer" content="same-origin"><meta name="robots" content="noindex"><title>Continue | Venn</title>
-<style>body{font:17px/1.5 system-ui,sans-serif;margin:0;padding:72px 16px;display:grid;justify-items:center}main{width:100%;max-width:26rem;display:grid;gap:16px}h1{font-size:1.75rem;letter-spacing:-.03em;margin:0}button{font:inherit;font-weight:600;min-height:52px;border:0;border-radius:999px;background:#000;color:#fff;cursor:pointer}</style></head>
-<body><main><h1>Almost there</h1>
+<meta name="referrer" content="same-origin"><meta name="robots" content="noindex"><meta name="color-scheme" content="light"><title>${esc(label)} | Venn</title>
+<style>:root{color-scheme:light}body{font:17px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;color:#18181a;background:#fff;margin:0;padding:56px 16px 48px;display:grid;justify-items:center}main{width:100%;max-width:26rem;display:grid;gap:16px}.wordmark{font-size:1.5rem;font-weight:800;letter-spacing:-.04em;margin-bottom:24px}h1{font-size:clamp(1.75rem,7vw,2.25rem);letter-spacing:-.035em;line-height:1.1;margin:0}button{font:inherit;font-weight:600;min-height:52px;border:0;border-radius:999px;background:#000;color:#fff;cursor:pointer;width:100%}</style></head>
+<body><main><div class="wordmark" aria-label="Venn">Venn</div><h1>${esc(label)}</h1>
 <form method="post" action="/portal/auth/callback"><input type="hidden" name="token_hash" value="${esc(tokenHash)}"><input type="hidden" name="type" value="${esc(type)}"><input type="hidden" name="next" value="${esc(next)}">
-<button type="submit" style="width:100%">Continue to your result</button></form></main></body></html>`;
+<button type="submit">${esc(label)}</button></form></main></body></html>`;
 }

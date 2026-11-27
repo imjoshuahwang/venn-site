@@ -3,7 +3,7 @@ import Base from '../../layouts/Base.astro';
 import AuthForm from '../../components/portal/AuthForm.astro';
 import { rpcStore } from '../../lib/portal/ratelimit';
 import { authGuard, guardStatus } from '../../scripts/portal/auth-errors';
-import { requestResend } from '../../lib/portal/resend';
+import { requestResend, signInLinkSender } from '../../lib/portal/resend';
 
 export const prerender = false;
 const expired = Astro.url.searchParams.get('expired') === '1';
@@ -18,7 +18,7 @@ if (Astro.request.method === 'POST') {
   if (error) Astro.response.status = guardStatus(error);
   if (!error) {
     notice = await requestResend(email, {
-      send: (e) => Astro.locals.supabase.auth.resetPasswordForEmail(e, { redirectTo: `${Astro.url.origin}/portal/auth/callback?next=${encodeURIComponent('/portal/set-password')}` }),
+      send: expired ? signInLinkSender(Astro.locals.supabase, Astro.url.origin) : (e) => Astro.locals.supabase.auth.resetPasswordForEmail(e, { redirectTo: `${Astro.url.origin}/portal/auth/callback?next=${encodeURIComponent('/portal/set-password')}` }),
     });
   }
 }

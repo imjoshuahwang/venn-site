@@ -44,8 +44,13 @@ const siteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || (import.meta.env.DE
 </section>
 {turnstile && siteKey && <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>}
 <script>
+  // The last email typed here stays on this device only (never in a URL or server page), so an expired-link page can prefill it.
+  const KEY = 'venn_last_email';
+  const emailInput = document.querySelector<HTMLInputElement>('.auth-form input[name=email]');
+  try { const saved = localStorage.getItem(KEY); if (emailInput && !emailInput.value && saved) emailInput.value = saved; } catch { /* storage blocked */ }
   document.querySelectorAll<HTMLFormElement>('.auth-form').forEach((f) => {
     f.addEventListener('submit', () => {
+      try { const v = f.querySelector<HTMLInputElement>('input[name=email]')?.value.trim(); if (v) localStorage.setItem(KEY, v); } catch { /* storage blocked */ }
       const b = f.querySelector<HTMLButtonElement>('button[type=submit]');
       if (b && f.checkValidity()) { b.textContent = b.dataset.working || 'Working...'; b.setAttribute('aria-busy', 'true'); setTimeout(() => (b.disabled = true), 0); }
     });
@@ -55,8 +60,8 @@ const siteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || (import.meta.env.DE
   .auth { max-width: 26rem; margin: 0 auto; padding: calc(56px + env(safe-area-inset-top)) 16px 48px; display: grid; gap: 16px; }
   h1 { font-size: clamp(1.75rem, 7vw, 2.25rem); letter-spacing: -.035em; line-height: 1.1; }
   .lede { color: var(--muted); font-size: 17px; line-height: 1.5; margin: -4px 0 0; }
-  .lead { margin: 0; font-size: 17px; line-height: 1.5; }
-  .lead a { font-weight: 600; text-underline-offset: 3px; }
+  .lead { margin: -8px 0; font-size: 17px; line-height: 1.5; }
+  .lead a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; font-weight: 600; text-underline-offset: 3px; }
   .status { font-size: 16px; line-height: 1.45; padding: 12px 14px; border-radius: 14px; background: var(--panel); color: var(--text); margin: 0; overflow-wrap: anywhere; }
   .status[hidden] { display: none; }
   .status.err { background: #fef2f2; color: #b91c1c; }

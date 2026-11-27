@@ -32,6 +32,21 @@
     - expect-url /portal/resend?expired=1
     - expect-visible input[name=email]
     - screenshot expired
+- name: link-continue-set-password
+  on: /portal/auth/callback?token_hash=qa-never-spent&type=recovery&next=/portal/set-password
+  steps:
+    - expect-visible button[type=submit]
+    - screenshot continue
+- name: link-continue-result
+  on: /portal/auth/callback?token_hash=qa-never-spent&type=magiclink&next=/portal/result
+  steps:
+    - expect-visible button[type=submit]
+    - screenshot continue
+- name: link-continue-match
+  on: /portal/auth/callback?token_hash=qa-never-spent&type=magiclink&next=/portal/match
+  steps:
+    - expect-visible button[type=submit]
+    - screenshot continue
 - name: auth-sign-in-sign-out
   on: /portal/login
   steps:

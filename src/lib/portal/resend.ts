@@ -1,5 +1,10 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 // Self-serve "email me a new link". The answer and the response time never depend on whether the email has an account.
 export const RESEND_NOTICE = "If you applied, it's on its way. Check your inbox and spam in a minute or two.";
+/** Expired-link send: a sign-in link (the magic-link mail), not the password-reset mail. */
+export const signInLinkSender = (supabase: SupabaseClient, origin: string) => (email: string) =>
+  supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false, emailRedirectTo: `${origin}/portal/auth/callback?next=${encodeURIComponent('/portal')}` } });
+
 export const RESEND_FLOOR_MS = 700;
 
 // Until Josh opens mail to real applicants, only contact+portal-*@joinvenn.org gets anything.
