@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { callCeremonyRpc } from '../../../lib/portal/ceremony-data';
+import { portalEvent } from '../../../lib/portal/api.ts';
 
 export const prerender = false;
 
@@ -10,5 +11,6 @@ export const POST: APIRoute = async (Astro) => {
   const id = Number(body?.id);
   if (!Astro.locals.user || !Number.isInteger(id) || !['viewed', 'finish'].includes(body?.action)) return json({ ok: false }, 400);
   const ok = await callCeremonyRpc(Astro, body.action, id).catch(() => false);
+  if (ok) await portalEvent(Astro.locals.supabase, body.action === 'viewed' ? 'reveal_started' : 'reveal_finished');
   return json({ ok }, ok ? 200 : 502);
 };
