@@ -1,14 +1,14 @@
 // Consent clauses for the portal ceremony (#127). Draft copy from Josh's round-4 decisions on #112.
 // Bump CONSENT_VERSION whenever the wording changes; give_consent stores answers per version.
-export const CONSENT_VERSION = '2026-11-v1';
+export const CONSENT_VERSION = '2026-11-v2';
 
 export type ConsentClause = { key: string; label: string; text: string; required: boolean; default: boolean };
 
 export const CONSENT_CLAUSES: ConsentClause[] = [
   {
     key: 'coordinator_groups',
-    label: 'Venn-run groups',
-    text: 'All contact with partners runs through Venn-run groups. No private DMs or off-platform asks between students and partners.',
+    label: 'Yes, I understand the cohort rules',
+    text: 'All contact with partners runs through Venn-run groups and contact@joinvenn.org. No private DMs or off-platform asks between students and partners. A cohort is aligned with a company and not sponsored by it, so never use a company logo. Venn vouches for your work and refers the top 10% of a cohort, and promises nothing more.',
     required: true,
     default: false,
   },

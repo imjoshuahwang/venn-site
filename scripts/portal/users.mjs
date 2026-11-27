@@ -36,7 +36,7 @@ const RESULT_SPECS = [
 const MEMBERS = ['member-1', 'member-2'];
 // Every other result user has answered the consent ceremony (src/data/consent.ts); these two still land on /portal/ceremony.
 export const UNCONSENTED = ['cohort-done', 'minor'];
-export const CONSENT_VERSION = '2026-11-v1';
+export const CONSENT_VERSION = '2026-11-v2';
 export const CONSENT_CLAUSES = ['coordinator_groups', 'highlights', 'full_name_photo', 'data_use', 'retention'];
 
 export const SEEDED_USERS = [

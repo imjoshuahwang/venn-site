@@ -42,7 +42,10 @@ test('both-down shows contact from the peer_down return value only', () => {
 test("copy is short and the pill says I'd be down", () => {
   assert.equal(PEER_COPY.pill, "I'd be down");
   assert.match(PEER_COPY.waiting, /waiting on them/i);
-  assert.match(PEER_COPY.both, /Josh will start your group/);
+  assert.match(PEER_COPY.both, /contact@joinvenn\.org/);
+  assert.match(PEER_COPY.notIn, /not in a cohort this season/);
+  assert.match(PEER_COPY.relay, /contact@joinvenn\.org/);
+  assert.doesNotMatch(PEER_COPY.relay, /your contact|phone/i);
 });
 
 test('adapter: getMyPeer and peerDown call the #116 RPC names', async () => {

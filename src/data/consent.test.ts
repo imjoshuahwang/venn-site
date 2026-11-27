@@ -18,5 +18,5 @@ test('required flags and defaults', () => {
 test('copy carries the round-4 phrases', () => {
   const text = CONSENT_CLAUSES.map((c) => c.text).join('\n').toLowerCase();
   for (const p of ['no private dms', 'off-platform', 'first name, school and project results', 'never sold', 'only for your cohort',
-    'ai may help read', 'anonymized aggregate', 'contact@joinvenn.org', 'no auto purge']) assert.ok(text.includes(p), p);
+    'ai may help read', 'anonymized aggregate', 'contact@joinvenn.org', 'no auto purge', 'not sponsored', 'never use a company logo', 'top 10%']) assert.ok(text.includes(p), p);
 });
