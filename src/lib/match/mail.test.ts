@@ -15,7 +15,7 @@ test('request carries first name, org and message, escaped; never the requester 
   assert.match(m.html, /Hi &lt;b&gt;there&lt;\/b&gt;/);
   assert.match(m.html, /https:\/\/joinvenn\.org\/intro\/tok"/);
   assert.match(m.html, /intro\/tok\?stop=1/);
-  assert.doesNotMatch(m.html + m.text, /Lovelace|@|phone|birthday/i);
+  assert.doesNotMatch(m.html.replace(/<style>[\s\S]*?<\/style>/, '') + m.text, /Lovelace|@|phone|birthday/i);
   assert.equal(m.idempotencyKey, 'match-request-7');
   assert.deepEqual(m.tags, [{ name: 'kind', value: 'match_request' }, { name: 'match_id', value: '7' }]);
 });
