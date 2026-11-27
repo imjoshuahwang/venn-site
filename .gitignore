@@ -14,3 +14,11 @@ qa/screens/
 
 # root-level QA screenshots
 /*.png
+
+# generated QA shots, local only
+qa/portal-shots/
+qa-shots/
+qa/172/
+qa/185-slides/
+qa/233/
+qa/*.png
