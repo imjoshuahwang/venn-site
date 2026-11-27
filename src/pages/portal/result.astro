@@ -19,8 +19,8 @@ let cohortView = null;
 let guiding = {};
 let failed = false;
 let firstName = '';
+const stub = import.meta.env.DEV ? Astro.url.searchParams.get('stub') : null;
 try {
-  const stub = import.meta.env.DEV ? Astro.url.searchParams.get('stub') : null;
   result = stub ? stubResult(stub) : await getMyResult(Astro.locals.supabase);
   if (result?.outcome === 'cohort' && stub) {
     ({ result: cohort, view: cohortView } = stubCohort(Astro.url.searchParams.get('partner')));
@@ -39,7 +39,7 @@ try {
 } catch {
   failed = true;
 }
-if (result && !failed) firstName = ((await Astro.locals.supabase.rpc('get_my_first_name')).data ?? '').split(' ')[0];
+if (result && !failed && !stub) firstName = ((await Astro.locals.supabase.rpc('get_my_first_name')).data ?? '').split(' ')[0];
 const access = guidingAccess({ isLead: cohortView?.isLead ?? false, cutoff: cohort?.cohort?.guiding_cutoff });
 const partner = partnerFor(cohort?.cohort?.slug);
 const page = result ? pageFor(result.outcome) : null;
@@ -47,7 +47,7 @@ const page = result ? pageFor(result.outcome) : null;
 <Portal title="Your Result">
   {failed ? <ResultState state="error" />
     : result?.outcome === 'cohort' ? <>
-      {partner && <CohortReveal partner={partner} />}
+      {partner && cohort && <CohortReveal partner={partner} resultId={cohort.id} done={!!cohort.ceremony_done_at} stub={!!stub} />}
       <Cohort result={cohort} view={cohortView}>
       {cohort && <GuidingQuestions slot="guidingQuestions" resultId={cohort.id} answers={guiding} closed={access === 'closed'} readonly={access === 'readonly'} />}
     </Cohort></>

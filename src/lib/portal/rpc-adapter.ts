@@ -106,7 +106,7 @@ export function stubCohort(partner: string | null) {
   const slug = partner === 'quadron' ? 'quadron' : 'aws';
   const name = slug === 'quadron' ? 'Quadron' : 'AWS';
   return {
-    result: { id: 1, letter: null, cohort: { slug, name: `${name} Fall Cohort 2026`, company: name, logo_path: null, goal: null, criteria: null, timeline: null, video_url: null, slides_url: null } },
+    result: { id: 1, letter: 'Dear Applicant,\n\nWe picked you for this cohort. The Venn team', ceremony_done_at: null, cohort: { slug, name: `${name} Fall Cohort 2026`, company: name, logo_path: null, goal: null, criteria: null, timeline: null, video_url: null, slides_url: null } },
     view: { signature: null, isLead: false, orgCount: null },
   };
 }

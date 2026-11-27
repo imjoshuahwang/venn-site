@@ -3,17 +3,19 @@ import { statLine, STOOD_OUT } from '../../../data/reveal-facts';
 import { popupTitle, type RevealPartner } from '../../../data/reveal-partners';
 // #226: Play -> dark forest gray -> stat line types -> "But you stood out." -> popup with pastel confetti.
 // Everything partner-specific comes from `partner` (src/data/reveal-partners.ts); this component is never forked per company.
-const { partner } = Astro.props as { partner: RevealPartner };
+// It auto-plays only until the ceremony is done (`done` = ceremony_done_at set); after that the letter shows with a small Replay.
+const { partner, resultId, done = false, stub = false } = Astro.props as { partner: RevealPartner; resultId: number; done?: boolean; stub?: boolean };
 const stat = statLine();
 const title = popupTitle(partner);
 ---
-<div class="rv" data-cohort-reveal data-state="idle" data-stat-text={stat} hidden>
-  <button class="play" type="button" data-reveal-play aria-label="Play">
+<button class="replay" type="button" data-reveal-replay hidden>Replay</button>
+<div class="rv" data-cohort-reveal data-state="idle" data-stat-text={stat} data-result-id={resultId} data-done={done ? '1' : '0'} data-stub={stub ? '1' : '0'} data-logo={partner.logo} hidden>
+  <button class="play" type="button" data-reveal-play aria-label="Play" disabled>
     <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor" /></svg>
     <span>Play</span>
   </button>
-  <div class="story" data-story aria-live="polite">
-    <p class="stat"><span data-typed aria-hidden="true"></span><span class="sr" data-stat-full></span></p>
+  <div class="story" data-story>
+    <p class="stat"><span data-typed aria-hidden="true"></span><span class="sr" role="status" data-stat-full></span></p>
     <p class="stood" data-stood>{STOOD_OUT}</p>
   </div>
   <div class="popup" data-popup role="dialog" aria-modal="true" aria-labelledby="rv-title" hidden>
@@ -28,14 +30,43 @@ const title = popupTitle(partner);
   const root = document.querySelector<HTMLElement>('[data-cohort-reveal]');
   if (root) {
     const $ = <T extends HTMLElement>(s: string) => root.querySelector<T>(s)!;
+    const replayBtn = document.querySelector<HTMLElement>('[data-reveal-replay]')!;
     const text = root.dataset.statText ?? '';
+    const stub = root.dataset.stub === '1';
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    const store = (k: string, v?: string) => { try { return v === undefined ? sessionStorage.getItem(k) : sessionStorage.setItem(k, v); } catch { return null; } };
+    let done = root.dataset.done === '1' || (stub && store('rv-done') === '1');
+    let replay = false;
+    let skipNow = () => {};
+    const skipped = new Promise<void>((r) => { skipNow = r; });
+    const wait = (ms: number) => Promise.race([new Promise((r) => setTimeout(r, ms)), skipped]);
     const set = (s: string) => { root.dataset.state = s; };
-    $('[data-stat-full]').textContent = text;
-    root.hidden = false;
-    document.documentElement.style.overflow = 'hidden';
+    const inertOthers = () => document.querySelectorAll('body > *:not(main), main > *:not([data-cohort-reveal])').forEach((el) => { (el as HTMLElement).inert = true; });
+    const open = () => { root.hidden = false; document.documentElement.style.overflow = 'hidden'; };
 
+    // Finish is sent once, when the popup is reached. A failed POST never blocks; one beacon retry on pagehide.
+    let finishPending = false;
+    const finish = async () => {
+      done = true;
+      if (stub) { store('rv-done', '1'); return; }
+      const body = JSON.stringify({ action: 'finish', id: Number(root.dataset.resultId) });
+      try {
+        const r = await fetch('/portal/api/ceremony', { method: 'POST', headers: { 'content-type': 'application/json' }, body });
+        if (!r.ok) throw new Error('finish');
+      } catch {
+        finishPending = true;
+        addEventListener('pagehide', () => { if (finishPending) navigator.sendBeacon('/portal/api/ceremony', new Blob([body], { type: 'application/json' })); }, { once: true });
+      }
+    };
+
+    // Loading beat: logo and fonts are ready before Play can be tapped (capped at 3s so a slow network never strands it).
+    const logo = new Image();
+    logo.src = root.dataset.logo ?? '';
+    Promise.race([Promise.all([logo.decode().catch(() => {}), document.fonts.ready]), new Promise((r) => setTimeout(r, 3000))])
+      .then(() => { $<HTMLButtonElement>('[data-reveal-play]').disabled = false; });
+
+    const dead = new Set<Animation>();
+    const stopConfetti = () => { dead.forEach((a) => a.cancel()); dead.clear(); root.querySelectorAll('.confetti').forEach((p) => p.remove()); };
     const confetti = () => {
       const colors = ['#ffc8dd', '#bde0fe', '#cdb4db', '#b9fbc0', '#fdffb6', '#ffd6a5'];
       for (let i = 0; i < 48; i++) {
@@ -45,36 +76,57 @@ const title = popupTitle(partner);
         p.style.left = `${Math.random() * 100}%`;
         p.style.background = colors[i % colors.length];
         root.appendChild(p);
-        p.animate(
+        const a = p.animate(
           [{ transform: 'translateY(-20px) rotate(0)', opacity: 1 }, { transform: `translateY(${innerHeight}px) rotate(${360 + Math.random() * 360}deg)`, opacity: 0 }],
           { duration: 1800 + Math.random() * 1400, delay: Math.random() * 500, easing: 'ease-in', fill: 'forwards' },
-        ).onfinish = () => p.remove();
+        );
+        dead.add(a);
+        a.onfinish = () => p.remove();
       }
+      setTimeout(stopConfetti, 3000);
+      document.addEventListener('visibilitychange', () => { if (document.hidden) stopConfetti(); }, { once: true });
     };
+
+    const popup = () => {
+      $<HTMLElement>('[data-popup]').hidden = false;
+      set('popup');
+      inertOthers();
+      $<HTMLElement>('[data-reveal-next]').focus();
+      if (!done) void finish();
+    };
+
+    // On a replay a tap anywhere during the build skips ahead to the popup.
+    root.addEventListener('click', (e) => { if (replay && ['dark', 'typing', 'stood'].includes(root.dataset.state ?? '') && !(e.target as HTMLElement).closest('a')) skipNow(); });
 
     $('[data-reveal-play]').addEventListener('click', async () => {
       if (root.dataset.state !== 'idle') return;
-      if (reduced) {
-        // Play is still tapped, but every beat after it appears at once: no typing, no confetti motion.
-        $('[data-typed]').textContent = text;
-        set('popup');
-        $<HTMLElement>('[data-popup]').hidden = false;
-        $<HTMLElement>('[data-reveal-next]').focus();
-        return;
-      }
+      replay = done;
+      $('[data-stat-full]').textContent = text;
       set('dark');
       await wait(900);
       set('typing');
       const el = $('[data-typed]');
-      for (let i = 1; i <= text.length; i++) { el.textContent = text.slice(0, i); await wait(22); }
-      await wait(500);
+      if (reduced) {
+        // No typing: the whole line crossfades in. The dim and the pauses stay.
+        el.textContent = text;
+        await wait(500);
+      } else {
+        for (let i = 1; i <= text.length; i++) {
+          el.textContent = text.slice(0, i);
+          await wait(22);
+        }
+        await wait(500);
+      }
+      el.textContent = text;
       set('stood');
       await wait(1200);
-      $<HTMLElement>('[data-popup]').hidden = false;
-      set('popup');
-      confetti();
-      $<HTMLElement>('[data-reveal-next]').focus();
+      popup();
+      if (!reduced && !document.hidden) confetti();
     });
+
+    replayBtn.addEventListener('click', () => open());
+    if (done) replayBtn.hidden = false;
+    else open();
   }
 </script>
 <style>
@@ -99,5 +151,13 @@ const title = popupTitle(partner);
   .go { min-height: 44px; display: inline-flex; align-items: center; text-decoration: none; }
   .rv :global(.confetti) { position: absolute; top: 0; width: 10px; height: 14px; border-radius: var(--sp-4); pointer-events: none; z-index: 3; }
   @keyframes up { from { opacity: 0; transform: translateY(24px); } }
-  @media (prefers-reduced-motion: reduce) { .rv, .stood, .story, .play { transition: none; } .popup { animation: none; } }
+    .replay { display: inline-flex; align-items: center; min-height: 44px; margin-bottom: var(--sp-8); padding: 0 var(--sp-16); border: 1px solid currentColor; border-radius: var(--r-pill); background: none; color: var(--ink); font: inherit; font-size: var(--fs-15); cursor: pointer; }
+  .replay[hidden] { display: none; }
+  .play:disabled { opacity: 0.5; cursor: default; }
+  @media (prefers-reduced-motion: reduce) {
+    .stat { opacity: 0; transition: opacity var(--dur-4) var(--ease); }
+    .rv[data-state='typing'] .stat, .rv[data-state='stood'] .stat { opacity: 1; }
+    .popup { animation: fade var(--dur-4) var(--ease) both; }
+  }
+  @keyframes fade { from { opacity: 0; } }
 </style>

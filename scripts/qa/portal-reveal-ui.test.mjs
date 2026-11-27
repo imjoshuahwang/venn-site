@@ -37,9 +37,11 @@ async function run(partner, reducedMotion, tag) {
   await shot(page, `${tag}-1-play`);
   await noOverflow(page, 'play');
   assert.equal(await page.locator('[data-reveal-play]').isVisible(), true);
-  await page.locator('[data-reveal-play]').tap();
+  await page.locator('[data-reveal-play]:enabled').tap();
+  const t0 = Date.now();
   if (reducedMotion === 'reduce') {
-    await page.locator('[data-popup]').waitFor({ state: 'visible', timeout: 500 });
+    // Dim and pauses stay as crossfades, so the popup follows within the pauses; no typing, no confetti.
+    await page.locator('[data-popup]').waitFor({ state: 'visible', timeout: 5000 });
     assert.equal(await page.locator('[data-confetti]').count(), 0, 'no confetti under reduced motion');
   } else {
     await page.waitForFunction(() => document.querySelector('[data-typed]').textContent.length > 20);
@@ -53,6 +55,7 @@ async function run(partner, reducedMotion, tag) {
     await page.waitForTimeout(500);
     assert.ok((await page.locator('[data-confetti]').count()) > 0, 'confetti falls');
   }
+  assert.ok(Date.now() - t0 < 9000, `Play to popup took ${Date.now() - t0}ms`);
   assert.equal(await page.locator('[data-typed]').textContent(), statLine());
   assert.doesNotMatch(await page.locator('[data-typed]').textContent(), /%/);
   await shot(page, `${tag}-4-popup`);
@@ -65,5 +68,41 @@ async function run(partner, reducedMotion, tag) {
 }
 
 test('aws reveal, full motion', () => run(null, 'no-preference', 'aws'));
-test('aws reveal, reduced motion: popup straight after Play', () => run(null, 'reduce', 'aws-reduced'));
+test('aws reveal, reduced motion: crossfades, no confetti', () => run(null, 'reduce', 'aws-reduced'));
 test('quadron reveal comes from config', () => run('quadron', 'no-preference', 'quadron'));
+
+const open = async (url) => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await ctx.newPage();
+  await page.goto(`${base}${url}`);
+  return { ctx, page };
+};
+
+test('reload mid-reveal returns to Play', async () => {
+  const { ctx, page } = await open('/portal/result?stub=cohort');
+  await page.locator('[data-reveal-play]:enabled').tap();
+  await page.waitForFunction(() => document.querySelector('[data-typed]').textContent.length > 20);
+  await page.reload();
+  await page.locator('[data-reveal-play]:enabled').waitFor({ state: 'visible' });
+  assert.equal(await page.locator('[data-reveal-replay]').isVisible(), false);
+  await ctx.close();
+});
+
+test('reload after the popup shows the letter and a Replay button', async () => {
+  const { ctx, page } = await open('/portal/result?stub=cohort');
+  await page.locator('[data-reveal-play]:enabled').tap();
+  await page.locator('[data-popup]').waitFor({ state: 'visible', timeout: 9000 });
+  await page.reload();
+  await page.locator('[data-reveal-replay]').waitFor({ state: 'visible' });
+  assert.equal(await page.locator('[data-cohort-reveal]').isVisible(), false);
+  assert.equal(await page.locator('[data-letter]').isVisible(), true);
+  await ctx.close();
+});
+
+test('not_this_season has no reveal and no "stood out" text', async () => {
+  const { ctx, page } = await open('/portal/result?stub=not_this_season');
+  await page.locator('main').waitFor();
+  assert.equal(await page.locator('[data-cohort-reveal]').count(), 0);
+  assert.doesNotMatch(await page.locator('body').innerText(), /stood out/i);
+  await ctx.close();
+});
