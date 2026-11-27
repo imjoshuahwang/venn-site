@@ -1,17 +1,17 @@
 // Next-steps page, LOCAL stack only (supabase start + astro dev). Run: npm run test:e2e
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { execFileSync, spawn } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { chromium, devices } from 'playwright';
 import { localServerEnv } from '../scripts/qa/portal.mjs';
+import { freePort, stopServer, supabaseStatus } from '../scripts/qa/dev-server.mjs';
 import { createClient } from '@supabase/supabase-js';
 import { mkdirSync } from 'node:fs';
 
-const st = JSON.parse(execFileSync('supabase', ['status', '-o', 'json'], { stdio: ['ignore', 'pipe', 'ignore'] }).toString().replace(/^[^{]*/, ''));
+const st = supabaseStatus();
 const API = st.API_URL;
-assert.match(API, /127\.0\.0\.1|localhost/, 'refusing to run against a non-local stack');
 const admin = createClient(API, st.SERVICE_ROLE_KEY, { auth: { persistSession: false } });
-const PORT = 8228;
+const PORT = await freePort();
 const BASE = `http://127.0.0.1:${PORT}`;
 const PASSWORD = 'e2e-NextSteps-pass-1';
 const SHOTS = process.env.SHOTS || '/private/tmp/claude-501/-Users-joshuahwang-venn/e6b0f322-fd8a-4214-84a0-62e119cfb2b2/scratchpad/qa243/';
@@ -22,7 +22,7 @@ let server, browser, user, appId;
 before(async () => {
   server = spawn('npx', ['astro', 'dev', '--host', '127.0.0.1', '--port', String(PORT)], {
     env: localServerEnv(API, st.ANON_KEY),
-    stdio: 'ignore',
+    stdio: 'ignore', detached: true,
   });
   for (let i = 0; i < 120; i++) {
     if (await fetch(`${BASE}/portal/login`).then((r) => r.ok, () => false)) break;
@@ -39,7 +39,7 @@ before(async () => {
 
 after(async () => {
   await browser?.close();
-  server?.kill();
+  stopServer(server);
   if (user) {
     await admin.from('applications').delete().eq('id', appId);
     await admin.auth.admin.deleteUser(user.id);

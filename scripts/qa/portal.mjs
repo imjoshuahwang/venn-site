@@ -6,6 +6,7 @@ import { execFileSync, spawn } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { slug } from './devices.mjs';
 import { SUPABASE_BLOCK } from './flows.mjs';
+import { freePort, stopServer } from './dev-server.mjs';
 
 export const PORTAL_FILE = 'qa/portal-flows.yaml';
 const REPO = 'imjoshuahwang/venn-site';
@@ -83,14 +84,16 @@ const CLS_PORTAL = 0.05;
 const unq = (s) => s.trim().replace(/^(["'])(.*)\1$/, '$2');
 
 // Starts astro dev wired to the local stack; resolves { url, stop }.
-async function startDev(env, port = 4333) {
+// Always a fresh free port, never a fixed one: whatever already holds 4333 may be another worktree's code.
+export async function startDev(env, port) {
+  port ??= await freePort();
   const url = `http://127.0.0.1:${port}`;
-  const child = spawn('npx', ['astro', 'dev', '--host', '127.0.0.1', '--port', String(port)], { env: { ...process.env, ...env, PORTAL_JOSH_PHONE: process.env.PORTAL_JOSH_PHONE || '+16505550100' }, stdio: 'ignore' });
+  const child = spawn('npx', ['astro', 'dev', '--host', '127.0.0.1', '--port', String(port)], { env: { ...process.env, ...env, PORTAL_JOSH_PHONE: process.env.PORTAL_JOSH_PHONE || '+16505550100' }, stdio: 'ignore', detached: true });
   for (let i = 0; i < 120; i++) {
-    if (await fetch(url).then(() => true, () => false)) return { url, stop: () => child.kill() };
+    if (await fetch(url).then(() => true, () => false)) return { url, stop: () => stopServer(child) };
     await new Promise((r) => setTimeout(r, 500));
   }
-  child.kill();
+  stopServer(child);
   throw new Error('astro dev did not start');
 }
 
@@ -213,7 +216,7 @@ export async function main(argv = process.argv.slice(2)) {
   try {
     for (const flow of run) for (const d of devices) {
       clearRateLimits();
-      if (flow.stub && !stubs[flow.stub]) stubs[flow.stub] = await startDev({ ...localSupabaseEnv(execFileSync('supabase', ['status', '-o', 'json'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })), PORTAL_STUB: flow.stub }, 4334);
+      if (flow.stub && !stubs[flow.stub]) stubs[flow.stub] = await startDev({ ...localSupabaseEnv(execFileSync('supabase', ['status', '-o', 'json'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })), PORTAL_STUB: flow.stub });
       const r = await runPortalFlow({ flow, device: d, browser: browsers[d.browser], base: flow.stub ? stubs[flow.stub].url : base, login });
       if (!r.pass) failed++;
       console.log(`${r.pass ? 'PASS' : 'FAIL'}  ${flow.name}  ${d.name}  ${r.details}`);

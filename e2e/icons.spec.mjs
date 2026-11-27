@@ -4,15 +4,16 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { chromium } from 'playwright';
 import { localServerEnv } from '../scripts/qa/portal.mjs';
+import { freePort, stopServer } from '../scripts/qa/dev-server.mjs';
 
-const PORT = 8233;
+const PORT = await freePort();
 const BASE = `http://127.0.0.1:${PORT}`;
 let server, browser;
 
 before(async () => {
   server = spawn('npx', ['astro', 'dev', '--host', '127.0.0.1', '--port', String(PORT)], {
     env: localServerEnv('http://127.0.0.1:1', 'x', { PORTAL_HOST: 'portal.invalid' }),
-    stdio: 'ignore',
+    stdio: 'ignore', detached: true,
   });
   for (let i = 0; i < 120; i++) {
     if (await fetch(`${BASE}/`).then((r) => r.ok, () => false)) break;
@@ -20,7 +21,7 @@ before(async () => {
   }
   browser = await chromium.launch();
 });
-after(async () => { await browser?.close(); server?.kill(); });
+after(async () => { await browser?.close(); stopServer(server); });
 
 for (const path of ['/', '/portal/login', '/portal/result?stub=cohort']) {
   test(`icons on ${path}`, async () => {

@@ -2,16 +2,16 @@
 // Test users are made through the local admin API with contact+portal-* emails; no email is sent.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { execFileSync, spawn } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { chromium, devices } from 'playwright';
 import { localServerEnv } from '../scripts/qa/portal.mjs';
+import { freePort, stopServer, supabaseStatus } from '../scripts/qa/dev-server.mjs';
 import { createClient } from '@supabase/supabase-js';
 
-const st = JSON.parse(execFileSync('supabase', ['status', '-o', 'json'], { stdio: ['ignore', 'pipe', 'ignore'] }).toString().replace(/^[^{]*/, ''));
+const st = supabaseStatus();
 const API = st.API_URL;
-assert.match(API, /127\.0\.0\.1|localhost/, 'refusing to run against a non-local stack');
 const admin = createClient(API, st.SERVICE_ROLE_KEY, { auth: { persistSession: false } });
-const PORT = 8129;
+const PORT = await freePort();
 const BASE = `http://127.0.0.1:${PORT}`;
 const PASSWORD = 'e2e-Team-pass-1';
 const SHOTS = new URL('../qa/portal-shots/129/', import.meta.url).pathname;
@@ -23,7 +23,7 @@ let server, browser;
 before(async () => {
   server = spawn('npx', ['astro', 'dev', '--host', '127.0.0.1', '--port', String(PORT)], {
     env: localServerEnv(API, st.ANON_KEY),
-    stdio: 'ignore',
+    stdio: 'ignore', detached: true,
   });
   for (let i = 0; i < 120; i++) {
     if (await fetch(`${BASE}/portal/login`).then((r) => r.ok, () => false)) break;
@@ -34,7 +34,7 @@ before(async () => {
 
 after(async () => {
   await browser?.close();
-  server?.kill();
+  stopServer(server);
   for (const u of created) {
     await admin.from('team_members').delete().eq('lead_result_id', u.resId);
     await admin.from('consents').delete().eq('user_id', u.id);
@@ -50,7 +50,7 @@ async function makeLead(tag) {
   assert.ifError(error);
   const app = await admin.from('applications').insert({ role: 'student', level: 'college', name: 'E2E Lead', email, working_on: 'e2e', source: 'test' }).select('id').single();
   assert.ifError(app.error);
-  const res = await admin.from('results').insert({ application_id: app.data.id, season: 'e2e', outcome: 'cohort', status: 'approved', approved_at: new Date().toISOString() }).select('id').single();
+  const res = await admin.from('results').insert({ application_id: app.data.id, season: 'fall-2026', outcome: 'cohort', status: 'approved', approved_at: new Date().toISOString(), viewed_at: new Date().toISOString(), ceremony_done_at: new Date().toISOString() }).select('id').single();
   assert.ifError(res.error);
   for (const clause of ['coordinator_groups', 'highlights', 'full_name_photo', 'data_use', 'retention']) {
     const c = await admin.from('consents').insert({ user_id: data.user.id, clause, accepted: true, version: '2026-11-v3' });
@@ -91,8 +91,7 @@ for (const [slug, preset] of Object.entries(VIEWPORTS)) {
     const page = await ctx.newPage();
     const shot = (name) => page.screenshot({ path: `${SHOTS}${name}-${slug}.png`, fullPage: true, scale: 'css' });
     await login(page, lead.email);
-    await page.goto(`${BASE}/portal`);
-    await page.click('a[href="/portal/team"]');
+    await page.goto(`${BASE}/portal/team`); // #225 dropped the home link; the page is still live
     await page.waitForURL(`${BASE}/portal/team`);
     await page.locator('form.add').waitFor();
     await shot('team-empty');
