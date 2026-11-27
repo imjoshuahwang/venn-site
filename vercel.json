@@ -1,5 +1,7 @@
 {
   "regions": ["sfo1"],
+  "git": { "deploymentEnabled": { "*": false, "main": true } },
+  "ignoreCommand": "bash scripts/vercel-ignore.sh",
   "redirects": [
     { "source": "/boost", "destination": "/refer", "permanent": true },
     { "source": "/pricing", "destination": "/startups", "permanent": true }
