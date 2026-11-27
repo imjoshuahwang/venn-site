@@ -1,6 +1,7 @@
 ---
 import { CONTACT } from '../../../data/portal-copy';
 const { state } = Astro.props as { state: 'loading' | 'empty' | 'error' };
+const mail = (subject: string) => `mailto:${CONTACT}?subject=${encodeURIComponent(subject)}`;
 ---
 {state === 'loading' && (
   <section class="state" aria-busy="true" aria-label="Loading your Result">
@@ -10,17 +11,26 @@ const { state } = Astro.props as { state: 'loading' | 'empty' | 'error' };
 {state === 'empty' && (
   <section class="state">
     <h1>Your letter is not ready yet</h1>
-    <a class="pill" href={`mailto:${CONTACT}`}>{CONTACT}</a>
-  </section>
+    <div class="acts">
+      <a class="pill" href="">Try again</a>
+      <form method="post" action="/portal/logout"><button class="pill ghost" type="submit">Sign out</button></form>
+      <a class="pill ghost" href={mail('Result letter not ready')}>{CONTACT}</a>
+    </div>  </section>
 )}
 {state === 'error' && (
   <section class="state" role="alert">
     <h1>We could not load your Result</h1>
-    <a class="pill" href={`mailto:${CONTACT}`}>{CONTACT}</a>
-  </section>
+    <div class="acts">
+      <a class="pill" href="">Try again</a>
+      <form method="post" action="/portal/logout"><button class="pill ghost" type="submit">Sign out</button></form>
+      <a class="pill ghost" href={mail('Result could not load')}>{CONTACT}</a>
+    </div>  </section>
 )}
 <style>
   .state { display: grid; gap: var(--sp-16); justify-items: start; align-content: start; }
+  .acts { display: flex; flex-wrap: wrap; gap: var(--sp-12); }
+  .acts form { margin: 0; }
+  .acts .pill { min-height: 48px; display: inline-flex; align-items: center; font-family: inherit; }
   h1 { margin: 0; font-size: var(--fs-28); font-weight: var(--fw-800); letter-spacing: var(--track-tight); line-height: 1.15; }
   .sk { height: var(--sp-16); width: 100%; border-radius: var(--r-12); background: var(--panel); }
   .sk.h { height: var(--sp-32); width: 70%; }
