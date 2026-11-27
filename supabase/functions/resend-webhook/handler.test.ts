@@ -157,10 +157,11 @@ async function bounceRun(e: Record<string, string>, o: { patch?: number; isTest?
     globalThis.fetch = real;
   }
 }
-const alertEnv = { MATCH_ALERT_TO: "contact+portal-a@joinvenn.org", STUDENT_RESEND_API_KEY: "k" };
+const alertEnv = { SEND_ALLOWLIST: "contact+portal-*@joinvenn.org", MATCH_ALERT_TO: "contact+portal-a@joinvenn.org", STUDENT_RESEND_API_KEY: "k" };
 
 test("bounce alert: switch unset sends nothing", async () => assert.equal(await bounceRun(alertEnv), 0));
 test("bounce alert: switch on and PATCH ok sends one", async () => assert.equal(await bounceRun({ ...alertEnv, MATCH_SENDS_ENABLED: "1" }), 1));
 test("bounce alert: failed PATCH sends nothing", async () => assert.equal(await bounceRun({ ...alertEnv, MATCH_SENDS_ENABLED: "1" }, { patch: 500 }), 0));
 test("bounce alert: test row sends nothing", async () => assert.equal(await bounceRun({ ...alertEnv, MATCH_SENDS_ENABLED: "1" }, { isTest: true }), 0));
 test("bounce alert: non-allowlisted address sends nothing", async () => assert.equal(await bounceRun({ ...alertEnv, MATCH_ALERT_TO: "x@example.com", MATCH_SENDS_ENABLED: "1" }), 0));
+test("bounce alert: SEND_ALLOWLIST unset sends nothing", async () => assert.equal(await bounceRun({ MATCH_ALERT_TO: "contact+portal-a@joinvenn.org", STUDENT_RESEND_API_KEY: "k", MATCH_SENDS_ENABLED: "1" }), 0));

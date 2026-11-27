@@ -41,13 +41,13 @@ function fakeSb({ claimed }) {
 
 test('a row someone else already claimed is never sent', async () => {
   let n = 0;
-  const r = await sendOne({ sb: fakeSb({ claimed: false }), row: row(1, 'a@x.com'), template, from: 'f', resendKey: 'k', fetchImpl: async () => { n++; return { ok: true }; } });
+  const r = await sendOne({ allowlist: '*', sb: fakeSb({ claimed: false }), row: row(1, 'a@x.com'), template, from: 'f', resendKey: 'k', fetchImpl: async () => { n++; return { ok: true }; } });
   assert.equal(r, 'already'); assert.equal(n, 0);
 });
 
 test('a failed send releases the claim', async () => {
   const sb = fakeSb({ claimed: true });
-  await assert.rejects(sendOne({ sb, row: row(1, 'a@x.com'), template, from: 'f', resendKey: 'k', fetchImpl: async () => ({ ok: false, status: 500, text: async () => 'no' }) }));
+  await assert.rejects(sendOne({ allowlist: '*', sb, row: row(1, 'a@x.com'), template, from: 'f', resendKey: 'k', fetchImpl: async () => ({ ok: false, status: 500, text: async () => 'no' }) }));
   assert.equal(sb.calls.at(-1)[1].emailed_at, null);
 });
 
@@ -60,7 +60,7 @@ test('--test never picks a real applicant, even when --to names one', () => {
 
 test('mail goes From the verified domain with Reply-To contact@joinvenn.org', async () => {
   let body;
-  await sendOne({ sb: fakeSb({ claimed: true }), row: row(1, 'a@x.com'), template, from: FROM, resendKey: 'k', fetchImpl: async (_u, o) => { body = JSON.parse(o.body); return { ok: true }; } });
+  await sendOne({ allowlist: '*', sb: fakeSb({ claimed: true }), row: row(1, 'a@x.com'), template, from: FROM, resendKey: 'k', fetchImpl: async (_u, o) => { body = JSON.parse(o.body); return { ok: true }; } });
   assert.equal(REPLY_TO, 'contact@joinvenn.org');
   assert.equal(body.reply_to, 'contact@joinvenn.org');
   assert.match(body.from, /<hello@vennstudentorgs\.com>$/);
@@ -70,8 +70,8 @@ test('missing student key: nothing sent, fetch never called, claim never taken',
   const sb = fakeSb({ claimed: true });
   let n = 0;
   const fetchImpl = async () => { n++; return { ok: true }; };
-  await assert.rejects(sendOne({ sb, row: row(1, 'a@x.com'), template, from: FROM, resendKey: undefined, fetchImpl }), /STUDENT_RESEND_API_KEY/);
-  await assert.rejects(run({ args: { send: true, to: null, test: false }, sb: { ...sb, from: () => ({ select: () => ({ eq() { return this; }, is() { return this; }, order() { return this; }, limit: async () => ({ data: [row(1, 'a@x.com')], error: null }) }) }) }, template, from: FROM, resendKey: '', log() {}, fetchImpl }), /STUDENT_RESEND_API_KEY/);
+  await assert.rejects(sendOne({ allowlist: '*', sb, row: row(1, 'a@x.com'), template, from: FROM, resendKey: undefined, fetchImpl }), /STUDENT_RESEND_API_KEY/);
+  await assert.rejects(run({ allowlist: '*', args: { send: true, to: null, test: false }, sb: { ...sb, from: () => ({ select: () => ({ eq() { return this; }, is() { return this; }, order() { return this; }, limit: async () => ({ data: [row(1, 'a@x.com')], error: null }) }) }) }, template, from: FROM, resendKey: '', log() {}, fetchImpl }), /STUDENT_RESEND_API_KEY/);
   assert.equal(n, 0);
   assert.equal(sb.calls.length, 0);
 });
@@ -83,8 +83,8 @@ test('logs carry row id and resend_id but no applicant email', async () => {
   const base = sb.from;
   const sbq = { ...sb, from: (t) => { const f = base(t); return { ...f, select: () => ({ eq() { return this; }, is() { return this; }, order() { return this; }, limit: async () => ({ data: pending, error: null }) }) }; } };
   const fetchImpl = async () => ({ ok: true, json: async () => ({ id: 're_abc' }) });
-  await run({ args: { send: false, to: null, test: false }, sb: sbq, template, from: FROM, resendKey: 'k', log: (m) => lines.push(m) });
-  await run({ args: { send: true, to: null, test: false }, sb: sbq, template, from: FROM, resendKey: 'k', log: (m) => lines.push(m), fetchImpl, sleep: async () => {} });
+  await run({ allowlist: '*', args: { send: false, to: null, test: false }, sb: sbq, template, from: FROM, resendKey: 'k', log: (m) => lines.push(m) });
+  await run({ allowlist: '*', args: { send: true, to: null, test: false }, sb: sbq, template, from: FROM, resendKey: 'k', log: (m) => lines.push(m), fetchImpl, sleep: async () => {} });
   const out = lines.join('\n');
   assert.doesNotMatch(out, /ada\.secret|@example\.com/);
   assert.match(out, /result 5 resend_id=re_abc/);
@@ -94,7 +94,7 @@ test('logs carry row id and resend_id but no applicant email', async () => {
 test('a failed send throws the status only, never the response body or an email', async () => {
   const sb = fakeSb({ claimed: true });
   await assert.rejects(
-    sendOne({ sb, row: row(1, 'a@x.com'), template, from: FROM, resendKey: 'k', fetchImpl: async () => ({ ok: false, status: 422, text: async () => 'invalid to a@x.com' }) }),
+    sendOne({ allowlist: '*', sb, row: row(1, 'a@x.com'), template, from: FROM, resendKey: 'k', fetchImpl: async () => ({ ok: false, status: 422, text: async () => 'invalid to a@x.com' }) }),
     (e) => e.message === 'resend 422' && !e.message.includes('@'),
   );
 });
@@ -103,7 +103,7 @@ test('429/5xx retries reuse the same Idempotency-Key; a 500 then 200 sends once 
   const keys = []; const bodies = [];
   const answers = [{ ok: false, status: 500, text: async () => '' }, { ok: true, status: 200, json: async () => ({ id: 're_9' }) }];
   const slept = [];
-  const r = await sendOne({ sb: fakeSb({ claimed: true }), row: row(1, 'a@x.com'), template, from: FROM, resendKey: 'k', sleep: async (ms) => { slept.push(ms); },
+  const r = await sendOne({ allowlist: '*', sb: fakeSb({ claimed: true }), row: row(1, 'a@x.com'), template, from: FROM, resendKey: 'k', sleep: async (ms) => { slept.push(ms); },
     fetchImpl: async (_u, o) => { keys.push(o.headers['Idempotency-Key']); bodies.push(JSON.parse(o.body)); return answers.shift(); } });
   assert.equal(r, 'sent');
   assert.equal(keys.length, 2); assert.equal(keys[0], keys[1]); assert.equal(slept.length, 1);
@@ -112,6 +112,20 @@ test('429/5xx retries reuse the same Idempotency-Key; a 500 then 200 sends once 
 
 test('three retries then give up: the claim is released', async () => {
   const sb = fakeSb({ claimed: true }); let n = 0;
-  await assert.rejects(sendOne({ sb, row: row(1, 'a@x.com'), template, from: FROM, resendKey: 'k', sleep: async () => {}, fetchImpl: async () => { n++; return { ok: false, status: 429, text: async () => '' }; } }), /resend 429/);
+  await assert.rejects(sendOne({ allowlist: '*', sb, row: row(1, 'a@x.com'), template, from: FROM, resendKey: 'k', sleep: async () => {}, fetchImpl: async () => { n++; return { ok: false, status: 429, text: async () => '' }; } }), /resend 429/);
   assert.equal(n, 4); assert.equal(sb.calls.at(-1)[1].emailed_at, null);
+});
+
+test('SEND_ALLOWLIST unset or not matching refuses before any claim, fetch or log of the address', async () => {
+  let n = 0; const lines = [];
+  const sb = { from() { n++; throw new Error('touched db'); } };
+  const fetchImpl = async () => { n++; return { ok: true }; };
+  assert.equal(await sendOne({ sb, row: row(1, 'refuse-check@example.com'), template, from: FROM, resendKey: 'k', fetchImpl }), 'not_allowlisted');
+  assert.equal(await sendOne({ sb, row: row(1, 'refuse-check@example.com'), template, from: FROM, resendKey: 'k', allowlist: 'imjoshuahwang+*@gmail.com', fetchImpl }), 'not_allowlisted');
+  assert.equal(n, 0);
+  const sbq = { from: () => ({ select: () => ({ eq() { return this; }, is() { return this; }, order() { return this; }, limit: async () => ({ data: [row(1, 'refuse-check@example.com')], error: null }) }) }) };
+  const r = await run({ args: { send: true, to: null, test: false }, sb: sbq, template, from: FROM, resendKey: 'k', allowlist: 'imjoshuahwang+*@gmail.com', log: (m) => lines.push(m), fetchImpl, sleep: async () => {} });
+  assert.deepEqual(r, { sent: 0, failed: 0, refused: 1 });
+  assert.ok(lines.some((l) => l.includes('not_allowlisted')));
+  assert.ok(!lines.join().includes('example.com'));
 });
