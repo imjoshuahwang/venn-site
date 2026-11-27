@@ -100,7 +100,7 @@ export async function sendOne({ sb, row, template, from, resendKey, fetchImpl = 
 
 export async function run({ args, sb, template, from, resendKey, log = console.log, fetchImpl, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) }) {
   const rows = pickRows(await fetchPending(sb), args.to, args.test);
-  log(`${rows.length} ${args.test ? 'TEST ' : ''}result(s) approved and not yet emailed${args.to ? ` (restricted to ${args.to.join(', ')})` : ''}.`);
+  log(`${rows.length} ${args.test ? 'TEST ' : ''}result(s) approved and not yet emailed${args.to ? ` (restricted to ${args.to.length} address(es))` : ''}.`);
   if (!rows.length) return { sent: 0, failed: 0 };
   if (args.send && !resendKey) throw new Error(NO_KEY);
   if (!args.send) {
