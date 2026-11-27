@@ -34,9 +34,11 @@ const RESULT_SPECS = [
   { slug: 'lead', outcome: 'cohort', cohort: 'test-cohort' },
 ];
 const MEMBERS = ['member-1', 'member-2'];
+// Signed in, no application and no result: the home none state (#225).
+const NO_RESULT = ['none'];
 // Every other result user has answered the consent ceremony (src/data/consent.ts); these two still land on /portal/ceremony.
 export const UNCONSENTED = ['cohort-done', 'minor'];
-export const CONSENT_VERSION = '2026-11-v2';
+export const CONSENT_VERSION = '2026-11-v3';
 export const CONSENT_CLAUSES = ['coordinator_groups', 'highlights', 'full_name_photo', 'data_use', 'retention'];
 
 export const SEEDED_USERS = [
@@ -45,6 +47,7 @@ export const SEEDED_USERS = [
     landing: LANDING,
   })),
   ...MEMBERS.map((slug) => ({ slug, email: emailFor(slug), outcome: 'team_member', status: 'approved', landing: LANDING })),
+  ...NO_RESULT.map((slug) => ({ slug, email: emailFor(slug), outcome: 'none', status: 'none', landing: LANDING })),
 ];
 
 export function buildPlan() {

@@ -24,3 +24,18 @@ test('the slideshow is deleted', () => {
   for (const f of ['src/scripts/portal/slides.ts', 'src/components/portal/results/CohortSlides.astro', 'src/data/cohort-decks.ts']) assert.equal(fs.existsSync(f), false, f);
   for (const f of ['src/pages/portal/result.astro', 'src/pages/portal/dev/result.astro', 'src/components/portal/results/Cohort.astro']) assert.doesNotMatch(read(f), /CohortSlides|data-slot="slides"|slot="slides"/, f);
 });
+
+test('home reads go through loadHome (parallel) and vercel runs in sfo1', () => {
+  assert.match(read('src/pages/portal/index.astro'), /loadHome\(/);
+  assert.deepEqual(JSON.parse(read('vercel.json')).regions, ['sfo1']);
+});
+
+test('none state names the email, offers a different sign-in and the contact address; error keeps Retry and logs nothing', () => {
+  const s = read('src/pages/portal/index.astro');
+  assert.match(s, /We could not find a result for \{email\}/);
+  assert.match(s, /Sign in with a different email/);
+  assert.match(s, /contact@joinvenn\.org/);
+  assert.match(s, /data-retry/);
+  assert.doesNotMatch(s, /console\./);
+  assert.doesNotMatch(s, /could not find an application/);
+});

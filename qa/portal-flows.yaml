@@ -325,7 +325,7 @@
 - name: home-results-button
   on: /portal/login
   steps:
-    - sign-in contact+portal-network@joinvenn.org
+    - sign-in contact+portal-home@joinvenn.org
     - expect-url /portal
     - goto /portal
     - expect-visible [data-home] h1
@@ -335,6 +335,16 @@
     - tap [data-home] a[href="/portal/result"]
     - expect-url /portal/result
     - screenshot result
+- name: home-none-state
+  on: /portal/login
+  steps:
+    - sign-in contact+portal-none@joinvenn.org
+    - goto /portal
+    - expect-visible [data-none] h1
+    - expect-content We could not find a result for contact\+portal-none@joinvenn\.org
+    - expect-content Sign in with a different email
+    - expect-content contact@joinvenn\.org
+    - screenshot none
 - name: cohort-guiding-questions
   on: /portal/login
   steps:

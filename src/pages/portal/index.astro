@@ -5,27 +5,31 @@ import Ceremony from '../../components/portal/Ceremony.astro';
 import { getCeremonyData, stubMode } from '../../lib/portal/ceremony-data';
 import { initialScreen } from '../../lib/portal/ceremony.mjs';
 import { getConsentState } from '../../lib/portal/api';
+import { loadHome } from '../../lib/portal/home';
 import { CONSENT_VERSION } from '../../data/consent';
 
-const ceremony = await getCeremonyData(Astro);
+const home = await loadHome({
+  ceremony: () => getCeremonyData(Astro),
+  consent: () => getConsentState(Astro.locals.supabase, CONSENT_VERSION),
+});
+const { ceremony, consentFailed } = home;
 const inCeremony = ceremony.status === 'ok' && initialScreen(ceremony.result) === 'ceremony';
 // #127 consent, #128 parent, #132 phone are on their own pages: setup slots show only in stub mode unless ?setup=0.
 const showSlots = !!stubMode() && Astro.url.searchParams.get('setup') !== '0';
 const setup = { consent: !showSlots, parent: !showSlots, phone: !showSlots };
-// A missing or failing consent_state must be visible, never a silent skip of the consent redirect.
-let consent = null;
-let consentFailed = false;
-try {
-  const r = await getConsentState(Astro.locals.supabase, CONSENT_VERSION);
-  consent = r.data;
-  consentFailed = !!r.error || !r.data;
-} catch {
-  consentFailed = true;
-}
-if (!consentFailed && consent?.application && consent.done === false) return Astro.redirect('/portal/ceremony', 303);
+if (home.redirectToConsent) return Astro.redirect('/portal/ceremony', 303);
+const email = Astro.locals.user?.email ?? '';
+const none = ceremony.status === 'none' && !consentFailed;
+const failed = ceremony.status === 'error' || consentFailed;
 ---
 <Portal title="Your Venn home">
-  {inCeremony ? <Ceremony result={ceremony.result} setup={setup} /> : consentFailed ? <><p role="alert">We could not load this page.</p><form method="get" action="/portal"><button class="pill" type="submit" data-retry>Retry</button></form></> : (
+  {inCeremony ? <Ceremony result={ceremony.result} setup={setup} /> : failed ? <><p role="alert">We could not load this page.</p><form method="get" action="/portal"><button class="pill" type="submit" data-retry>Retry</button></form></> : none ? (
+    <section class="home" data-none>
+      <h1>We could not find a result for {email}</h1>
+      <form method="post" action="/portal/logout"><button class="pill" type="submit">Sign in with a different email</button></form>
+      <p class="help">Questions? Write to <a href="mailto:contact@joinvenn.org">contact@joinvenn.org</a>.</p>
+    </section>
+  ) : (
     <section class="home" data-home>
       <h1>Your results are here</h1>
       <a class="pill" href="/portal/result">View your results</a>
@@ -36,5 +40,7 @@ if (!consentFailed && consent?.application && consent.done === false) return Ast
 <style>
   .home { display: grid; gap: var(--sp-24); justify-items: start; padding-top: var(--sp-48); }
   .home h1 { margin: 0; font-size: var(--fs-28); font-weight: var(--fw-800); letter-spacing: var(--track-tight); line-height: 1.15; }
+  .help { margin: 0; font-size: var(--fs-15); color: var(--muted); }
+  .help a { display: inline-flex; align-items: center; min-height: 44px; }
   .consent { display: inline-flex; align-items: center; min-height: 44px; font-size: var(--fs-15); color: var(--muted); text-underline-offset: 3px; }
 </style>
