@@ -76,7 +76,7 @@ export async function submitIntro(token: string, form: FormData, d: Deps): Promi
 }
 
 export const COPY: Record<Outcome, { h: string; p?: string }> = {
-  accepted: { h: 'Accepted', p: 'We will email you both.' },
+  accepted: { h: 'Accepted', p: 'We are emailing you both an introduction. If nothing arrives within an hour, check spam, then write to contact@joinvenn.org and we will connect you.' },
   declined: { h: 'Not now', p: 'Thanks for letting us know.' },
   reported: { h: 'Reported', p: 'Thank you. We will look into it.' },
   opted_out: { h: 'Done', p: 'You will not get more requests.' },
