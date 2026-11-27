@@ -99,12 +99,13 @@ const draft = config.prompts.map((p) => `${p}\n\n`).join('');
   .ns-back { min-height: 44px; min-width: 44px; padding: 0 var(--sp-16); border: 0; background: none; font: inherit; font-size: var(--fs-15); color: var(--ink); cursor: pointer; }
   .ns-alt, .ns-sent p, .ns-done p { margin: 0; font-size: var(--fs-15); color: var(--muted); }
   .ns-alt a { color: var(--ink); display: inline-block; padding: 12px 0; margin: -12px 0; }
-  .ns-sent { display: flex; gap: var(--sp-12); align-items: center; justify-content: space-between; }
+  .ns-sent { display: flex; flex-wrap: wrap; gap: var(--sp-12); align-items: center; justify-content: space-between; }
+  .ns-sent .pill { white-space: nowrap; flex-shrink: 0; }
   .ns-sent[hidden] { display: none; }
   .ns-ticks, .ns-next { margin: 0; padding: 0; display: grid; gap: var(--sp-12); font-size: var(--fs-15); }
   .ns-ticks { list-style: none; }
   .ns-ticks li::before { content: '\2713'; margin-right: var(--sp-8); font-weight: var(--fw-600); }
-  .ns-next { padding-left: var(--sp-24); }
+  .ns-next { list-style-position: inside; }
   .ns-done:focus { outline: none; }
   @media (min-width: 900px) {
     .ns { grid-template-columns: 280px 1fr; align-items: start; }
