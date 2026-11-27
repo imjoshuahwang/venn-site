@@ -1,14 +1,18 @@
 ---
 // Share pill (#173): draws the 9:16 card on tap, shares it as a PNG file, else copies the public link.
-interface Props { name?: string | null; label?: string | null }
-const { name = '', label = '' } = Astro.props;
+interface Props { name?: string | null; label?: string | null; kind?: 'cohort' | 'peer' }
+const { name = '', label = '', kind = 'cohort' } = Astro.props;
+const line = 'Venn cohort seats are rare.';
+const text = kind === 'peer' ? `${line} Venn matched me with another founder.` : `${line} I got one.`;
 ---
-<div class="share" data-share data-name={name ?? ''} data-label={label ?? ''}>
+<div class="share" data-share data-name={name ?? ''} data-label={label ?? ''} data-text={text}>
+  <p class="share-line">{line}</p>
   <button type="button" class="pill" data-share-btn>Share</button>
   <span class="share-state" data-share-state role="status" aria-live="polite"></span>
 </div>
 <style>
-  .share { display: flex; align-items: center; gap: var(--sp-12); margin-top: var(--sp-24); }
+  .share { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-12); margin-top: var(--sp-32); }
+  .share-line { margin: 0; flex: 1 1 100%; font-size: var(--fs-15); color: var(--muted); }
   .share-state { font-size: var(--fs-15); }
   button.pill { border: 0; cursor: pointer; font-family: inherit; }
 </style>
@@ -24,7 +28,7 @@ const { name = '', label = '' } = Astro.props;
         const blob = await renderCard(cardSpec({ name: root.dataset.name, label: root.dataset.label }));
         file = new File([blob], 'venn.png', { type: 'image/png' });
         if (navigator.canShare?.({ files: [file] })) {
-          await navigator.share({ files: [file], url, title: 'Venn' });
+          await navigator.share({ files: [file], url, title: 'Venn', text: root.dataset.text });
           return;
         }
       } catch (e) {

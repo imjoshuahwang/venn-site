@@ -44,12 +44,12 @@ const page = result ? pageFor(result.outcome) : null;
 <Portal title="Your Result">
   {failed ? <ResultState state="error" />
     : result?.outcome === 'cohort' ? <Cohort result={cohort} view={cohortView}>
-      <CohortSlides slot="slides" cohort={cohort?.cohort} logo={logoUrl(cohort?.cohort?.logo_path, import.meta.env.PUBLIC_SUPABASE_URL)} />
+      <CohortSlides slot="slides" cohort={cohort?.cohort} firstName={firstName} logo={logoUrl(cohort?.cohort?.logo_path, import.meta.env.PUBLIC_SUPABASE_URL)} />
       {cohort && <GuidingQuestions slot="guidingQuestions" resultId={cohort.id} answers={guiding} closed={access === 'closed'} readonly={access === 'readonly'} />}
     </Cohort>
     : result?.outcome === 'peer' ? <Peer view={peer} />
     : page === 'waitlist' ? <Waitlist outcome={result.outcome} letter={result.letter} />
     : page === 'not_this_season' ? <NotThisSeason letter={result.letter} />
     : <ResultState state="empty" />}
-  {!failed && result && <SharePill name={firstName} label={cohort?.cohort?.name} />}
+  {!failed && (result?.outcome === 'cohort' || result?.outcome === 'peer') && <SharePill name={firstName} label={cohort?.cohort?.name} kind={result.outcome} />}
 </Portal>
