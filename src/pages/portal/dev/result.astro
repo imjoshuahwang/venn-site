@@ -8,7 +8,6 @@ import { logoUrl } from '../../../data/mou';
 import { STUB_GUIDING } from '../../../lib/portal/guiding';
 import { Waitlist, NotThisSeason, ResultState, Peer, Cohort } from '../../../components/portal/results';
 import { peerView } from '../../../data/portal-peer';
-import { AWS_SLIDES, QUADRON_SLIDES } from '../../../data/batch1-slides';
 import { stubPeer, STUB_CONTACT } from '../../../lib/portal/rpc-adapter';
 if (!import.meta.env.DEV) return new Response(null, { status: 404 });
 const q = Astro.url.searchParams;
@@ -21,9 +20,9 @@ const peerEndpoint = '/portal/dev/peer-down?' + (q.get('fail') ? 'fail=1' : q.ge
 // Cohort states: unsigned (default), signed, full, null (missing cohort fields), member (non-lead), plus loading/error. `fail=full|signed|not_owner|invalid|retry` makes Sign error.
 const cohortRow = state === 'null' ? { id: 1, name: 'Fall cohort', company: null, goal: null, criteria: null, timeline: null, video_url: null, slides_url: null, logo_path: null }
   : { id: 1, name: 'Teaching Tools', company: 'Lincoln Labs', goal: 'Ship one tool that a teacher uses every week.', criteria: 'A team of students with a working prototype and a real user.', timeline: 'Sept to Dec 2026, one session a week.', video_url: 'https://www.youtube.com/watch?v=fixture', slides_url: 'https://example.com/slides', logo_path: 'https://wirjadichvbmrqzamwtp.supabase.co/storage/v1/object/public/cohort-logos/fixture.png' };
-// `cohort=aws|quadron` renders the batch 1 slides (#185) exactly as stored on the prod row.
-const batch1 = { aws: { name: 'AWS', slides: AWS_SLIDES }, quadron: { name: 'Quadron', slides: QUADRON_SLIDES } }[q.get('cohort') ?? ''];
-if (batch1) Object.assign(cohortRow, { name: batch1.name, company: batch1.name, goal: null, slides: batch1.slides, logo_path: null, video_url: null, slides_url: null });
+// `cohort=aws|quadron` renders the code decks (#190), exactly as the result page does.
+const batch1 = { aws: 'AWS', quadron: 'Quadron' }[q.get('cohort') ?? ''];
+if (batch1) Object.assign(cohortRow, { slug: q.get('cohort'), name: batch1, company: batch1, goal: null, slides: null, logo_path: null, video_url: null, slides_url: null });
 const cohortResult = { id: 1, letter, cohort: cohortRow };
 const cohortView = { signature: state === 'signed' ? { typed_name: 'Maya Lee', signed_at: '2026-11-18T17:00:00Z' } : null, isLead: state !== 'member', orgCount: state === 'null' ? null : 4 };
 const mouEndpoint = '/portal/dev/mou' + (q.get('fail') ? `?fail=${encodeURIComponent(q.get('fail'))}` : '');
@@ -33,11 +32,11 @@ const peer = peerView(stubPeer(peerState), peerState === 'both' ? STUB_CONTACT :
 <Portal title="Result fixture">
   {state === 'loading' || state === 'error' ? <ResultState state={state} />
     : outcome === 'cohort' ? <Cohort result={cohortResult} view={cohortView} full={state === 'full'} endpoint={mouEndpoint}>
-      <CohortSlides slot="slides" cohort={cohortRow} logo={logoUrl(cohortRow.logo_path, import.meta.env.PUBLIC_SUPABASE_URL)} />
+      <CohortSlides slot="slides" cohort={cohortRow} firstName="Maya" logo={logoUrl(cohortRow.logo_path, import.meta.env.PUBLIC_SUPABASE_URL)} />
       <GuidingQuestions slot="guidingQuestions" resultId={cohortResult.id} answers={state === 'empty-answers' ? {} : STUB_GUIDING} endpoint={guidingEndpoint} closed={q.get('gfail') === 'closed-load'} />
     </Cohort>
     : outcome === 'peer' ? <Peer view={state === 'empty' ? null : peer} endpoint={peerEndpoint} />
     : outcome === 'not_this_season' ? <NotThisSeason letter={letter} />
     : <Waitlist outcome={outcome === 'track_waitlist' ? 'track_waitlist' : 'network_waitlist'} letter={letter} />}
-  {state !== 'loading' && state !== 'error' && <SharePill name="Maya Okafor" label={outcome === 'cohort' ? cohortRow.name : null} />}
+  {state !== 'loading' && state !== 'error' && (outcome === 'cohort' || outcome === 'peer') && <SharePill name="Maya Okafor" label={outcome === 'cohort' ? cohortRow.name : null} kind={outcome} />}
 </Portal>
