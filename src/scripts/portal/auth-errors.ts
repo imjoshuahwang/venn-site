@@ -42,10 +42,9 @@ const fallbackStore = memoryStore();
 
 /**
  * Pages call it before touching Supabase; a returned message stops the attempt.
- * Login, reset and resend need a Turnstile token (verified server-side); login, reset and resend are limited per IP and per email.
+ * Login, reset, resend and set-password need a Turnstile token (verified server-side); login, reset and resend are limited per IP and per email.
  */
 export async function authGuard(action: Action, request: Request, deps: GuardDeps = {}): Promise<string | null> {
-  if (action === 'set-password') return null;
   let form = deps.form;
   if (!form) { try { form = await request.clone().formData(); } catch { form = new FormData(); } }
   const ip = clientIp(request);
@@ -56,6 +55,7 @@ export async function authGuard(action: Action, request: Request, deps: GuardDep
     const token = String(form.get('cf-turnstile-response') ?? '');
     if (!(await verifyTurnstile(token, secret, ip, deps.fetch))) return TURNSTILE_MESSAGE;
   }
+  if (action === 'set-password') return null; // no rate limit on set-password; it already needs a live session (#207)
   const email = String(form.get('email') ?? '');
   const { limited } = await checkLimits(deps.store ?? fallbackStore, action, { ip, email });
   return limited ? RATE_MESSAGE : null;
