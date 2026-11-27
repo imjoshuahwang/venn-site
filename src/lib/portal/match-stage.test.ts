@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { plan, lowEnd, wheelTiles, peerTile, finalY, TILES, BEATS, stateLabel } from './match-stage.mjs';
+import { plan, lowEnd, wheelTiles, TRAIL, peerTile, finalY, TILES, BEATS, stateLabel } from './match-stage.mjs';
 
 test('plan: unmatched never spins, first view plays, later visits land on the card, replay plays', () => {
   assert.deepEqual(plan({ status: 'unmatched' }), { screen: 'unmatched', kind: null });
@@ -22,9 +22,9 @@ test('low end: saveData, 4 cores or dropped frames; confetti halves', () => {
   assert.ok(BEATS.short.spin < BEATS.full.spin);
 });
 
-test('tiles hold field and region only and the peer tile is last', () => {
+test('tiles hold field and region only and the peer tile sits before the trailing decoys', () => {
   const t = wheelTiles(peerTile({ field: 'Robotics', region: 'Ohio' }));
-  assert.equal(t.at(-1), 'Robotics, Ohio');
+  assert.equal(t.at(-1 - TRAIL), 'Robotics, Ohio');
   assert.ok(TILES.every((x) => /^[A-Za-z]+, [A-Za-z]+$/.test(x)));
   assert.equal(peerTile({}), 'Your peer');
   assert.ok(finalY(t.length) < 0);

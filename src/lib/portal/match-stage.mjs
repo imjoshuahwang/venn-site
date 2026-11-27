@@ -20,9 +20,11 @@ export function plan({ status, viewedAt, reduced, low, replay = false }) {
 }
 
 export const openerLine = (home) => (home ? `Finding your peer in ${home}.` : 'Finding your peer.');
-export const wheelTiles = (peerTile) => [...TILES, ...TILES.slice(0, 8), peerTile];
+// Two decoys trail the peer's tile so the window is full below it when the wheel stops.
+export const TRAIL = 2;
+export const wheelTiles = (peerTile) => [...TILES, ...TILES.slice(0, 8), peerTile, ...TILES.slice(0, TRAIL)];
 export const peerTile = (p) => [p.field, p.region].filter(Boolean).join(', ') || 'Your peer';
-export const finalY = (count, height = 264) => -(count - 1) * ROW + (height / 2 - ROW / 2);
+export const finalY = (count, height = 264) => -(count - 1 - TRAIL) * ROW + (height / 2 - ROW / 2);
 
 const LABELS = { requested: 'Sent', accepted: 'Said yes', declined: 'Declined', expired: 'No reply' };
 export const stateLabel = (status) => LABELS[status] ?? null;

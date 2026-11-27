@@ -42,6 +42,10 @@ async function taps(page, where) {
   assert.deepEqual(small, [], `${where}: tap targets under ${MIN_TAP}px`);
 }
 const noOverflow = (page) => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
+const geometry = (page) => page.evaluate(() => {
+  const r = (e) => { const b = e.getBoundingClientRect(); return { top: b.top, bottom: b.bottom, h: b.height }; };
+  return { win: r(document.querySelector('[data-win]')), strip: r(document.querySelector('[data-strip]')), tiles: [...document.querySelectorAll('[data-strip] i')].map((e) => ({ ...r(e), t: e.textContent })) };
+});
 const beat = (page, b) => page.waitForFunction((x) => document.querySelector('[data-match]').dataset.beat === x, b, { timeout: 20000 });
 
 for (const d of DEVICES) {
@@ -115,9 +119,19 @@ for (const d of DEVICES) {
     await beat(page, 'wheel');
     const pair = () => page.locator('[data-pair]').boundingBox();
     const box0 = await pair();
-    for (const n of [1, 2, 3, 4]) { await page.waitForTimeout(500); await shot(page, `wheel-${n}`); assert.ok(await noOverflow(page)); const b = await pair(); assert.deepEqual([b.x, b.width, b.height], [box0.x, box0.width, box0.height], 'pair does not shift while spinning'); }
+    for (const n of [1, 2, 3, 4]) { await page.waitForTimeout(500); await shot(page, `wheel-${n}`); { const f = await geometry(page); const filled = f.tiles.filter((t) => t.bottom > f.win.top && t.top < f.win.bottom); assert.ok(filled[0].top <= f.win.top + 0.75 && filled.at(-1).bottom >= f.win.bottom - 0.75, `wheel-${n}: window is filled edge to edge`); } assert.ok(await noOverflow(page)); const b = await pair(); assert.deepEqual([b.x, b.width, b.height], [box0.x, box0.width, box0.height], 'pair does not shift while spinning'); }
     await page.waitForFunction(() => document.querySelector('[data-match]').dataset.beat === 'wheel' && !document.querySelector('[data-strip]').getAnimations().length, null, { timeout: 20000 });
     await shot(page, 'stop');
+    const g = await geometry(page), EPS = 0.75;
+    const seen = g.tiles.filter((t) => t.bottom > g.win.top + EPS && t.top < g.win.bottom - EPS);
+    console.log(`geometry ${dev.name} stop: win ${g.win.top.toFixed(1)}..${g.win.bottom.toFixed(1)} tiles ${seen.map((t) => `${t.t}@${t.top.toFixed(1)}`).join(' | ')}`);
+    for (const t of seen) assert.ok(t.top >= g.win.top - EPS && t.bottom <= g.win.bottom + EPS, `stop: ${t.t} is partly outside the window`);
+    const pitch = Math.max(...g.tiles.map((t) => t.h));
+    assert.ok(seen.length >= 3, 'stop: window holds at least three whole tiles');
+    assert.ok(seen[0].top - g.win.top <= EPS + 0.01 && g.win.bottom - seen.at(-1).bottom <= EPS + 0.01, 'stop: tiles reach both window edges');
+    for (let i = 1; i < seen.length; i++) assert.ok(seen[i].top - seen[i - 1].bottom <= pitch, 'stop: gap between tiles over one pitch');
+    const mid = (g.win.top + g.win.bottom) / 2, c = seen.find((t) => t.top <= mid && t.bottom >= mid);
+    assert.ok(c && Math.abs((c.top + c.bottom) / 2 - mid) <= EPS, 'stop: a tile is centred in the window');
     await beat(page, 'rise');
     for (const n of [1, 2, 3]) { await shot(page, `rise-${n}`); await page.waitForTimeout(120); }
     await page.waitForTimeout(500); await shot(page, 'rise-end');

@@ -44,7 +44,7 @@ const config = JSON.stringify({ status: m?.status ?? null, viewed: !!m?.viewed_a
   .mhalf:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
   .mhalf.l { border-radius: 0 132px 132px 0; background: #35463f; }
   .mhalf.r { border-radius: 132px 0 0 132px; background: var(--forest-2); }
-  .mwin { position: absolute; left: 0; right: 0; top: calc(50% - 84px); height: 168px; overflow: hidden; -webkit-mask: linear-gradient(transparent, #000 34%, #000 66%, transparent) 0 0 / 100% 100% no-repeat; mask: linear-gradient(transparent, #000 34%, #000 66%, transparent) 0 0 / 100% 100% no-repeat; }
+  .mwin { position: absolute; left: 0; right: 0; top: calc(50% - 84px); height: 168px; overflow: hidden; -webkit-mask: linear-gradient(transparent 0, transparent 12px, #000 56px, #000 calc(100% - 56px), transparent calc(100% - 12px), transparent 100%) 0 0 / 100% 100% no-repeat; mask: linear-gradient(transparent 0, transparent 12px, #000 56px, #000 calc(100% - 56px), transparent calc(100% - 12px), transparent 100%) 0 0 / 100% 100% no-repeat; }
   .mstrip { position: absolute; left: 0; right: 0; top: -48px; display: grid; will-change: transform; }
   .mstrip:not([data-run]) i:nth-child(n+6) { visibility: hidden; }
   .mstrip i { display: grid; place-items: center; height: 56px; padding: 0 14px 0 0; justify-items: end; font-style: normal; font-size: 12px; font-weight: var(--fw-600); white-space: nowrap; }
