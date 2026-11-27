@@ -12,6 +12,7 @@ export const TEST_APPLICANTS = [
   { slug: 'peer', name: 'Pia Test Peer', outcome: 'peer', partner: 'peer2' },
   { slug: 'peer2', name: 'Pax Test Peer', outcome: 'peer', partner: 'peer' },
   { slug: 'nts', name: 'Nia Test Season', outcome: 'not_this_season' },
+  { slug: 'nwl', name: 'Wren Test Waitlist', outcome: 'network_waitlist' },
 ].map((a) => ({ ...a, email: `${BOX}+${a.slug}@gmail.com` }));
 
 // Test-only copy: this builder is called for is_test applicants only, and the real letter path never writes it.

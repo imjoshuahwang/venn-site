@@ -73,7 +73,7 @@ export async function makeLink(sb, email) {
   return linkFor(hash, type);
 }
 
-export async function sendOne({ sb, row, template, from, resendKey, fetchImpl = fetch }) {
+export async function sendOne({ sb, row, template, from, resendKey, fetchImpl = fetch, idemSuffix = '', onId = () => {} }) {
   const email = row.applications.email.trim();
   // Claim first: a crash after this point can skip a student, never double send. A failed send releases the claim.
   const claim = await sb.from('results').update({ emailed_at: new Date().toISOString() }).eq('id', row.id).is('emailed_at', null).select('id');
@@ -83,10 +83,11 @@ export async function sendOne({ sb, row, template, from, resendKey, fetchImpl = 
     const { html, text } = render(template, { name: row.applications.name, link: await makeLink(sb, email) });
     const r = await fetchImpl('https://api.resend.com/emails', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json', 'Idempotency-Key': `results-ready-${row.id}`, 'User-Agent': 'venn-send-results/1' },
+      headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json', 'Idempotency-Key': `results-ready-${row.id}${idemSuffix}`, 'User-Agent': 'venn-send-results/1' },
       body: JSON.stringify({ from, to: [email], reply_to: REPLY_TO, subject: SUBJECT, html, text }),
     });
     if (!r.ok) throw new Error(`resend ${r.status} ${(await r.text()).slice(0, 200)}`);
+    try { onId((await r.json?.())?.id); } catch { /* logging only: never fail or release the claim after the mail is sent */ }
     return 'sent';
   } catch (e) {
     await sb.from('results').update({ emailed_at: null }).eq('id', row.id);
@@ -106,7 +107,10 @@ export async function run({ args, sb, template, from, resendKey, log = console.l
   }
   let sent = 0, failed = 0;
   for (const row of rows) {
-    try { if (await sendOne({ sb, row, template, from, resendKey, fetchImpl }) === 'sent') sent++; log(`sent  result ${row.id}`); }
+    try {
+      let id; // a --test rerun gets a fresh key so Resend does not replay an earlier test send; real sends keep one key per result
+      if (await sendOne({ sb, row, template, from, resendKey, fetchImpl, idemSuffix: args.test ? `-t${Date.now()}` : '', onId: (v) => { id = v; } }) === 'sent') sent++;
+      log(`sent  result ${row.id} ${row.applications.email} resend_id=${id}`); }
     catch (e) { failed++; log(`FAILED result ${row.id}: ${e.message}`); }
     await sleep(600);
   }
