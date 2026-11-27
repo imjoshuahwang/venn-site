@@ -87,3 +87,67 @@ test('fixtures are reachable only behind import.meta.env.DEV', () => {
   assert.equal(uses.length, 1);
   assert.match(uses[0], /import\.meta\.env\.DEV\s*\?\s*fixtureClient\(/);
 });
+
+// Intro and decline mail after an answer (#270).
+import templates from '../../../supabase/functions/match-sweep/templates.json' with { type: 'json' };
+const target = (status: string) => ({ match_id: 7, status, requester_name: 'Maya Lee', requester_email: 'contact+portal-r@joinvenn.org', peer_name: 'Riley Cho', peer_email: 'contact+portal-p@joinvenn.org', is_test: false });
+function mailed(status: string, outcome: string, o: { enabled?: boolean; markFails?: boolean; resend?: number } = {}) {
+  const calls: Array<[string, Record<string, unknown>]> = [];
+  const sent: Record<string, unknown>[] = [];
+  const sb = { rpc: async (fn: string, args: Record<string, unknown>) => {
+    calls.push([fn, args]);
+    if (fn === 'intro_by_token') return { data: [{ ...OPEN, state: 'open' }], error: null };
+    if (fn === 'match_mail_target') return { data: [target(status)], error: null };
+    if (fn === 'match_mail_done') return { data: null, error: o.markFails ? { message: 'x' } : null };
+    return { data: [{ outcome }], error: null };
+  } };
+  const f = (async (_u: string, init: RequestInit) => { sent.push({ ...JSON.parse(init.body as string), key: (init.headers as Record<string, string>)['Idempotency-Key'] }); return o.resend ? new Response('{}', { status: o.resend }) : new Response('{"id":"e1"}'); }) as unknown as typeof fetch;
+  const vars: Record<string, string> = { STUDENT_RESEND_API_KEY: 'k', ...(o.enabled === false ? {} : { MATCH_SENDS_ENABLED: '1' }) };
+  return { calls, sent, d: (extra: Partial<Deps> = {}): Deps => ({ sb: sb as never, store: memoryStore(), ip: '1.1.1.1', mail: { templates: templates as never, env: (k) => vars[k], fetch: f, log: () => {} }, ...extra }) };
+}
+
+test('accept sends one intro To both students, no CC, and marks it', async () => {
+  const m = mailed('accepted', 'accepted');
+  assert.deepEqual(await submitIntro(TOKEN, fd({ action: 'accept' }), m.d()), { kind: 'state', state: 'accepted' });
+  assert.equal(m.sent.length, 1);
+  assert.deepEqual(m.sent[0].to, ['contact+portal-r@joinvenn.org', 'contact+portal-p@joinvenn.org']);
+  assert.ok(!('cc' in m.sent[0]) && !('bcc' in m.sent[0]));
+  assert.equal(m.sent[0].key, 'match-intro-7');
+  assert.ok(m.calls.some(([fn, a]) => fn === 'match_mail_done' && a.p_kind === 'intro'));
+});
+
+test('decline sends the kind decline to the requester only', async () => {
+  const m = mailed('declined', 'declined');
+  await submitIntro(TOKEN, fd({ action: 'decline' }), m.d());
+  assert.deepEqual(m.sent.map((b) => [b.key, b.to]), [['match-declined-7', ['contact+portal-r@joinvenn.org']]]);
+  assert.ok(m.calls.some(([fn, a]) => fn === 'match_mail_done' && a.p_kind === 'decline'));
+});
+
+test('kill switch off: the answer is saved, nothing is sent or marked', async () => {
+  const m = mailed('accepted', 'accepted', { enabled: false });
+  assert.deepEqual(await submitIntro(TOKEN, fd({ action: 'accept' }), m.d()), { kind: 'state', state: 'accepted' });
+  assert.equal(m.sent.length, 0);
+  assert.ok(!m.calls.some(([fn]) => fn === 'match_mail_done'));
+});
+
+test('a failed send never breaks the response and is not marked', async () => {
+  const m = mailed('accepted', 'accepted', { resend: 500 });
+  assert.deepEqual(await submitIntro(TOKEN, fd({ action: 'accept' }), m.d()), { kind: 'state', state: 'accepted' });
+  assert.ok(!m.calls.some(([fn]) => fn === 'match_mail_done'));
+});
+
+test('a failed marker is retried and never resends; the page still answers', async () => {
+  const m = mailed('accepted', 'accepted', { markFails: true });
+  assert.deepEqual(await submitIntro(TOKEN, fd({ action: 'accept' }), m.d()), { kind: 'state', state: 'accepted' });
+  assert.equal(m.sent.length, 1);
+  assert.equal(m.calls.filter(([fn]) => fn === 'match_mail_done').length, 3);
+});
+
+test('report, opt-out and unconfirmed answers send nothing', async () => {
+  const m = mailed('reported', 'reported');
+  await submitIntro(TOKEN, fd({ action: 'report', confirm: '1' }), m.d());
+  const g = mailed('expired', 'expired');
+  await submitIntro(TOKEN, fd({ action: 'accept' }), g.d());
+  assert.equal(m.sent.length + g.sent.length, 0);
+  assert.ok(!g.calls.some(([fn]) => fn === 'match_mail_target'));
+});

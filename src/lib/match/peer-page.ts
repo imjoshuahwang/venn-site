@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { introByToken, introRespond, type IntroView } from '../portal/match-rpc.ts';
 import { verifyTurnstile } from '../portal/turnstile.ts';
+import { buildIntro, buildNotice, sendThenMark, type Env, type Templates } from './mail.ts';
 import { checkLimits, type Store } from '../portal/ratelimit.ts';
 
 export type Action = 'accept' | 'decline' | 'report' | 'optout';
@@ -29,7 +30,27 @@ export async function loadIntro(sb: SupabaseClient, token: string): Promise<Page
   return { kind: 'state', state: stateOf(view?.state ?? 'unknown') };
 }
 
-export type Deps = { sb: SupabaseClient; store: Store; ip: string; secret?: string; fetch?: Parameters<typeof verifyTurnstile>[3] };
+export type MailDeps = { templates: Templates; env: Env; fetch?: typeof fetch; log?: (m: string) => void };
+export type Deps = { sb: SupabaseClient; store: Store; ip: string; secret?: string; fetch?: Parameters<typeof verifyTurnstile>[3]; mail?: MailDeps };
+
+type Target = { match_id: number; status: string; requester_name: string | null; requester_email: string; peer_name: string | null; peer_email: string; is_test: boolean };
+
+/** After a peer answers: mail the intro (To both, no CC) or the kind decline. Best effort: a failure never touches the page,
+ *  the match stays owed and the sweep retries it. Gated by MATCH_SENDS_ENABLED inside sendMail. */
+export async function mailAfterAnswer(sb: SupabaseClient, token: string, action: 'accept' | 'decline', m: MailDeps): Promise<void> {
+  try {
+    const { data } = await sb.rpc('match_mail_target', { p_token_hash: tokenHash(token) });
+    const t = (Array.isArray(data) ? data[0] : data) as Target | undefined;
+    if (!t) return;
+    const send = { env: m.env, fetch: m.fetch, log: m.log, isTest: t.is_test };
+    const mark = (kind: string) => async () => !(await sb.rpc('match_mail_done', { p_match_id: t.match_id, p_kind: kind })).error;
+    if (action === 'accept' && t.status === 'accepted') {
+      await sendThenMark(buildIntro(m.templates, { matchId: t.match_id, a: { name: t.requester_name, email: t.requester_email }, b: { name: t.peer_name, email: t.peer_email } }), send, mark('intro'));
+    } else if (action === 'decline' && t.status === 'declined') {
+      await sendThenMark(buildNotice(m.templates, 'declined', { matchId: t.match_id, email: t.requester_email, name: t.requester_name }), send, mark('decline'));
+    }
+  } catch { (m.log ?? console.log)('match mail after answer failed'); }
+}
 
 /**
  * POST: accept and decline go straight through; report and opt-out first show a confirm page and act only when the confirm form comes back.
@@ -49,6 +70,7 @@ export async function submitIntro(token: string, form: FormData, d: Deps): Promi
   const wasOpen = action === 'optout' && (await loadIntro(d.sb, token)).kind === 'open';
   const res = await introRespond(d.sb, tokenHash(token), action);
   const out = res?.outcome ?? 'unknown';
+  if (d.mail && (action === 'accept' || action === 'decline') && out === (action === 'accept' ? 'accepted' : 'declined')) await mailAfterAnswer(d.sb, token, action, d.mail);
   if (out === 'declined' && wasOpen) return { kind: 'state', state: 'opted_out' };
   return { kind: 'state', state: stateOf(out) };
 }

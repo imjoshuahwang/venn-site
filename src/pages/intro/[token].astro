@@ -2,6 +2,7 @@
 import { createClient } from '@supabase/supabase-js';
 import Portal from '../../layouts/Portal.astro';
 import { loadIntro, submitIntro, fixtureClient, COPY, type Page } from '../../lib/match/peer-page.ts';
+import templates from '../../../supabase/functions/match-sweep/templates.json';
 import { memoryStore, rpcStore, clientIp } from '../../lib/portal/ratelimit.ts';
 import { TURNSTILE_TEST } from '../../lib/portal/turnstile-test-keys.ts';
 
@@ -21,6 +22,7 @@ try {
     if (Astro.request.headers.get('origin') !== Astro.url.origin) return new Response('Forbidden', { status: 403 });
     page = await submitIntro(token, await Astro.request.formData(), {
       sb, ip: clientIp(Astro.request), store: fixture ? memoryStore() : rpcStore(sb), secret: siteKey && secret ? secret : undefined,
+      mail: fixture ? undefined : { templates, env: (k) => process.env[k] },
     });
   } else page = await loadIntro(sb, token);
 } catch (e) {

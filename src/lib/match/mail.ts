@@ -102,3 +102,15 @@ export async function sendMail(m: Mail, d: SendDeps): Promise<SendResult> {
   log(`match mail ${idempotencyKey} sent ${id}`);
   return { sent: true, id };
 }
+
+/** Send, then record that it went out. A failed record is retried; if it still fails the mail stays "owed" and the sweep retries it
+ *  under the same idempotency key (intro and decline are only owed for 20h, inside Resend's 24h key window, so no double send). */
+export async function sendThenMark(m: Mail, d: SendDeps, mark: () => Promise<boolean>): Promise<SendResult> {
+  const r = await sendMail(m, d);
+  if (!r.sent) return r;
+  for (let i = 0; i < 3; i++) {
+    try { if (await mark()) return r; } catch { /* retry */ }
+  }
+  (d.log ?? console.log)(`match mail ${m.idempotencyKey} sent but not marked`);
+  return r;
+}

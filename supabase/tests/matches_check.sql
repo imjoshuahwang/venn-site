@@ -272,12 +272,22 @@ begin
   if not pg_temp.fails(format('insert into public.matches (requester_result_id, peer_result_id) values (%s, %s)', rf, ra), '22023') then raise exception 'opted-out peer matched again'; end if;
   if not pg_temp.fails('select * from public.intro_respond(' || quote_literal(repeat('d', 64)) || ', ''hack'')', '22023') then raise exception 'unknown action accepted'; end if;
 
+  -- an opt-out declines the match but must get no decline mail from the sweep (the page sends nothing either)
+  update public.matches set request_mailed_at = now(), responded_at = now() where id = m5;
+  if (select count(*) from public.match_sweep() where match_id = m5 and action in ('decline', 'lapsed')) <> 0 then raise exception 'sweep mails a decline after an opt-out'; end if;
+  delete from public.match_events where match_id = m5 and type = 'opted_out';
+  if (select count(*) from public.match_sweep() where match_id = m5 and action = 'decline') <> 1 then raise exception 'plain decline not swept'; end if;
+  update public.matches set responded_at = now() - interval '21 hours' where id = m5;
+  if (select count(*) from public.match_sweep() where match_id = m5 and action = 'lapsed') <> 1 then raise exception 'stale decline not reported lapsed'; end if;
+
   -- sweep: reminder at 48h once, expiry at 72h
   delete from public.matches where requester_result_id in (rf);
   insert into public.match_pool (result_id) values (rb) on conflict do nothing;
   insert into public.matches (requester_result_id, peer_result_id, status, requested_at, expires_at, token_hash)
     values (rf, rb, 'requested', now() - interval '50 hours', now() + interval '22 hours', repeat('e', 64)) returning id into m5;
+  update public.matches set request_mailed_at = now() where id = m5;
   if (select count(*) from public.match_sweep() where match_id = m5 and action = 'remind') <> 1 then raise exception 'no reminder'; end if;
+  perform public.match_mail_done(m5, 'reminder');
   if (select count(*) from public.match_sweep() where match_id = m5) <> 0 then raise exception 'reminder repeated'; end if;
   update public.matches set expires_at = now() - interval '1 minute' where id = m5;
   if (select count(*) from public.match_sweep() where match_id = m5 and action = 'expire') <> 1 then raise exception 'no expiry'; end if;
