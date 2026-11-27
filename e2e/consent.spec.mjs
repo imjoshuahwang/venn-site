@@ -5,13 +5,13 @@ import assert from 'node:assert/strict';
 import { execFileSync, spawn } from 'node:child_process';
 import { chromium, devices } from 'playwright';
 import { localServerEnv } from '../scripts/qa/portal.mjs';
+import { freePort, stopServer, supabaseStatus } from '../scripts/qa/dev-server.mjs';
 import { createClient } from '@supabase/supabase-js';
 
-const st = JSON.parse(execFileSync('supabase', ['status', '-o', 'json'], { stdio: ['ignore', 'pipe', 'ignore'] }).toString().replace(/^[^{]*/, ''));
+const st = supabaseStatus();
 const API = st.API_URL;
-assert.match(API, /127\.0\.0\.1|localhost/, 'refusing to run against a non-local stack');
 const admin = createClient(API, st.SERVICE_ROLE_KEY, { auth: { persistSession: false } });
-const PORT = 8127;
+const PORT = await freePort();
 const BASE = `http://127.0.0.1:${PORT}`;
 const PASSWORD = 'e2e-Consent-pass-1';
 const SHOTS = new URL('../qa/portal-shots/127/', import.meta.url).pathname;
@@ -23,7 +23,10 @@ let server, browser;
 
 // email_key strips +tags, so every contact+portal-* user maps to the same applications; keep one live at a time.
 async function dropApps() {
-  for (const u of created) await admin.from('applications').delete().eq('id', u.appId);
+  for (const u of created) {
+    await admin.from('results').delete().eq('application_id', u.appId);
+    await admin.from('applications').delete().eq('id', u.appId);
+  }
 }
 
 async function makeUser(tag, level) {
@@ -33,6 +36,9 @@ async function makeUser(tag, level) {
   assert.ifError(error);
   const app = await admin.from('applications').insert({ role: 'student', level, name: 'E2E Student', email, working_on: 'e2e' }).select('id').single();
   assert.ifError(app.error);
+  // Home (#225) shows the consent link only for someone with a result; without one it is the "could not find a result" state.
+  const res = await admin.from('results').insert({ application_id: app.data.id, season: 'e2e', outcome: 'cohort', status: 'approved', approved_at: new Date().toISOString(), viewed_at: new Date().toISOString(), ceremony_done_at: new Date().toISOString() });
+  assert.ifError(res.error);
   created.push({ id: data.user.id, appId: app.data.id });
   return { email, id: data.user.id };
 }
@@ -40,7 +46,7 @@ async function makeUser(tag, level) {
 before(async () => {
   server = spawn('npx', ['astro', 'dev', '--host', '127.0.0.1', '--port', String(PORT)], {
     env: localServerEnv(API, st.ANON_KEY),
-    stdio: 'ignore',
+    stdio: 'ignore', detached: true,
   });
   for (let i = 0; i < 120; i++) {
     if (await fetch(`${BASE}/portal/login`).then((r) => r.ok, () => false)) break;
@@ -51,9 +57,10 @@ before(async () => {
 
 after(async () => {
   await browser?.close();
-  server?.kill();
+  stopServer(server);
   for (const u of created) {
     await admin.from('consents').delete().eq('user_id', u.id);
+    await admin.from('results').delete().eq('application_id', u.appId);
     await admin.from('applications').delete().eq('id', u.appId);
     await admin.auth.admin.deleteUser(u.id);
   }
@@ -141,7 +148,7 @@ for (const [slug, preset] of Object.entries(VIEWPORTS)) {
     await readAll(page);
     await page.click('[data-yes]');
     await page.waitForURL(`${BASE}/portal`);
-    await page.locator("form.parent-request").waitFor();
+    await page.waitForSelector('[data-home]'); // #225 removed the home parent form; co-sign is the /portal/parent link, covered below
     await shot(page, 'cosign');
     await ctx.close();
   });
@@ -200,9 +207,7 @@ for (const [slug, preset] of Object.entries(VIEWPORTS)) {
     await page.click('[data-yes]');
     await page.waitForURL(`${BASE}/portal`);
     await page.goto(`${BASE}/portal`);
-    assert.equal(await page.locator('[data-next-step=waiting-on-parent]').count(), 1);
-    assert.equal(await page.locator('[data-text-josh]').count(), 0);
-    await page.waitForSelector('form.parent-request');
+    await page.waitForSelector('[data-home]');
     await shot128(page, 'parent-waiting');
     await checkLayout(page, 'parent-waiting');
     // Mint the link the form would email, so the e2e never sends mail.
@@ -221,8 +226,7 @@ for (const [slug, preset] of Object.entries(VIEWPORTS)) {
     await shot128(pp, 'parent-reused');
     await parent.close();
     await page.goto(`${BASE}/portal`);
-    assert.equal(await page.locator('[data-next-step=waiting-on-parent]').count(), 0);
-    assert.equal(await page.locator('form.parent-request').count(), 0);
+    await page.waitForSelector('[data-home]');
     await shot128(page, 'parent-signed');
     await ctx.close();
   });
@@ -245,14 +249,6 @@ for (const [slug, preset] of Object.entries(VIEWPORTS)) {
     assert.equal(await pp.getByRole('button', { name: 'I agree' }).count(), 0);
     await shot128(pp, 'parent-expired');
     await checkLayout(pp, 'parent-expired');
-    await page.goto(`${BASE}/portal`);
-    assert.equal(await page.locator('form.parent-request').count(), 1);
-    await page.goto(`${BASE}/portal?parent=invalid`);
-    await page.locator('[data-parent-error]').waitFor();
-    await page.goto(`${BASE}/portal?parent=error`);
-    await page.locator('[data-parent-error]').waitFor();
-    await page.goto(`${BASE}/portal`);
-    assert.equal(await page.locator('[data-parent-error]').count(), 0);
     // Resend goes through the RPC, not the form, so no mail is attempted.
     const second = (await admin.rpc('request_parent_consent', { p_user_id: u.id, p_parent_email: to })).data;
     await pp.goto(`${BASE}/portal/parent/${second}`);

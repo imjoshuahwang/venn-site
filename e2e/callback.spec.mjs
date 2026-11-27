@@ -3,17 +3,17 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { spawnSync, spawn } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import * as pw from 'playwright';
 import { createClient } from '@supabase/supabase-js';
 import { localServerEnv } from '../scripts/qa/portal.mjs';
+import { freePort, stopServer, supabaseStatus } from '../scripts/qa/dev-server.mjs';
 
 // status exits 1 when an optional service (imgproxy, pooler) is stopped; the JSON is still valid.
-const st = JSON.parse(spawnSync('supabase', ['status', '-o', 'json'], { stdio: ['ignore', 'pipe', 'ignore'] }).stdout.toString().replace(/^[^{]*/, ''));
+const st = supabaseStatus();
 const API = st.API_URL;
-assert.match(API, /127\.0\.0\.1|localhost/, 'refusing to run against a non-local stack');
 const admin = createClient(API, st.SERVICE_ROLE_KEY, { auth: { persistSession: false } });
-const PORT = 8134;
+const PORT = await freePort();
 const BASE = `http://127.0.0.1:${PORT}`;
 const SHOTS = new URL('../qa/portal-shots/234/', import.meta.url).pathname;
 const { devices } = pw;
@@ -22,7 +22,7 @@ let server, browser, userId;
 before(async () => {
   server = spawn('npx', ['astro', 'dev', '--host', '127.0.0.1', '--port', String(PORT)], {
     env: localServerEnv(API, st.ANON_KEY, { SUPABASE_URL: API, SUPABASE_SERVICE_ROLE_KEY: st.SERVICE_ROLE_KEY }),
-    stdio: 'ignore',
+    stdio: 'ignore', detached: true,
   });
   for (let i = 0; i < 120; i++) {
     if (await fetch(`${BASE}/portal/login`).then((r) => r.ok, () => false)) break;
@@ -32,7 +32,7 @@ before(async () => {
 });
 after(async () => {
   await browser?.close();
-  server?.kill();
+  stopServer(server);
   if (userId) { await admin.from('portal_links').delete().eq('user_id', userId); await admin.auth.admin.deleteUser(userId); }
 });
 
