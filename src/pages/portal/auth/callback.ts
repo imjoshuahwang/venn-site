@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { handleCallbackGet, handleCallbackPost, sameOrigin, EXPIRED_PATH } from '../../../lib/portal/callback';
+import { handleCallbackGet, handleCallbackPost, sameOrigin, EXPIRED_PATH } from '../../../lib/portal/callback.ts';
 import { portalEvent } from '../../../lib/portal/api.ts';
 
 export const prerender = false;

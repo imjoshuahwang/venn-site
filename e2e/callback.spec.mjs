@@ -1,9 +1,10 @@
+// BROWSER=chromium|webkit|firefox picks the engine. Dev server only: @astrojs/vercel has no preview, and Astro's checkOrigin middleware runs in dev too.
 // Scanner-safe sign-in link, LOCAL stack only (supabase start + astro dev). A GET (mail scanner) must not spend the link; the POST does.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { spawnSync, spawn } from 'node:child_process';
-import { chromium, devices } from 'playwright';
+import * as pw from 'playwright';
 import { createClient } from '@supabase/supabase-js';
 
 // status exits 1 when an optional service (imgproxy, pooler) is stopped; the JSON is still valid.
@@ -14,18 +15,20 @@ const admin = createClient(API, st.SERVICE_ROLE_KEY, { auth: { persistSession: f
 const PORT = 8134;
 const BASE = `http://127.0.0.1:${PORT}`;
 const SHOTS = new URL('../qa/portal-shots/234/', import.meta.url).pathname;
+const { devices } = pw;
 let server, browser, userId;
 
 before(async () => {
+  const env = { PUBLIC_SUPABASE_URL: API, PUBLIC_SUPABASE_ANON_KEY: st.ANON_KEY, SUPABASE_URL: API, SUPABASE_SERVICE_ROLE_KEY: st.SERVICE_ROLE_KEY };
   server = spawn('npx', ['astro', 'dev', '--host', '127.0.0.1', '--port', String(PORT)], {
-    env: { ...process.env, PUBLIC_SUPABASE_URL: API, PUBLIC_SUPABASE_ANON_KEY: st.ANON_KEY, SUPABASE_URL: API, SUPABASE_SERVICE_ROLE_KEY: st.SERVICE_ROLE_KEY },
+    env: { ...process.env, ...env },
     stdio: 'ignore',
   });
   for (let i = 0; i < 120; i++) {
     if (await fetch(`${BASE}/portal/login`).then((r) => r.ok, () => false)) break;
     await new Promise((r) => setTimeout(r, 500));
   }
-  browser = await chromium.launch();
+  browser = await pw[process.env.BROWSER ?? 'chromium'].launch();
 });
 after(async () => {
   await browser?.close();
