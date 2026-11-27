@@ -69,11 +69,11 @@ const widget = !!(siteKey && secret);
   h1 { margin: 0; font-size: var(--fs-28); letter-spacing: var(--track-tight); line-height: 1.15; overflow-wrap: anywhere; }
   p, blockquote { margin: 0; overflow-wrap: anywhere; }
   form { display: grid; gap: var(--sp-16); }
-  .who { color: var(--muted); }
+  .who { color: var(--muted); text-wrap: balance; }
   blockquote { padding: var(--sp-16); border-radius: var(--r-12); background: var(--panel); }
   .row { display: flex; flex-wrap: wrap; gap: var(--sp-12); }
   .row .pill { flex: 1 1 8rem; border: 0; font-family: inherit; cursor: pointer; }
-  .pill.ghost { background: var(--white); color: var(--ink); border: 1px solid var(--line); }
+  .row .pill.ghost { background: var(--white); color: var(--ink); border: 1px solid var(--ink); }
   .row.small { gap: var(--sp-16); }
   .link { min-height: 44px; padding: 0; border: 0; background: none; font: inherit; font-size: var(--fs-15); color: var(--muted); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 </style>

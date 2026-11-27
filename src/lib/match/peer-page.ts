@@ -45,9 +45,11 @@ export async function submitIntro(token: string, form: FormData, d: Deps): Promi
     const page = await loadIntro(d.sb, token);
     return page.kind === 'open' ? { kind: 'confirm', action } : page;
   }
-  const res = await introRespond(d.sb, tokenHash(token), action as never);
+  // The RPC returns early on a non-open match without setting opted_out_at, so "opted out" is claimed only when the link was open going in.
+  const wasOpen = action === 'optout' && (await loadIntro(d.sb, token)).kind === 'open';
+  const res = await introRespond(d.sb, tokenHash(token), action);
   const out = res?.outcome ?? 'unknown';
-  if (out === 'declined' && action === 'optout') return { kind: 'state', state: 'opted_out' };
+  if (out === 'declined' && wasOpen) return { kind: 'state', state: 'opted_out' };
   return { kind: 'state', state: stateOf(out) };
 }
 

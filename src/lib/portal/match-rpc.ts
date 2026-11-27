@@ -16,7 +16,7 @@ export type IntroView = {
   message: string | null; learn: string | null; expires_at: string | null;
 };
 
-export type IntroAction = 'accept' | 'decline' | 'optout';
+export type IntroAction = 'accept' | 'decline' | 'report' | 'optout';
 
 async function call<T>(supabase: SupabaseClient, fn: string, args?: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.rpc(fn, args);

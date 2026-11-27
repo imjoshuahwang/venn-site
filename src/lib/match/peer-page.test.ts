@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import { loadIntro, submitIntro, tokenHash, COPY, type Deps } from './peer-page.ts';
 import { memoryStore } from '../portal/ratelimit.ts';
@@ -72,4 +73,17 @@ test('Turnstile is enforced when a secret is set, and the limiter stops a flood'
   let last;
   for (let i = 0; i < 7; i++) last = await submitIntro(TOKEN, fd({ action: 'decline' }), d);
   assert.deepEqual(last, { kind: 'refused', why: 'limited' });
+});
+
+test('opt-out on a link that is no longer open shows its real state, not Done', async () => {
+  const c = fake('declined', 'declined');
+  const p = await submitIntro(TOKEN, fd({ action: 'optout', confirm: '1' }), deps(c.sb));
+  assert.deepEqual(p, { kind: 'state', state: 'declined' });
+});
+
+test('fixtures are reachable only behind import.meta.env.DEV', () => {
+  const src = readFileSync(new URL('../../pages/intro/[token].astro', import.meta.url), 'utf8');
+  const uses = src.split('\n').filter((l) => /fixtureClient\(/.test(l));
+  assert.equal(uses.length, 1);
+  assert.match(uses[0], /import\.meta\.env\.DEV\s*\?\s*fixtureClient\(/);
 });
