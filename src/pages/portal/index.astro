@@ -8,6 +8,7 @@ import { getConsentState } from '../../lib/portal/api';
 import { loadHome } from '../../lib/portal/home';
 import { CONSENT_VERSION } from '../../data/consent';
 import { nextStepsFor } from '../../data/next-steps';
+import { getMyMatch } from '../../lib/portal/match-rpc';
 
 const home = await loadHome({
   ceremony: () => getCeremonyData(Astro),
@@ -23,6 +24,8 @@ if (home.redirectToConsent) return Astro.redirect('/portal/ceremony', 303);
 const email = Astro.locals.user?.email ?? '';
 const none = ceremony.status === 'none' && !consentFailed;
 const failed = ceremony.status === 'error' || consentFailed;
+// The match page is offered once a match is approved or past it; a failing lookup just hides the link.
+const hasMatchLink = !inCeremony && !failed && !none && await getMyMatch(Astro.locals.supabase).then((m) => !!m?.status && ['approved', 'revealed', 'requested', 'accepted'].includes(m.status), () => false);
 ---
 <Portal title="Your Venn home">
   {inCeremony ? <Ceremony result={replay ? { ...ceremony.result, viewedAt: ceremony.result.viewedAt ?? ceremony.result.doneAt } : ceremony.result} setup={setup} replay={replay} /> : failed ? <><section class="home" data-error><h1 role="alert">We could not load this page</h1><form method="get" action="/portal"><button class="pill" type="submit" data-retry>Try again</button></form></section></> : none ? (
@@ -36,6 +39,7 @@ const failed = ceremony.status === 'error' || consentFailed;
       {ceremony.status === 'ok' && ceremony.result.cohortName && <p class="cohort" data-cohort-name>{ceremony.result.cohortName}</p>}
       <h1>Your results are here</h1>
       <a class="pill" href="/portal/result">View your results</a>
+      {hasMatchLink && <a class="pill" href="/portal/match" data-match-link>Your match</a>}
       {ceremony.status === 'ok' && ceremony.result.outcome === 'cohort' && <a class="pill ghost" href="/portal/next-steps" data-next-step>Next: {nextStepsFor(null).steps[0]}</a>}
       {ceremony.status === 'ok' && <a class="pill ghost" href="/portal?replay=1" data-watch-again>Watch again</a>}
       <a class="pill ghost" href="/portal/consent">Review consent</a>

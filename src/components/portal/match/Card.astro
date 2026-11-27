@@ -1,0 +1,31 @@
+---
+// Fit card (#247). Contact details never reach this component; the RPC returns none before both accept.
+const { peer, fit, label = null, unmatched = false } = Astro.props;
+const list = (v: unknown): string[] => (Array.isArray(v) ? v.map(String) : []);
+---
+<section class="mcard" data-card hidden>
+  {unmatched ? (
+    <>
+      <h1>No one fits well enough yet</h1>
+      <p>We will tell you when someone does.</p>
+    </>
+  ) : (
+    <>
+      <header>
+        <h1>{peer.first_name}</h1>
+        <p>{[peer.headline, peer.org].filter(Boolean).join(', ')}</p>
+        {label && <p class="mlabel" data-state-label>{label}</p>}
+      </header>
+      <dl>
+        <dt>You do</dt><dd>{fit.you_do}</dd>
+        <dt>They do</dt><dd>{fit.they_do}</dd>
+        <dt>Together</dt><dd><ul>{list(fit.together).map((t) => <li>{t}</li>)}</ul></dd>
+        <dt>In common</dt><dd class="mtagrow">{list(fit.common).map((t) => <span>{t}</span>)}</dd>
+        <dt>Ask</dt><dd>{fit.ask}</dd>
+      </dl>
+      <button class="pill" type="button" data-compose-open>Let's write an email together</button>
+      <button class="pill ghost" type="button" data-replay>Replay</button>
+      <div data-compose-mount hidden></div>
+    </>
+  )}
+</section>

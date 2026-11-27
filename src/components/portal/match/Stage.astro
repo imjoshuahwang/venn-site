@@ -1,0 +1,16 @@
+---
+// Forest-gray stage: your half stays visible the whole time, the right half is the wheel (#247).
+const { you, line = '' } = Astro.props;
+---
+<section class="mstage" data-stage hidden>
+  <p class="mline" data-line aria-live="polite"></p>
+  <div class="mpair" data-pair>
+    <button class="mhalf l" type="button" data-left aria-label="You">
+      <span class="mwho"><b>{you.name}</b><i>{you.org}</i><i>{you.region}</i></span>
+    </button>
+    <button class="mhalf r" type="button" data-right aria-label="Your peer">
+      <span class="mwin" data-win><span class="mstrip" data-strip></span></span>
+      <span class="mwho" data-who hidden></span>
+    </button>
+  </div>
+</section>

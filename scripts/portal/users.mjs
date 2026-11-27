@@ -26,6 +26,8 @@ const RESULT_SPECS = [
   { slug: 'peer-one-b', outcome: 'peer' },
   { slug: 'peer-both-a', outcome: 'peer' },
   { slug: 'peer-both-b', outcome: 'peer' },
+  { slug: 'match', outcome: 'peer', ceremony_done_at: DONE },
+  { slug: 'match-peer', outcome: 'peer', ceremony_done_at: DONE },
   { slug: 'network', outcome: 'network_waitlist' },
   { slug: 'track', outcome: 'track_waitlist' },
   { slug: 'nts', outcome: 'not_this_season' },
@@ -69,12 +71,14 @@ export function buildPlan() {
     { a: 'peer-one-a', b: 'peer-one-b', a_down: true, b_down: false },
     { a: 'peer-both-a', b: 'peer-both-b', a_down: true, b_down: true },
   ].map((p) => ({ ...p, why_matched: 'Test peer pair.' }));
+  // One approved match: `match` asked for `match-peer`, who sits in the match pool (test row).
+  const matches = [{ requester: 'match', peer: 'match-peer', status: 'approved', fit: { together: ['Both build in public'], common: ['Same season'] } }];
   const parent = {
     user: 'minor', parent_email: emailFor('parent-minor'),
     token_hash: hashToken(PARENT_TOKEN), signed_at: null,
   };
   const teamMembers = MEMBERS.map((m) => ({ lead: 'lead', slug: m, email: emailFor(m) }));
-  return { cohorts, results, pairs, parent, teamMembers };
+  return { cohorts, results, pairs, matches, parent, teamMembers };
 }
 
 const PROD_REF = 'wirjadichvbmrqzamwtp';

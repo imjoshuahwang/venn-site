@@ -7,7 +7,7 @@ export type MyMatch = {
   viewed_at: string | null; requested_at: string | null; responded_at: string | null; expires_at: string | null;
   requests_used: number; rematches_used: number;
   peer_first_name: string | null; peer_org: string | null; peer_region: string | null; peer_project: string | null;
-  peer_name: string | null; peer_email: string | null; peer_phone: string | null;
+  peer_name: string | null; peer_email: string | null; peer_phone: string | null; own_region: string | null;
 };
 
 export type IntroView = {
@@ -44,3 +44,7 @@ export const introRespond = async (s: SupabaseClient, tokenHash: string, action:
 const ESC: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 /** Escape a student's free text before it goes into mail HTML. */
 export const escapeHtml = (t: string) => t.replace(/[&<>"']/g, (c) => ESC[c]);
+
+/** Funnel beat for the stage (once per match and type, server-side). */
+export const matchStep = (s: SupabaseClient, id: number, type: 'stage_opened' | 'wheel_done' | 'card_opened' | 'compose_opened') =>
+  call<void>(s, 'match_step', { p_match_id: id, p_type: type });
