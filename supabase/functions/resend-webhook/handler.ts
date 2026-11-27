@@ -1,5 +1,7 @@
 // Resend delivery webhook (svix-signed): records bounces, complaints and deliveries in rs_events (venn#397 G5).
 // Verification follows https://docs.svix.com/receiving/verifying-payloads/how-manual
+import { mailAllowed } from "../../../src/lib/portal/resend.ts";
+import { matchSendsEnabled } from "../../../src/lib/match/mail.ts";
 export type Env = (name: string) => string | undefined;
 
 const TOLERANCE_S = 300;
@@ -103,15 +105,22 @@ async function expireBouncedRequest(env: Env, kind: string, data: any) {
   const tags = data.tags ?? {};
   const matchId = Number(tags.match_id);
   if (kind !== "bounced" || tags.kind !== "match_request" || !Number.isInteger(matchId) || matchId < 1) return;
-  const key = env("SUPABASE_SERVICE_ROLE_KEY")!;
+  const key = env("SUPABASE_SERVICE_ROLE_KEY");
+  if (!key) return;
   const res = await fetch(`${env("SUPABASE_URL")}/rest/v1/matches?id=eq.${matchId}&status=eq.requested`, {
     method: "PATCH",
     headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json", Prefer: "return=minimal" },
     body: JSON.stringify({ status: "expired" }),
   });
   console.log(`match ${matchId} request bounced; expire ${res.ok ? "ok" : res.status}`);
+  // Alert only when the switch is on, the expire landed, the alert address is allowed and neither student is a test row.
   const to = env("MATCH_ALERT_TO"), resendKey = env("STUDENT_RESEND_API_KEY");
-  if (!to || !resendKey) return;
+  if (!res.ok || !matchSendsEnabled(env) || !to || !resendKey || !mailAllowed(to, env("PORTAL_MAIL_OPEN"))) return;
+  const info = await fetch(`${env("SUPABASE_URL")}/rest/v1/matches?id=eq.${matchId}&select=requester:results!requester_result_id(applications(is_test)),peer:results!peer_result_id(applications(is_test))`, {
+    headers: { apikey: key, Authorization: `Bearer ${key}` },
+  }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  const m = info?.[0];
+  if (!m || m.requester?.applications?.is_test !== false || m.peer?.applications?.is_test !== false) return;
   await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json", "Idempotency-Key": `match-bounce-alert-${matchId}` },

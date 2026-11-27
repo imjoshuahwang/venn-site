@@ -27,7 +27,8 @@ export async function handle(req: Request, env: Env, deps: { fetch?: typeof fetc
 
   const f = deps.fetch ?? fetch;
   const log = deps.log ?? console.log;
-  const KEY = env("SUPABASE_SERVICE_ROLE_KEY")!;
+  const KEY = env("SUPABASE_SERVICE_ROLE_KEY");
+  if (!KEY || !env("SUPABASE_URL")) return json({ error: "server misconfigured" }, 500);
   const call = (path: string, init: RequestInit = {}) =>
     f(`${env("SUPABASE_URL")}/rest/v1/${path}`, { ...init, headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" } });
   const load = async (id: number): Promise<Row | null> => {
@@ -35,10 +36,13 @@ export async function handle(req: Request, env: Env, deps: { fetch?: typeof fetc
     return r.ok ? ((await r.json()) as Row[])[0] ?? null : null;
   };
   const out: Record<string, number> = { remind: 0, expire: 0, request: 0, skipped: 0, failed: 0 };
+  const done = async (id: number, kind: string, r: SendResult) => {
+    if (r.sent) await call("rpc/match_mail_done", { method: "POST", body: JSON.stringify({ p_match_id: id, p_kind: kind }) });
+  };
   const tally = (key: string, r: SendResult) => { out[r.sent ? key : r.reason === "failed" ? "failed" : "skipped"]++; };
 
-  // 1. First requests: requested matches that have no link yet. Issue the link, then mail it.
-  const pending = await call("matches?status=eq.requested&token_hash=is.null&select=id");
+  // 1. First requests: requested matches whose request mail has not gone out. Issue (or re-derive) the link, mail it, then mark it sent.
+  const pending = await call("matches?status=eq.requested&request_mailed_at=is.null&select=id");
   for (const { id } of pending.ok ? ((await pending.json()) as { id: number }[]) : []) {
     try {
       const row = await load(id);
@@ -48,11 +52,13 @@ export async function handle(req: Request, env: Env, deps: { fetch?: typeof fetc
       const token = await matchToken(tokenSecret, id);
       const issued = await call("rpc/match_issue_token", { method: "POST", body: JSON.stringify({ p_match_id: id, p_token_hash: await tokenHash(token) }) });
       if (!issued.ok) { out.failed++; continue; }
-      tally("request", await sendMail(buildRequest(templates, "request", { matchId: id, peerEmail: peer.email, peerName: peer.name, requesterName: rq.name, requesterOrg: rq.org, message: row.message, token }), { env, fetch: f, log }));
+      const r = await sendMail(buildRequest(templates, "request", { matchId: id, peerEmail: peer.email, peerName: peer.name, requesterName: rq.name, requesterOrg: rq.org, message: row.message, token }), { env, fetch: f, log });
+      tally("request", r);
+      await done(id, "request", r);
     } catch { out.failed++; log(`match ${id} request failed`); }
   }
 
-  // 2. Hour-48 reminders and 72h expiries, decided in the database.
+  // 2. Hour-48 reminders and expiries (including ones closed by a bounce or a late click), decided in the database; marked only after a send.
   const sweep = await call("rpc/match_sweep", { method: "POST", body: "{}" });
   if (!sweep.ok) { log(`match_sweep failed ${sweep.status}`); return json({ ...out, error: "sweep failed" }, 500); }
   for (const { match_id: id, action } of (await sweep.json()) as { match_id: number; action: string }[]) {
@@ -62,9 +68,13 @@ export async function handle(req: Request, env: Env, deps: { fetch?: typeof fetc
       if (!row || !rq || !peer) continue;
       const isTest = rq.is_test || peer.is_test;
       if (action === "remind" && row.message) {
-        tally("remind", await sendMail(buildRequest(templates, "reminder", { matchId: id, peerEmail: peer.email, peerName: peer.name, requesterName: rq.name, requesterOrg: rq.org, message: row.message, token: await matchToken(tokenSecret, id) }), { env, fetch: f, log, isTest }));
+        const r = await sendMail(buildRequest(templates, "reminder", { matchId: id, peerEmail: peer.email, peerName: peer.name, requesterName: rq.name, requesterOrg: rq.org, message: row.message, token: await matchToken(tokenSecret, id) }), { env, fetch: f, log, isTest });
+        tally("remind", r);
+        await done(id, "reminder", r);
       } else if (action === "expire") {
-        tally("expire", await sendMail(buildNotice(templates, "expired", { matchId: id, email: rq.email, name: rq.name }), { env, fetch: f, log, isTest }));
+        const r = await sendMail(buildNotice(templates, "expired", { matchId: id, email: rq.email, name: rq.name }), { env, fetch: f, log, isTest });
+        tally("expire", r);
+        await done(id, "expiry", r);
       }
     } catch { out.failed++; log(`match ${id} ${action} failed`); }
   }
