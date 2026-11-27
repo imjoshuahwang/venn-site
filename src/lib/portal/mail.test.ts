@@ -52,3 +52,11 @@ test('RESEND_API_KEY is ignored: no student key means a clear error and no fetch
   }
   assert.equal(urls.length, 0);
 });
+
+test('retries a 500 then succeeds; the mail has a plain-text part with the link', async () => {
+  const bodies: string[] = []; const answers = [500, 200];
+  const fetch = (async (_u: string, i: RequestInit) => { bodies.push(String(i.body)); return new Response('{}', { status: answers.shift() }); }) as unknown as typeof globalThis.fetch;
+  assert.equal(await sendParentLink('contact+portal-x1@joinvenn.org', 'https://joinvenn.org/portal/parent/t', { fetch, apiToken: 't', sleep: async () => {} }), true);
+  assert.equal(bodies.length, 2);
+  assert.match(JSON.parse(bodies[1]).text, /joinvenn\.org\/portal\/parent\/t/);
+});

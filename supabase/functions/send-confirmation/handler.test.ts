@@ -12,7 +12,7 @@ const ENV: Record<string, string> = {
 const env = (k: string) => ENV[k];
 // No real DNS in tests: every domain has an MX.
 const resolve = async () => [{ exchange: "mx.example.com" }];
-const handle = (req: Request, e: (k: string) => string | undefined) => realHandle(req, e, { resolve });
+const handle = (req: Request, e: (k: string) => string | undefined, sleep: (ms: number) => Promise<void> = async () => {}) => realHandle(req, e, { resolve, sleep });
 const row = {
   id: 7, role: "student", name: "ada lovelace", email: "ada@example.com", email_key: null,
   ref_code: "abc123", page_token: "f00dfeed00112233445566778899aabb", is_test: false, confirmed_at: null, email_status: null, share_due: "2026-10-20T22:40:00+00:00",
@@ -95,4 +95,23 @@ test("missing student key sends nothing and releases the claim, even with RESEND
     const last = calls.filter((c) => c.init?.method === "PATCH").at(-1)!;
     assert.deepEqual(JSON.parse(String(last.init!.body)), { confirmed_at: null });
   });
+});
+
+test("a 500 then 200 retries with the same Idempotency-Key and sends a plain-text part", async () => {
+  const real = globalThis.fetch;
+  const keys: string[] = []; let texts: string[] = []; let n = 0;
+  globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+    const u = String(url);
+    if (u.startsWith("https://api.resend.com/")) {
+      keys.push((init!.headers as Record<string, string>)["Idempotency-Key"]); texts.push(JSON.parse(String(init!.body)).text);
+      return n++ === 0 ? new Response("{}", { status: 500 }) : new Response(JSON.stringify({ id: "re_2" }), { status: 200 });
+    }
+    return new Response(JSON.stringify(init?.method === "PATCH" ? [{ id: 7 }] : [row]), { status: 200 });
+  }) as typeof fetch;
+  try {
+    const res = await handle(req(), env);
+    assert.equal(res.status, 200);
+    assert.deepEqual(keys, ["confirm-7", "confirm-7"]);
+    assert.match(texts[1], /joinvenn\.org\/refer\?code=/);
+  } finally { globalThis.fetch = real; }
 });

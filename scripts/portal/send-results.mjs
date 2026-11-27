@@ -75,7 +75,7 @@ export async function makeLink(sb, email) {
 
 const NO_KEY = 'STUDENT_RESEND_API_KEY is not set: nothing sent';
 
-export async function sendOne({ sb, row, template, from, resendKey, fetchImpl = fetch, idemSuffix = '', onId = () => {} }) {
+export async function sendOne({ sb, row, template, from, resendKey, fetchImpl = fetch, idemSuffix = '', onId = () => {}, sleep = (ms) => new Promise((x) => setTimeout(x, ms)) }) {
   if (!resendKey) throw new Error(NO_KEY);
   const email = row.applications.email.trim();
   // Claim first: a crash after this point can skip a student, never double send. A failed send releases the claim.
@@ -84,11 +84,14 @@ export async function sendOne({ sb, row, template, from, resendKey, fetchImpl = 
   if (!claim.data.length) return 'already';
   try {
     const { html, text } = render(template, { name: row.applications.name, link: await makeLink(sb, email) });
-    const r = await fetchImpl('https://api.resend.com/emails', {
+    const post = () => fetchImpl('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json', 'Idempotency-Key': `results-ready-${row.id}${idemSuffix}`, 'User-Agent': 'venn-send-results/1' },
       body: JSON.stringify({ from, to: [email], reply_to: REPLY_TO, subject: SUBJECT, html, text }),
     });
+    // 429 and 5xx: retry up to 3 times with backoff, the same Idempotency-Key so Resend can never double send.
+    let r = await post();
+    for (let i = 1; i <= 3 && (r.status === 429 || r.status >= 500); i++) { await sleep(i * 1000); r = await post(); }
     if (!r.ok) throw new Error(`resend ${r.status}`);
     try { onId((await r.json?.())?.id); } catch { /* logging only: never fail or release the claim after the mail is sent */ }
     return 'sent';
@@ -113,7 +116,7 @@ export async function run({ args, sb, template, from, resendKey, log = console.l
   for (const row of rows) {
     try {
       let id; // a --test rerun gets a fresh key so Resend does not replay an earlier test send; real sends keep one key per result
-      if (await sendOne({ sb, row, template, from, resendKey, fetchImpl, idemSuffix: args.test ? `-t${Date.now()}` : '', onId: (v) => { id = v; } }) === 'sent') sent++;
+      if (await sendOne({ sb, row, template, from, resendKey, fetchImpl, idemSuffix: args.test ? `-t${Date.now()}` : '', sleep, onId: (v) => { id = v; } }) === 'sent') sent++;
       log(`sent  result ${row.id} resend_id=${id}`); }
     catch (e) { failed++; log(`FAILED result ${row.id}: ${e.message}`); }
     await sleep(600);

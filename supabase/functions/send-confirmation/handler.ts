@@ -72,7 +72,7 @@ function safeEqual(a: string, b: string): boolean {
 type Rest = (path: string, init?: RequestInit) => Promise<Response>;
 
 // The whole request path. index.ts wires it to Deno.serve and Deno.env; tests pass a fake env and stub fetch.
-export async function handle(req: Request, env: Env, deps: { resolve?: Parameters<typeof mailable>[1] } = {}): Promise<Response> {
+export async function handle(req: Request, env: Env, deps: { resolve?: Parameters<typeof mailable>[1]; sleep?: (ms: number) => Promise<void> } = {}): Promise<Response> {
   const SUPABASE_URL = env("SUPABASE_URL")!;
   const KEY = env("SUPABASE_SERVICE_ROLE_KEY")!;
   const rest: Rest = (path, init = {}) =>
@@ -179,16 +179,16 @@ export async function handle(req: Request, env: Env, deps: { resolve?: Parameter
         }),
       });
     let res = await post();
-    // A burst can trip Resend's per-second rate limit (429) or hit a 5xx. Retry ONCE with the same Idempotency-Key
+    // A burst can trip Resend's per-second rate limit (429) or hit a 5xx. Retry up to 3 times with the same Idempotency-Key
     // (Resend dedupes it for 24h, so a retry can never double-send). A daily/monthly quota 429 is not retried:
     // the claim is released below and `venn confirm` sends the row once the quota resets (00:00 UTC).
-    if (res.status === 429 || res.status >= 500) {
+    const sleep = deps.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+    for (let attempt = 1; attempt <= 3 && (res.status === 429 || res.status >= 500); attempt++) {
       const err = await res.clone().json().catch(() => ({}));
-      if (!/quota/.test(String(err?.name ?? ""))) {
-        const wait = Math.min(Math.max(Number(res.headers.get("retry-after")) || 1, 1), 3);
-        await new Promise((r) => setTimeout(r, wait * 1000));
-        res = await post();
-      }
+      if (/quota/.test(String(err?.name ?? ""))) break;
+      const wait = Math.min(Math.max(Number(res.headers.get("retry-after")) || attempt, 1), 4);
+      await sleep(wait * 1000);
+      res = await post();
     }
     if (!res.ok) {
       // Resend answered with an error, so nothing was sent: release the claim so a retry can send.

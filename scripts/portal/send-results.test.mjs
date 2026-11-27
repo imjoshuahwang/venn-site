@@ -25,7 +25,7 @@ test('email is human: one pill, one link, first name, no postal address', () => 
   assert.equal((html.match(/<a /g) ?? []).length, 1);
   assert.equal((html.match(/border-radius:999px/g) ?? []).length, 1);
   assert.match(html, /Hi Ada,/);
-  assert.match(html, /Sign in to your portal/);
+  assert.match(html, /Sign in at joinvenn\.org/);
   assert.match(html, /token_hash=H&amp;type=invite&amp;next=\/portal\/set-password/);
   assert.match(text, /results are out/);
   assert.doesNotMatch(html + text, /\b(Street|Ave|CA 9\d{4})\b|{{/);
@@ -97,4 +97,21 @@ test('a failed send throws the status only, never the response body or an email'
     sendOne({ sb, row: row(1, 'a@x.com'), template, from: FROM, resendKey: 'k', fetchImpl: async () => ({ ok: false, status: 422, text: async () => 'invalid to a@x.com' }) }),
     (e) => e.message === 'resend 422' && !e.message.includes('@'),
   );
+});
+
+test('429/5xx retries reuse the same Idempotency-Key; a 500 then 200 sends once with a plain-text part', async () => {
+  const keys = []; const bodies = [];
+  const answers = [{ ok: false, status: 500, text: async () => '' }, { ok: true, status: 200, json: async () => ({ id: 're_9' }) }];
+  const slept = [];
+  const r = await sendOne({ sb: fakeSb({ claimed: true }), row: row(1, 'a@x.com'), template, from: FROM, resendKey: 'k', sleep: async (ms) => { slept.push(ms); },
+    fetchImpl: async (_u, o) => { keys.push(o.headers['Idempotency-Key']); bodies.push(JSON.parse(o.body)); return answers.shift(); } });
+  assert.equal(r, 'sent');
+  assert.equal(keys.length, 2); assert.equal(keys[0], keys[1]); assert.equal(slept.length, 1);
+  assert.ok(bodies[1].text.includes('joinvenn.org')); assert.match(bodies[1].html, />Sign in at joinvenn\.org</);
+});
+
+test('three retries then give up: the claim is released', async () => {
+  const sb = fakeSb({ claimed: true }); let n = 0;
+  await assert.rejects(sendOne({ sb, row: row(1, 'a@x.com'), template, from: FROM, resendKey: 'k', sleep: async () => {}, fetchImpl: async () => { n++; return { ok: false, status: 429, text: async () => '' }; } }), /resend 429/);
+  assert.equal(n, 4); assert.equal(sb.calls.at(-1)[1].emailed_at, null);
 });
