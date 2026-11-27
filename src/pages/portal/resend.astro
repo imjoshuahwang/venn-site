@@ -9,10 +9,11 @@ export const prerender = false;
 const expired = Astro.url.searchParams.get('expired') === '1';
 let error = '';
 let notice = '';
+let email = '';
 
 if (Astro.request.method === 'POST') {
   const f = await Astro.request.formData();
-  const email = String(f.get('email') ?? '').trim();
+  email = String(f.get('email') ?? '').trim();
   error = (await authGuard('resend', Astro.request, { form: f, store: rpcStore(Astro.locals.supabase) })) ?? '';
   if (error) Astro.response.status = guardStatus(error);
   if (!error) {
@@ -25,6 +26,7 @@ if (Astro.request.method === 'POST') {
 <Base title="Email me a new link | Venn" description="Get a new Venn portal link." bare noindex>
   <AuthForm turnstile title={expired ? 'That link has expired' : 'Email me a new link'}
     lede={expired ? 'Links work once and only for a short while. Enter your email and we will send a new one.' : ''}
+    email={email} lead={expired ? { text: 'Already set your password?', href: '/portal/login', label: 'Sign in' } : undefined}
     fields={notice ? [] : ['email']} submit="Send link" error={error} notice={notice}
     links={[{ href: '/portal/login', label: 'Back to sign in' }]} />
 </Base>

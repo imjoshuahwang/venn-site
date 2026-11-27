@@ -13,14 +13,16 @@ interface Props {
   email?: string;
   links?: { href: string; label: string }[];
   turnstile?: boolean;
+  lead?: { text: string; href: string; label: string };
 }
-const { title, lede, fields, submit, error = '', notice = '', next = '', email = '', links = [], turnstile = false } = Astro.props;
+const { title, lede, fields, submit, error = '', notice = '', next = '', email = '', links = [], turnstile = false, lead } = Astro.props;
 // Cloudflare test key in dev only; in production with no key there is no widget and the server refuses sign-in.
 const siteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || (import.meta.env.DEV ? TURNSTILE_TEST.siteKey : '');
 ---
 <section class="auth">
   <h1>{title}</h1>
   {lede && <p class="lede">{lede}</p>}
+  {lead && <p class="lead">{lead.text} <a href={lead.href}>{lead.label}</a></p>}
   <p class:list={['status', { err: !!error }]} role={error ? 'alert' : 'status'} hidden={!error && !notice}>{error || notice}</p>
   {fields.length > 0 && (
     <form method="post" class="auth-form" novalidate>
@@ -53,6 +55,8 @@ const siteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || (import.meta.env.DE
   .auth { max-width: 26rem; margin: 0 auto; padding: calc(56px + env(safe-area-inset-top)) 16px 48px; display: grid; gap: 16px; }
   h1 { font-size: clamp(1.75rem, 7vw, 2.25rem); letter-spacing: -.035em; line-height: 1.1; }
   .lede { color: var(--muted); font-size: 17px; line-height: 1.5; margin: -4px 0 0; }
+  .lead { margin: 0; font-size: 17px; line-height: 1.5; }
+  .lead a { font-weight: 600; text-underline-offset: 3px; }
   .status { font-size: 16px; line-height: 1.45; padding: 12px 14px; border-radius: 14px; background: var(--panel); color: var(--text); margin: 0; overflow-wrap: anywhere; }
   .status[hidden] { display: none; }
   .status.err { background: #fef2f2; color: #b91c1c; }
