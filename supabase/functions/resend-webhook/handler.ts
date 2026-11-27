@@ -94,5 +94,28 @@ export async function handle(req: Request, env: Env, now: () => number = Date.no
     console.log(`rs_events write failed ${res.status}`);
     return json({ error: "write failed" }, 500);
   }
+  await expireBouncedRequest(env, kind, data);
   return json({ ok: true });
 }
+
+// A bounced match request can never be answered: close it so the requester hears back, and tell Josh (match id only, no addresses).
+async function expireBouncedRequest(env: Env, kind: string, data: any) {
+  const tags = data.tags ?? {};
+  const matchId = Number(tags.match_id);
+  if (kind !== "bounced" || tags.kind !== "match_request" || !Number.isInteger(matchId) || matchId < 1) return;
+  const key = env("SUPABASE_SERVICE_ROLE_KEY")!;
+  const res = await fetch(`${env("SUPABASE_URL")}/rest/v1/matches?id=eq.${matchId}&status=eq.requested`, {
+    method: "PATCH",
+    headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+    body: JSON.stringify({ status: "expired" }),
+  });
+  console.log(`match ${matchId} request bounced; expire ${res.ok ? "ok" : res.status}`);
+  const to = env("MATCH_ALERT_TO"), resendKey = env("STUDENT_RESEND_API_KEY");
+  if (!to || !resendKey) return;
+  await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json", "Idempotency-Key": `match-bounce-alert-${matchId}` },
+    body: JSON.stringify({ from: "Venn <hello@vennstudentorgs.com>", to, subject: `Match ${matchId}: request bounced`, text: `The request mail for match ${matchId} bounced, so the match was marked expired.` }),
+  }).catch(() => logAlertFailed(matchId));
+}
+const logAlertFailed = (id: number) => console.log(`match ${id} bounce alert failed`);
