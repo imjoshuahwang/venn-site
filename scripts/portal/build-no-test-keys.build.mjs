@@ -1,15 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-// Cloudflare's always-pass test keys must never ship; a production build with no key configured has to fail closed instead.
+// Run with `npm run test:build` (full production build, kept out of `npm test`). Cloudflare's always-pass test keys must never ship; a production build with no key configured has to fail closed instead.
 function walk(dir, out = []) {
-  for (const name of readdirSync(dir)) {
-    const p = join(dir, name);
-    if (statSync(p).isDirectory()) walk(p, out);
-    else out.push(p);
+  // Skip symlinks: the Vercel adapter links node_modules into the function dir, and that link can dangle in a worktree.
+  for (const e of readdirSync(dir, { withFileTypes: true })) {
+    const p = join(dir, e.name);
+    if (e.isDirectory()) walk(p, out);
+    else if (e.isFile()) out.push(p);
   }
   return out;
 }
