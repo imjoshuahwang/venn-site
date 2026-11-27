@@ -1,14 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { parseArgs, pickRows, render, linkFor, firstName, sendOne } from './send-results.mjs';
+import { parseArgs, pickRows, render, linkFor, firstName, sendOne, FROM, REPLY_TO } from './send-results.mjs';
 
 const template = readFileSync(new URL('../../supabase/templates/results-ready.html', import.meta.url), 'utf8');
 const row = (id, email, is_test = false, name = 'Ada Lovelace') => ({ id, applications: { name, email, is_test } });
 
 test('dry run is the default; --send and --to parse', () => {
-  assert.deepEqual(parseArgs([]), { send: false, to: null });
-  assert.deepEqual(parseArgs(['--send', '--to', 'A@x.com, b@y.com']), { send: true, to: ['a@x.com', 'b@y.com'] });
+  assert.deepEqual(parseArgs([]), { send: false, to: null, test: false });
+  assert.deepEqual(parseArgs(['--send', '--to', 'A@x.com, b@y.com']), { send: true, to: ['a@x.com', 'b@y.com'], test: false });
+  assert.equal(parseArgs(['--test']).test, true);
   assert.throws(() => parseArgs(['--to']));
   assert.throws(() => parseArgs(['--nope']));
 });
@@ -48,4 +49,19 @@ test('a failed send releases the claim', async () => {
   const sb = fakeSb({ claimed: true });
   await assert.rejects(sendOne({ sb, row: row(1, 'a@x.com'), template, from: 'f', resendKey: 'k', fetchImpl: async () => ({ ok: false, status: 500, text: async () => 'no' }) }));
   assert.equal(sb.calls.at(-1)[1].emailed_at, null);
+});
+
+test('--test never picks a real applicant, even when --to names one', () => {
+  const rows = [row(1, 'real@x.com'), row(2, 'imjoshuahwang+aws@gmail.com', true), row(3, 'imjoshuahwang+peer@gmail.com', true)];
+  assert.deepEqual(pickRows(rows, null, true).map((r) => r.id), [2, 3]);
+  assert.deepEqual(pickRows(rows, ['real@x.com'], true), []);
+  assert.deepEqual(pickRows(rows, ['real@x.com', 'imjoshuahwang+aws@gmail.com'], true).map((r) => r.id), [2]);
+});
+
+test('mail goes From the verified domain with Reply-To contact@joinvenn.org', async () => {
+  let body;
+  await sendOne({ sb: fakeSb({ claimed: true }), row: row(1, 'a@x.com'), template, from: FROM, resendKey: 'k', fetchImpl: async (_u, o) => { body = JSON.parse(o.body); return { ok: true }; } });
+  assert.equal(REPLY_TO, 'contact@joinvenn.org');
+  assert.equal(body.reply_to, 'contact@joinvenn.org');
+  assert.match(body.from, /@mail\.heyvenn\.org>$/);
 });
