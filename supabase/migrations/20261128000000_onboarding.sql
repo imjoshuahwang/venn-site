@@ -16,7 +16,8 @@ create function public.get_onboarding() returns jsonb
 language sql stable security definer set search_path = public, pg_temp as $$
   select coalesce((
     select jsonb_build_object(
-      'required', a.onboarding_started_at is not null and a.onboarding_consent_at is null,
+      'required', a.onboarding_started_at is not null and (a.onboarding_consent_at is null
+        or (a.birthday > (current_date - interval '18 years')::date and not exists (select 1 from public.mou_signatures m where m.user_id = auth.uid()))),
       'profile_done', a.onboarding_profile_at is not null,
       'contact_done', a.onboarding_consent_at is not null,
       'minor', a.birthday is not null and a.birthday > (current_date - interval '18 years')::date,

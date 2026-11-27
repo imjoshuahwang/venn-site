@@ -1,0 +1,49 @@
+---
+import Portal from '../../../layouts/Portal.astro';
+import OnboardingShell from '../../../components/portal/OnboardingShell.astro';
+import { getOnboarding, validateProfile } from '../../../lib/portal/onboarding';
+
+export const prerender = false;
+const sb = Astro.locals.supabase;
+let error = '';
+let v = { name: '', location: '' };
+if (Astro.request.method === 'POST') {
+  const f = await Astro.request.formData();
+  const r = validateProfile(Object.fromEntries(f));
+  v = { name: String(f.get('name') ?? ''), location: String(f.get('location') ?? '') };
+  if (!r.ok) error = r.error;
+  else {
+    const { error: e } = await sb.rpc('save_onboarding_profile', { p_name: r.name, p_location: r.location, p_birthday: r.birthday });
+    if (!e) return Astro.redirect('/portal/onboarding/contact', 303);
+    error = 'We could not save that. Please try again.';
+  }
+} else {
+  const s = await getOnboarding(sb);
+  if (s && s.profileDone) return Astro.redirect('/portal/onboarding/contact', 303);
+  v.name = s?.name ?? '';
+}
+const today = new Date().toISOString().slice(0, 10);
+---
+<Portal title="Your details | Venn">
+  <OnboardingShell done={1} total={8} start={error ? 2 : 0}>
+    <section class="ob-panel" data-panel>
+      <h1>What's your full name?</h1>
+      <input name="name" autocomplete="name" enterkeyhint="next" maxlength="200" required value={v.name} aria-label="Full name" data-msg="Enter your full name." />
+      <p class="ob-err" data-err role="alert" hidden></p>
+      <div class="ob-nav"><button class="pill" type="button" data-next>Continue</button></div>
+    </section>
+    <section class="ob-panel" data-panel hidden>
+      <h1>Where do you live?</h1>
+      <p class="lede">City and country is plenty.</p>
+      <input name="location" autocomplete="address-level2" enterkeyhint="next" maxlength="200" required value={v.location} aria-label="Where you live" data-msg="Enter where you live, like a city and country." />
+      <p class="ob-err" data-err role="alert" hidden></p>
+      <div class="ob-nav"><button class="pill ghost" type="button" data-back>Back</button><button class="pill" type="button" data-next>Continue</button></div>
+    </section>
+    <section class="ob-panel" data-panel hidden>
+      <h1>When's your birthday?</h1>
+      <input name="birthday" type="date" autocomplete="bday" required min="1900-01-01" max={today} aria-label="Birthday" data-msg="Enter your birthday." />
+      <p class="ob-err" data-err role="alert" hidden={!error}>{error}</p>
+      <div class="ob-nav"><button class="pill ghost" type="button" data-back>Back</button><button class="pill" type="submit">Continue</button></div>
+    </section>
+  </OnboardingShell>
+</Portal>
