@@ -53,17 +53,17 @@ const next = `/portal/next-steps?partner=${partner.key}`;
   </>}
   <section data-screen="phone" hidden>
     <h3>{c.items.phone}</h3>
-    <a class="pill" data-primary href="/portal">{c.items.phone}</a>
+    <a class="pill" data-primary href="/portal">Add number</a>
     <button type="button" class="text" data-go>Next</button>
   </section>
   <section data-screen="mou" hidden>
     <h3>{c.items.mou}</h3>
-    <a class="pill" data-primary href="/portal/result">{c.items.mou}</a>
+    <a class="pill" data-primary href="/portal/result">Open MOU</a>
     <button type="button" class="text" data-go>Next</button>
   </section>
   <section data-screen="email" hidden>
     <h3>{c.items.email}</h3>
-    <a class="pill" data-primary href={next}>{c.items.email}</a>
+    <a class="pill" data-primary href={next}>Open email</a>
   </section>
 </div>
 <script>
