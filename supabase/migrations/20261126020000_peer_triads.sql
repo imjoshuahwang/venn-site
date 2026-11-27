@@ -5,7 +5,7 @@ alter table public.peer_matches
   drop constraint if exists peer_matches_result_a_key,
   drop constraint if exists peer_matches_result_b_key;
 
-create unique index peer_matches_pair_key on public.peer_matches (least(result_a, result_b), greatest(result_a, result_b));
+create unique index if not exists peer_matches_unordered_pair on public.peer_matches (season, least(result_a, result_b), greatest(result_a, result_b));
 
 create or replace function public.peer_matches_one_pair() returns trigger language plpgsql set search_path = public as $$
 declare x bigint;
