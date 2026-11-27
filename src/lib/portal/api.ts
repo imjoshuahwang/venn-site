@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Step } from './track.ts';
 
 export type ApiError = { message: string; code?: string };
 export type Api<T> = { data: T | null; error: ApiError | null };
@@ -92,4 +93,9 @@ export async function isLead(sb: SupabaseClient, resultId: number): Promise<Api<
 /** Approved orgs in the result's cohort, for "N orgs in this cohort"; null when the result has no cohort. */
 export async function cohortOrgCount(sb: SupabaseClient, resultId: number): Promise<Api<number>> {
   return wrap<number>(await sb.rpc('cohort_org_count', { p_result_id: resultId }));
+}
+
+/** Records one funnel step for the caller's result (once per step). Best effort: never throws, never blocks the page. */
+export async function portalEvent(sb: SupabaseClient, step: Step): Promise<void> {
+  try { await sb.rpc('portal_event', { p_step: step }); } catch { /* the funnel is not worth a failed page */ }
 }

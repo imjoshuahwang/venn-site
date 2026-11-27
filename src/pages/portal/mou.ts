@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { signMou } from '../../lib/portal/api.ts';
+import { signMou, portalEvent } from '../../lib/portal/api.ts';
 import { mapMouError, validateMou, type MouErrorKind } from '../../data/mou.ts';
 
 export const prerender = false;
@@ -21,5 +21,6 @@ export const POST: APIRoute = async ({ locals, request }) => {
     const kind = mapMouError(error?.code);
     return Response.json({ error: kind }, { status: STATUS[kind] });
   }
+  await portalEvent(locals.supabase, 'mou_signed');
   return Response.json({ signature: { typed_name: data.typed_name, signed_at: data.signed_at } });
 };

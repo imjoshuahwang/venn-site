@@ -1,7 +1,12 @@
 import type { APIRoute } from 'astro';
-import { handleCallback } from '../../../lib/portal/callback';
+import { handleCallback, EXPIRED_PATH } from '../../../lib/portal/callback';
+import { portalEvent } from '../../../lib/portal/api.ts';
 
 export const prerender = false;
 
 // Invite and recovery links land here. A live link signs in once and goes on to `next`; a reused or expired one lands on the resend page.
-export const GET: APIRoute = async ({ url, locals, redirect }) => redirect(await handleCallback(url, locals.supabase), 303);
+export const GET: APIRoute = async ({ url, locals, redirect }) => {
+  const to = await handleCallback(url, locals.supabase);
+  if (to !== EXPIRED_PATH) await portalEvent(locals.supabase, 'link_opened');
+  return redirect(to, 303);
+};

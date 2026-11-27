@@ -2,8 +2,10 @@
 import Portal from '../../layouts/Portal.astro';
 import NextSteps from '../../components/portal/NextSteps.astro';
 import { nextStepsFor } from '../../data/next-steps';
+import { portalEvent } from '../../lib/portal/api.ts';
 
 export const prerender = false;
+if (Astro.locals.user) await portalEvent(Astro.locals.supabase, 'next_steps_opened');
 const config = nextStepsFor(Astro.url.searchParams.get('partner'));
 ---
 <Portal title="Next steps">
