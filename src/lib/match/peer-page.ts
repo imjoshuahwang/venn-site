@@ -6,7 +6,7 @@ import { buildIntro, buildNotice, sendThenMark, type Env, type Templates } from 
 import { checkLimits, type Store } from '../portal/ratelimit.ts';
 
 export type Action = 'accept' | 'decline' | 'report' | 'optout';
-export type Outcome = 'accepted' | 'declined' | 'reported' | 'opted_out' | 'expired' | 'withdrawn' | 'unknown';
+export type Outcome = 'accepted' | 'declined' | 'reported' | 'opted_out' | 'expired' | 'withdrawn' | 'busy' | 'unknown';
 export type Page =
   | { kind: 'open'; view: IntroView }
   | { kind: 'confirm'; action: 'report' | 'optout' }
@@ -14,7 +14,7 @@ export type Page =
   | { kind: 'refused'; why: 'turnstile' | 'limited'; view?: IntroView };
 
 const ACTIONS: Action[] = ['accept', 'decline', 'report', 'optout'];
-const STATES: Outcome[] = ['accepted', 'declined', 'reported', 'expired', 'withdrawn'];
+const STATES: Outcome[] = ['accepted', 'declined', 'reported', 'expired', 'withdrawn', 'busy'];
 const SHAPE = /^[A-Za-z0-9_-]{8,200}$/;
 
 /** The database only ever sees this hash, never the token. */
