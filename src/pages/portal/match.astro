@@ -1,0 +1,140 @@
+---
+export const prerender = false;
+import Portal from '../../layouts/Portal.astro';
+import Stage from '../../components/portal/match/Stage.astro';
+import Card from '../../components/portal/match/Card.astro';
+import { getMyMatch, type MyMatch } from '../../lib/portal/match-rpc';
+import { peerTile, stateLabel } from '../../lib/portal/match-stage.mjs';
+import { searchLine } from '../../data/match-facts';
+
+// Dev only: ?stub=unmatched|first|replay renders fixtures with no session. import.meta.env.DEV is false in every build.
+const stub = import.meta.env.DEV ? Astro.url.searchParams.get('stub') : null;
+const fixture = (viewed: boolean): MyMatch => ({
+  match_id: 1, status: viewed ? 'revealed' : 'approved', viewed_at: viewed ? '2026-11-27T00:00:00Z' : null,
+  fit: { you_do: 'You run a robotics club of 14 that builds one working tool a term.', they_do: 'Daniel leads a STEM collective that gets teams from idea to a real user.', together: ['Swap how each club picks a first project.', 'Share one build night over video.'], common: ['Robotics', 'Small teams', 'Teaching tools'], ask: 'How does your club get new members to finish a first build?' },
+  peer_first_name: 'Daniel', peer_org: 'Ohio STEM Collective', peer_region: 'Ohio', peer_project: 'Robotics',
+} as MyMatch);
+let m: MyMatch | null = null;
+let failed = false;
+try {
+  m = stub ? (stub === 'unmatched' ? ({ status: 'unmatched' } as MyMatch) : fixture(stub === 'replay')) : await getMyMatch(Astro.locals.supabase);
+} catch { failed = true; }
+const you = { name: stub ? 'Maya' : 'You', org: stub ? 'Lincoln HS Robotics Club' : '', region: stub ? 'Texas' : '' };
+const peer = { first_name: m?.peer_first_name, headline: m?.peer_project, org: m?.peer_org, region: m?.peer_region, field: m?.peer_project };
+const config = JSON.stringify({ status: m?.status ?? null, viewed: !!m?.viewed_at, stub: !!stub, home: you.region || null, tile: peerTile(peer), who: { name: peer.first_name, org: peer.org, headline: peer.headline } });
+---
+<Portal title="Your match">
+  {failed ? <p role="alert">We could not load your match. Reload to try again.</p> : (
+    <div class="match" data-match data-config={config} data-search={searchLine()}>
+      <Stage you={you} />
+      <Card peer={peer} fit={m?.fit ?? {}} label={stateLabel(m?.status ?? '')} unmatched={!m || m.status === 'unmatched'} />
+    </div>
+  )}
+</Portal>
+
+<style is:global>
+  .match { --forest: #1d2823; --forest-2: #2a3832; --mist: #dfe8e3; display: grid; gap: var(--sp-16); }
+  .match [hidden] { display: none !important; }
+  .mstage { background: var(--forest); color: var(--mist); border-radius: var(--r-20); padding: var(--sp-32) var(--sp-16); min-height: 520px; display: grid; grid-template-rows: auto 1fr auto; gap: var(--sp-24); overflow: hidden; }
+  .mline { margin: 0; min-height: 4.2em; font-size: var(--fs-17); line-height: 1.4; }
+  .mpair { display: flex; justify-content: center; align-items: center; gap: 8px; transition: transform var(--dur-3) var(--ease); }
+  .mpair.up { transform: translateY(-16px); }
+  .mhalf { all: unset; box-sizing: border-box; width: min(132px, 38vw); height: 264px; position: relative; overflow: hidden; cursor: pointer; display: grid; place-items: center; text-align: center; }
+  .mhalf:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
+  .mhalf.l { border-radius: 0 132px 132px 0; background: #35463f; }
+  .mhalf.r { border-radius: 132px 0 0 132px; background: var(--forest-2); }
+  .mwin { position: absolute; inset: 0; overflow: hidden; -webkit-mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent); mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent); }
+  .mstrip { position: absolute; left: 0; right: 0; top: 0; display: grid; will-change: transform; }
+  .mstrip i { display: grid; place-items: center; height: 56px; padding: 0 20px; font-style: normal; font-size: var(--fs-15); font-weight: var(--fw-600); }
+  .mwho { position: absolute; inset: 0; display: grid; align-content: center; justify-items: center; gap: 4px; padding: 0 20px; font-size: var(--fs-13); }
+  .mwho b { font-size: var(--fs-22); font-weight: var(--fw-800); }
+  .mwho i { font-style: normal; opacity: 0.8; line-height: 1.25; }
+  .mtags { display: flex; justify-content: space-around; margin: 0; font-size: var(--fs-15); font-weight: var(--fw-600); opacity: 0; transition: opacity var(--dur-3); }
+  .match[data-beat="rise"] .mtags { opacity: 1; }
+  .mconf { position: fixed; top: 0; width: 8px; height: 12px; pointer-events: none; z-index: 3; }
+  .mcard { background: var(--panel); border-radius: var(--r-20); padding: var(--sp-24); display: grid; gap: var(--sp-16); justify-items: start; animation: mfade var(--dur-3) var(--ease); }
+  .mcard h1 { margin: 0; font-size: var(--fs-28); font-weight: var(--fw-800); letter-spacing: -0.02em; line-height: 1.15; }
+  .mcard header p { margin: 2px 0 0; color: var(--muted); font-size: var(--fs-15); }
+  .mcard dl { margin: 0; display: grid; gap: var(--sp-8); }
+  .mcard dt { font-size: var(--fs-13); font-weight: var(--fw-600); color: var(--muted); margin-top: var(--sp-8); }
+  .mcard dd { margin: 0; line-height: 1.4; } .mcard ul { margin: 0; padding-left: 1.1em; }
+  .mtagrow { display: flex; flex-wrap: wrap; gap: 6px; } .mtagrow span { background: var(--green); border-radius: var(--r-pill); padding: 4px 12px; font-size: var(--fs-13); }
+  .match .pill { border: 0; cursor: pointer; font-family: inherit; } .match .pill.ghost { background: var(--white); color: var(--ink); border: 1px solid var(--line); }
+  @keyframes mfade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .match *, .match { animation: none !important; } .mpair { transition: none; transform: none !important; } }
+</style>
+
+<script>
+  import { BEATS, ROW, plan, lowEnd, wheelTiles, openerLine, finalY } from '../../lib/portal/match-stage.mjs';
+
+  const root = document.querySelector<HTMLElement>('[data-match]');
+  if (root) {
+    const cfg = JSON.parse(root.dataset.config!);
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const $ = (s: string) => root.querySelector<HTMLElement>(s)!;
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    const send = (body: object) => { if (cfg.stub) return; try { fetch('/portal/api/match', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).catch(() => {}); } catch { /* the funnel never blocks */ } };
+    const step = (type: string) => send({ action: 'step', type });
+    let run = 0, drops = 0;
+    const strip = $('[data-strip]');
+    const showCard = () => { $('[data-stage]').hidden = true; $('[data-card]').hidden = false; root.dataset.beat = 'card'; step('card_opened'); };
+    const confetti = (n: number) => {
+      const colors = ['#2f6bff', '#1fa971', '#18181a', '#f4b400'];
+      for (let i = 0; i < n; i++) {
+        const p = document.createElement('i'); p.className = 'mconf'; p.dataset.confetti = '';
+        p.style.left = `${Math.random() * 100}%`; p.style.background = colors[i % colors.length];
+        root.appendChild(p);
+        p.animate([{ transform: 'translateY(0) rotate(0)', opacity: 1 }, { transform: `translateY(${280 + Math.random() * 200}px) rotate(${Math.random() * 540}deg)`, opacity: 0 }], { duration: 600, easing: 'ease-out', fill: 'forwards' }).onfinish = () => p.remove();
+      }
+    };
+    const frames = () => { let last = performance.now(); const t = (n: number) => { if (n - last > 50) drops++; last = n; if (run && root.dataset.beat !== 'rise') requestAnimationFrame(t); }; requestAnimationFrame(t); };
+
+    async function play(replay: boolean) {
+      const id = ++run;
+      const low = lowEnd(navigator as never, drops);
+      const p = plan({ status: cfg.status, viewedAt: cfg.viewed, reduced, low, replay });
+      if (p.screen !== 'stage') { showCard(); return; }
+      const b = (BEATS as Record<string, typeof BEATS.full>)[p.kind!];
+      $('[data-card]').hidden = true; $('[data-stage]').hidden = false; root.dataset.beat = 'stage';
+      $('[data-pair]').classList.remove('up'); $('[data-who]').hidden = true; $('[data-win]').style.opacity = '1';
+      strip.getAnimations().forEach((a) => a.cancel());
+      const tiles = wheelTiles(cfg.tile);
+      strip.replaceChildren(...tiles.map((t: string) => Object.assign(document.createElement('i'), { textContent: t })));
+      const end = finalY(tiles.length);
+      strip.style.transform = 'translateY(0)';
+      step('stage_opened');
+      if (!replay && !cfg.viewed) send({ action: 'viewed' });
+      const line = `${openerLine(cfg.home)} ${root.dataset.search}`;
+      const lineEl = $('[data-line]'); lineEl.textContent = '';
+      if (b.type) { frames(); for (let i = 1; i <= line.length; i++) { if (id !== run) return; lineEl.textContent = line.slice(0, i); await sleep(b.type); } } else lineEl.textContent = line;
+      await sleep(b.hold); if (id !== run) return;
+      root.dataset.beat = 'wheel';
+      if (b.spin) {
+        const a = strip.animate([{ transform: 'translateY(0)' }, { transform: `translateY(${end - 10}px)`, offset: 0.93 }, { transform: `translateY(${end}px)` }], { duration: b.spin, easing: 'cubic-bezier(0.15, 0.7, 0.2, 1)', fill: 'forwards' });
+        await a.finished.catch(() => {}); if (id !== run) return;
+        try { a.commit(); } catch { /* older engines */ } a.cancel();
+      }
+      strip.style.transform = `translateY(${end}px)`;
+      step('wheel_done');
+      await sleep(b.stop); if (id !== run) return;
+      const who = $('[data-who]');
+      who.replaceChildren(...[cfg.who.name, cfg.who.headline, cfg.who.org].filter(Boolean).map((t: string, i: number) => Object.assign(document.createElement(i ? 'i' : 'b'), { textContent: t })));
+      who.hidden = false; $('[data-win]').style.opacity = '0';
+      root.dataset.beat = 'rise'; $('[data-pair]').classList.add('up');
+      if (b.confetti) confetti(b.confetti);
+      if (reduced) { await sleep(b.lift); if (id === run) showCard(); }
+    }
+    const lift = async () => {
+      if (root.dataset.beat !== 'rise') return;
+      const low = lowEnd(navigator as never, drops);
+      await sleep(reduced ? BEATS.reduced.lift : low ? BEATS.short.lift : BEATS.full.lift);
+      showCard();
+    };
+    $('[data-right]').addEventListener('click', lift);
+    $('[data-left]').addEventListener('click', lift);
+    root.querySelector('[data-replay]')?.addEventListener('click', () => play(true));
+    root.querySelector('[data-compose-open]')?.addEventListener('click', () => { const m = $('[data-compose-mount]'); m.hidden = false; m.dispatchEvent(new CustomEvent('compose:open', { bubbles: true })); });
+    root.dataset.ready = '';
+    play(false);
+  }
+</script>
