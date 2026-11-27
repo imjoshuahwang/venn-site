@@ -4,7 +4,7 @@ import { handle } from './handler.ts';
 
 const base: Record<string, string> = { SUPABASE_URL: 'https://s.example.com', SUPABASE_SERVICE_ROLE_KEY: 'svc', MATCH_SWEEP_SECRET: 'sec', MATCH_TOKEN_SECRET: 'tok', STUDENT_RESEND_API_KEY: 'k' };
 const person = (name: string, email: string, is_test = false) => ({ applications: { name, email, org: 'Club', is_test } });
-const row = { id: 5, message: 'hello', requester: person('Sam Lovelace', 'contact+portal-r@joinvenn.org'), peer: person('Riley', 'contact+portal-p@joinvenn.org') };
+const row = { id: 5, status: 'requested', message: 'hello', requester: person('Sam Lovelace', 'contact+portal-r@joinvenn.org'), peer: person('Riley', 'contact+portal-p@joinvenn.org') };
 
 function stub(sweep: unknown[], r = row, o: { pending?: unknown[]; resend?: number } = {}) {
   const urls: string[] = [];
@@ -83,4 +83,52 @@ test('a missing service-role credential fails closed with 500 and no call', asyn
   const s = stub([]);
   assert.equal((await call({ ...on, SUPABASE_SERVICE_ROLE_KEY: '' }, s)).status, 500);
   assert.equal(s.urls.length, 0);
+});
+
+test('reminder is skipped when the peer already answered; no mail, no marker', async () => {
+  for (const status of ['accepted', 'declined']) {
+    const s = stub([{ match_id: 5, action: 'remind' }], { ...row, status } as never);
+    const out = await (await call(on, s)).json();
+    assert.equal(out.skipped, 1);
+    assert.equal(s.bodies.length, 0);
+    assert.deepEqual(s.marks, []);
+  }
+});
+
+test('sweep sends the intro To both students and the decline to the requester, then marks them', async () => {
+  const a = stub([{ match_id: 5, action: 'intro' }], { ...row, status: 'accepted' } as never);
+  assert.equal((await (await call(on, a)).json()).intro, 1);
+  assert.deepEqual(a.bodies.map((b) => [b.key, b.to]), [['match-intro-5', ['contact+portal-r@joinvenn.org', 'contact+portal-p@joinvenn.org']]]);
+  assert.deepEqual(a.marks, [{ p_match_id: 5, p_kind: 'intro' }]);
+  const d = stub([{ match_id: 5, action: 'decline' }], { ...row, status: 'declined' } as never);
+  assert.equal((await (await call(on, d)).json()).decline, 1);
+  assert.deepEqual(d.bodies.map((b) => [b.key, b.to]), [['match-declined-5', ['contact+portal-r@joinvenn.org']]]);
+  assert.deepEqual(d.marks, [{ p_match_id: 5, p_kind: 'decline' }]);
+});
+
+test('an intro for a match that is no longer accepted is not sent', async () => {
+  const s = stub([{ match_id: 5, action: 'intro' }], { ...row, status: 'withdrawn' } as never);
+  await call(on, s);
+  assert.equal(s.bodies.length, 0);
+});
+
+test('a failed marker after a good send is retried 3 times, and a failed send is not marked', async () => {
+  const s = stub([{ match_id: 5, action: 'intro' }], { ...row, status: 'accepted' } as never);
+  const orig = s.fetch;
+  let tries = 0;
+  const fetch = (async (u: string, i?: RequestInit) => u.includes('rpc/match_mail_done') ? (tries++, new Response('x', { status: 500 })) : orig(u, i)) as typeof orig;
+  await call(on, { ...s, fetch });
+  assert.equal(tries, 3);
+  assert.equal(s.bodies.length, 1);
+  const f = stub([{ match_id: 5, action: 'intro' }], { ...row, status: 'accepted' } as never, { resend: 500 });
+  await call(on, f);
+  assert.deepEqual(f.marks, []);
+});
+
+test('a lapsed intro is logged, not sent', async () => {
+  const logs: string[] = [];
+  const s = stub([{ match_id: 5, action: 'lapsed' }], { ...row, status: 'accepted' } as never);
+  await handle(new Request('https://f.example.com/', { method: 'POST', headers: { 'x-webhook-secret': 'sec' } }), (k) => on[k], { fetch: s.fetch, log: (m: string) => logs.push(m) });
+  assert.equal(s.bodies.length, 0);
+  assert.ok(logs.some((l) => l.includes('retry window')));
 });

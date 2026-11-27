@@ -3,6 +3,7 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { chromium } from 'playwright';
+import { localServerEnv } from '../scripts/qa/portal.mjs';
 
 const PORT = 8233;
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -10,7 +11,7 @@ let server, browser;
 
 before(async () => {
   server = spawn('npx', ['astro', 'dev', '--host', '127.0.0.1', '--port', String(PORT)], {
-    env: { ...process.env, PUBLIC_SUPABASE_URL: 'http://127.0.0.1:1', PUBLIC_SUPABASE_ANON_KEY: 'x', PORTAL_HOST: 'portal.invalid' },
+    env: localServerEnv('http://127.0.0.1:1', 'x', { PORTAL_HOST: 'portal.invalid' }),
     stdio: 'ignore',
   });
   for (let i = 0; i < 120; i++) {
