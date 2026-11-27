@@ -7,7 +7,7 @@ const read = (p) => fs.readFileSync(p, 'utf8');
 
 test('home has one heading and one button to the result', () => {
   const s = read('src/pages/portal/index.astro');
-  assert.equal((s.match(/<h1[ >]/g) ?? []).length, 2); // home + none state, never both
+  assert.equal((s.match(/<h1[ >]/g) ?? []).length, 3); // home, none and error states, never together
   assert.match(s, /Your results are here/);
   assert.match(s, /<a class="pill"[^>]*href="\/portal\/result"/);
   for (const gone of ['NextStep', 'TextJosh', 'data-team', 'parent-request', '<details']) assert.doesNotMatch(s, new RegExp(gone), gone);
@@ -30,7 +30,7 @@ test('home reads go through loadHome (parallel) and vercel runs in sfo1', () => 
   assert.deepEqual(JSON.parse(read('vercel.json')).regions, ['sfo1']);
 });
 
-test('none state names the email, offers a different sign-in and the contact address; error keeps Retry and logs nothing', () => {
+test('none state names the email, offers a different sign-in and the contact address; error offers Try again and logs nothing', () => {
   const s = read('src/pages/portal/index.astro');
   assert.match(s, /We could not find a result for \{email\}/);
   assert.match(s, /Sign in with a different email/);
