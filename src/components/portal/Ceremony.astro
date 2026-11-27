@@ -1,8 +1,8 @@
 ---
 import Reveal from './Reveal.astro';
-const { result, setup } = Astro.props;
+const { result, setup, replay = false } = Astro.props;
 const slots = { consent: 'Your consent', parent: 'Parent sign-off', phone: 'Text Josh' };
-const config = JSON.stringify({ result, setup });
+const config = JSON.stringify({ result, setup, replay });
 ---
 <div class="ceremony" data-ceremony data-config={config}>
   <div class="card skel" data-skel role="status" aria-busy="true" aria-label="Loading your portal"><span class="bar w1"></span><span class="bar w2"></span><span class="bar w3"></span><span class="bar w4"></span></div>
@@ -32,9 +32,12 @@ const config = JSON.stringify({ result, setup });
   import { createCeremony, cardFrames, revealKind, timeline, share, sharePayload } from '../../lib/portal/ceremony.mjs';
 
   const root = document.querySelector<HTMLElement>('[data-ceremony]')!;
-  const { result, setup } = JSON.parse(root.dataset.config!);
+  const { result, setup, replay } = JSON.parse(root.dataset.config!);
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Watch again (replay): nothing is written. markViewed is skipped by the engine (viewedAt is set) and finish is a no-op,
+  // so no viewed write and no reveal_started / reveal_finished beats fire a second time.
   const post = async (action: string) => {
+    if (replay) return;
     const r = await fetch('/portal/api/ceremony', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action, id: result.id }) });
     if (!r.ok) throw new Error(action);
   };

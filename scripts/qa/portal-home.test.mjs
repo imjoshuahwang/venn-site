@@ -39,3 +39,13 @@ test('none state names the email, offers a different sign-in and the contact add
   assert.doesNotMatch(s, /console\./);
   assert.doesNotMatch(s, /could not find an application/);
 });
+
+test('post-reveal home: partner name as text (no logo until #241), next step link, Watch again replays without writes', () => {
+  const s = read('src/pages/portal/index.astro');
+  assert.match(s, /data-cohort-name/);
+  assert.match(s, /href="\/portal\/next-steps"/);
+  assert.match(s, /href="\/portal\?replay=1"[^>]*data-watch-again/);
+  assert.doesNotMatch(s, /<img/);
+  const c = read('src/components/portal/Ceremony.astro');
+  assert.match(c, /if \(replay\) return;/);
+});

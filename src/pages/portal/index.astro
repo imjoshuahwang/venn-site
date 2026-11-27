@@ -7,15 +7,17 @@ import { initialScreen } from '../../lib/portal/ceremony.mjs';
 import { getConsentState } from '../../lib/portal/api';
 import { loadHome } from '../../lib/portal/home';
 import { CONSENT_VERSION } from '../../data/consent';
+import { nextStepsFor } from '../../data/next-steps';
 
 const home = await loadHome({
   ceremony: () => getCeremonyData(Astro),
   consent: () => getConsentState(Astro.locals.supabase, CONSENT_VERSION),
 });
 const { ceremony, consentFailed } = home;
-const inCeremony = ceremony.status === 'ok' && initialScreen(ceremony.result) === 'ceremony';
+const replay = ceremony.status === 'ok' && !!ceremony.result.doneAt && Astro.url.searchParams.get('replay') === '1';
+const inCeremony = replay || (ceremony.status === 'ok' && initialScreen(ceremony.result) === 'ceremony');
 // #127 consent, #128 parent, #132 phone are on their own pages: setup slots show only in stub mode unless ?setup=0.
-const showSlots = !!stubMode() && Astro.url.searchParams.get('setup') !== '0';
+const showSlots = !replay && !!stubMode() && Astro.url.searchParams.get('setup') !== '0';
 const setup = { consent: !showSlots, parent: !showSlots, phone: !showSlots };
 if (home.redirectToConsent) return Astro.redirect('/portal/ceremony', 303);
 const email = Astro.locals.user?.email ?? '';
@@ -23,7 +25,7 @@ const none = ceremony.status === 'none' && !consentFailed;
 const failed = ceremony.status === 'error' || consentFailed;
 ---
 <Portal title="Your Venn home">
-  {inCeremony ? <Ceremony result={ceremony.result} setup={setup} /> : failed ? <><p role="alert">We could not load this page.</p><form method="get" action="/portal"><button class="pill" type="submit" data-retry>Retry</button></form></> : none ? (
+  {inCeremony ? <Ceremony result={replay ? { ...ceremony.result, viewedAt: ceremony.result.viewedAt ?? ceremony.result.doneAt } : ceremony.result} setup={setup} replay={replay} /> : failed ? <><p role="alert">We could not load this page.</p><form method="get" action="/portal"><button class="pill" type="submit" data-retry>Retry</button></form></> : none ? (
     <section class="home" data-none>
       <h1>We could not find a result for {email}</h1>
       <form method="post" action="/portal/logout"><button class="pill" type="submit">Sign in with a different email</button></form>
@@ -31,8 +33,11 @@ const failed = ceremony.status === 'error' || consentFailed;
     </section>
   ) : (
     <section class="home" data-home>
+      {ceremony.status === 'ok' && ceremony.result.cohortName && <p class="cohort" data-cohort-name>{ceremony.result.cohortName}</p>}
       <h1>Your results are here</h1>
       <a class="pill" href="/portal/result">View your results</a>
+      {ceremony.status === 'ok' && ceremony.result.outcome === 'cohort' && <a class="next" href="/portal/next-steps" data-next-step>Next: {nextStepsFor(null).steps[0]}</a>}
+      {ceremony.status === 'ok' && <a class="again" href="/portal?replay=1" data-watch-again>Watch again</a>}
       <a class="consent" href="/portal/consent">Review consent</a>
     </section>
   )}
@@ -40,6 +45,8 @@ const failed = ceremony.status === 'error' || consentFailed;
 <style>
   .home { display: grid; gap: var(--sp-24); justify-items: start; padding-top: var(--sp-48); }
   .home h1 { margin: 0; font-size: var(--fs-28); font-weight: var(--fw-800); letter-spacing: var(--track-tight); line-height: 1.15; }
+  .cohort { margin: 0; font-size: var(--fs-15); font-weight: var(--fw-800); color: var(--muted); }
+  .next, .again { display: inline-flex; align-items: center; min-height: 44px; font-size: var(--fs-15); color: var(--ink, inherit); text-underline-offset: 3px; }
   .help { margin: 0; font-size: var(--fs-15); color: var(--muted); }
   .help a { display: inline-flex; align-items: center; min-height: 44px; }
   .consent { display: inline-flex; align-items: center; min-height: 44px; font-size: var(--fs-15); color: var(--muted); text-underline-offset: 3px; }

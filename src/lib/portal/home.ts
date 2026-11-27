@@ -8,7 +8,8 @@ type Deps = {
 
 export async function loadHome({ ceremony, consent }: Deps) {
   const [c, k] = await Promise.all([
-    ceremony(),
+    // A rejected ceremony read is an error state (Retry), never a 500.
+    ceremony().catch((): CeremonyData => ({ status: 'error' })),
     consent().then((r) => ({ r, threw: false }), () => ({ r: null, threw: true })),
   ]);
   // A missing or failing consent_state must be visible, never a silent skip of the consent redirect.
