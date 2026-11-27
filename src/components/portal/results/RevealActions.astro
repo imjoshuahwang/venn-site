@@ -135,6 +135,7 @@ const next = `/portal/next-steps?partner=${partner.key}`;
 <style>
   .ra section { display: grid; gap: var(--sp-16); justify-items: center; text-align: center; }
   .ra section[hidden] { display: none; }
+  @media (max-height: 740px) { .ra section { gap: var(--sp-8); } .list { gap: var(--sp-4); } }
   .ra h3 { margin: 0; font-size: var(--fs-22); font-weight: var(--fw-600); letter-spacing: var(--track-tight); }
   .ra p { margin: 0; }
   .body { font-size: var(--fs-17); }

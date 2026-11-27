@@ -21,7 +21,7 @@ export type RevealPartner = { key: string; name: string; cohortTitle: string; lo
 
 const AWS_COPY: PartnerCopy = {
   association: 'AWS staff worked directly with Venn to shape the courses and curriculum so they line up with AWS. It is an informal link, not an official, paid or corporate deal.',
-  intro: { title: 'Five quick steps', body: 'Do it all now, start to finish, and you are done for today.' },
+  intro: { title: 'Five quick steps', body: 'This takes about 20 minutes. Do it all now, start to finish, and you are done for today.' },
   items: { share: 'Share your news', experience: 'Add it to your LinkedIn Experience', phone: 'Add your phone number', mou: 'Sign the MOU', email: 'Email your Venn mentor' },
   card: { headline: 'I got accepted.', sub: (t) => `Venn x AWS ${t}` },
   letter: {
