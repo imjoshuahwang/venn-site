@@ -1,6 +1,10 @@
 // Batch 1 cohort decks (#190): AWS and Quadron, one idea per slide, written in code so a deck can end in a button that opens a prefilled email.
 // The company name appears as text only, never a logo; both cohorts are aligned with a company and never sponsored by it.
+import type { Slide } from '../scripts/portal/slides';
+
 export type DeckSlide = {
+  kicker?: string;
+  logo?: string | null;
   big: string;
   sub?: string;
   video?: { src: string; poster: string; label: string };
@@ -72,4 +76,9 @@ export function quadronDeck(w?: DeckWho): DeckSlide[] {
 /** The code deck for a cohort slug, or null so the row's own slides render. */
 export function deckFor(slug: unknown, w?: DeckWho): DeckSlide[] | null {
   return slug === 'aws' ? awsDeck(w) : slug === 'quadron' ? quadronDeck(w) : null;
+}
+
+/** A cohort row's own slides (title as the small label, body as the line) in the same shape as a code deck. */
+export function rowDeck(slides: Slide[]): DeckSlide[] {
+  return slides.map((s) => ({ kicker: s.title, big: s.body, logo: s.logo ?? null }));
 }

@@ -98,9 +98,9 @@ const slides: any[] = deckFor(cohort?.slug, { firstName }) ?? rowDeck(buildSlide
   @media (min-width: 640px) { .body { font-size: var(--fs-40); } .slide { padding: var(--sp-32) 0; } .sub { font-size: var(--fs-22); max-width: 36ch; } }
   .deck.flat { gap: 0; }
   .deck.flat .track { display: block; overflow: visible; }
-  .deck.flat .slide { width: 1600px; height: 900px; min-height: 0; padding: 0 160px; gap: var(--sp-24); break-after: page; }
-  .deck.flat .body { font-size: 56px; }
-  .deck.flat .sub { font-size: 28px; max-width: 28ch; }
+  .deck.flat .slide { width: 1600px; height: 900px; min-height: 0; padding: 0 calc(var(--sp-64) * 2.5); gap: var(--sp-24); break-after: page; }
+  .deck.flat .body { font-size: var(--fs-56); }
+  .deck.flat .sub { font-size: var(--fs-28); max-width: 28ch; }
   .deck.flat .poster { width: 568px; }
   @media (prefers-reduced-motion: reduce) { .track { scroll-behavior: auto; } .slide, .ctl, .dots i { transition: none; } }
 </style>
