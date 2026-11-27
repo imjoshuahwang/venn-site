@@ -400,3 +400,19 @@
     - sign-in contact+portal-member-1@joinvenn.org
     - goto /portal/team
     - expect-absent text=(you)
+- name: next-steps
+  on: /portal/login
+  steps:
+    - sign-in contact+portal-cohort-done@joinvenn.org
+    - goto /portal/next-steps
+    - expect-visible [data-step="1"]
+    - screenshot step1
+    - goto /portal/next-steps#step-2
+    - expect-visible [data-mailto]
+    - screenshot step2
+    - tap [data-mailto]
+    - expect-visible [data-sent]
+    - screenshot sent-row
+    - tap [data-sent-btn]
+    - expect-visible [data-done]
+    - screenshot done

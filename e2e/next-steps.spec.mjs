@@ -14,7 +14,7 @@ const admin = createClient(API, st.SERVICE_ROLE_KEY, { auth: { persistSession: f
 const PORT = 8228;
 const BASE = `http://127.0.0.1:${PORT}`;
 const PASSWORD = 'e2e-NextSteps-pass-1';
-const SHOTS = process.env.SHOTS || new URL('../.qa/228/', import.meta.url).pathname;
+const SHOTS = process.env.SHOTS || '/private/tmp/claude-501/-Users-joshuahwang-venn/e6b0f322-fd8a-4214-84a0-62e119cfb2b2/scratchpad/qa243/';
 mkdirSync(SHOTS, { recursive: true });
 const run = Date.now().toString(36);
 let server, browser, user, appId;
@@ -87,9 +87,45 @@ test('phone: step 1, next, type, send opens exact Gmail URL, back, hash', async 
   assert.equal(opened.length, 1);
   const e = encodeURIComponent;
   assert.equal(opened[0][0], `https://mail.google.com/mail/?view=cm&fs=1&to=contact%40joinvenn.org&cc=imjoshuahwang%40gmail.com&su=${e('Venn x AWS Fall Cohort 2026: hello from my organization')}&body=${e('We are A&B Club.\nEvent: hack night\nTimeline: March')}`);
+  // end state after Send
+  await page.waitForSelector('[data-done]:not([hidden])');
+  assert.equal(await page.locator('[data-done] h2').innerText(), "You're in");
+  assert.equal(await page.locator('[data-tick]').count(), 2);
+  assert.match(await page.locator('[data-done]').innerText(), /WhatsApp/);
+  assert.match(await page.locator('[data-count]').innerText(), /All done/);
+  assert.equal(await page.locator('[data-step="2"]').isVisible(), false);
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+  await page.screenshot({ path: `${SHOTS}done-390.png`, fullPage: true, scale: 'css' });
+  await page.goBack();
+  await page.waitForSelector('[data-step="2"]:not([hidden])');
+  assert.match(await page.locator('[data-count]').innerText(), /Step 2 of 2/);
   await page.click('[data-go="1"]');
   await page.waitForSelector('[data-step="1"]:not([hidden])');
   assert.match(await page.locator('[data-count]').innerText(), /Step 1 of 2/);
+});
+
+test('phone: mailto fallback carries the same to, cc, body; I sent it ends on Venn', async () => {
+  const page = await openPage(mobile());
+  await page.click('[data-go="2"]');
+  await page.waitForSelector('[data-step="2"]:not([hidden])');
+  await page.locator('#ns-body').fill('We are A&B Club.\nEvent: hack night');
+  assert.equal(await page.locator('[data-sent]').isVisible(), false);
+  await page.locator('[data-mailto]').evaluate((a) => a.addEventListener('click', (e) => e.preventDefault()));
+  await page.click('[data-mailto]');
+  const href = await page.getAttribute('[data-mailto]', 'href');
+  await page.click('[data-send]');
+  const g = new URL((await page.evaluate(() => window.__opened))[0][0]);
+  const m = new URL(href);
+  assert.equal(m.pathname, g.searchParams.get('to'));
+  assert.equal(m.searchParams.get('cc'), g.searchParams.get('cc'));
+  assert.equal(m.searchParams.get('subject'), g.searchParams.get('su'));
+  assert.equal(m.searchParams.get('body'), g.searchParams.get('body'));
+  await page.goBack();
+  await page.waitForSelector('[data-sent]:not([hidden])');
+  await page.screenshot({ path: `${SHOTS}mailto-390.png`, fullPage: true, scale: 'css' });
+  await page.click('[data-sent-btn]');
+  await page.waitForSelector('[data-done]:not([hidden])');
+  assert.equal(await page.locator('[data-done] h2').innerText(), "You're in");
 });
 
 test('desktop 1280: progress sits left of the step on the same row', async () => {
