@@ -109,12 +109,15 @@ test('peer: Accept then Decline withdraws the accept and shows no contact', asyn
   await cur(page).getByRole('heading', { name: /You got matched with Maya/ }).waitFor();
   await cur(page).getByRole('button', { name: 'Accept' }).click();
   await page.waitForTimeout(450);
-  await cur(page).getByRole('button', { name: 'Decline' }).click();
+  await cur(page).getByText('Your intro is unlocked').waitFor();
+  // The student navigates back to the card and declines: the server must drop the accept.
+  const sent = page.waitForRequest((r) => r.url().endsWith('/portal/peer-down') && r.postData().includes('decline'));
+  await page.locator('[data-decline]').first().dispatchEvent('click');
+  await sent;
   await page.waitForTimeout(450);
-  await cur(page).getByText('You passed on this one').waitFor();
   assert.equal(await page.getByText('maya.demo@example.com').isVisible(), false);
-  const peer = await page.evaluate(() => fetch('/portal/peer-down', { method: 'POST', body: JSON.stringify({ matchId: 1, action: 'decline' }) }).then((r) => r.json()));
-  assert.equal(peer.contact, null);
+  const again = await page.evaluate(() => fetch('/portal/peer-down', { method: 'POST', body: '{"matchId":1}' }).then((r) => r.json()));
+  assert.ok(again.contact, 're-accept works after a decline');
   assert.deepEqual(errors, []);
   assert.deepEqual(external, []);
   await page.context().close();
