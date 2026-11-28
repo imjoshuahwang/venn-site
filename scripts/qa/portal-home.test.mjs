@@ -49,5 +49,5 @@ test('post-reveal home: partner name as text (no logo until #241), next step lin
   assert.match(s, /href="\/portal\?replay=1"[^>]*data-watch-again/);
   assert.doesNotMatch(s, /<img/);
   const c = read('src/components/portal/Ceremony.astro');
-  assert.match(c, /if \(replay\) return;/);
+  assert.match(c, /if \(cfg\.replay\) return;/);
 });

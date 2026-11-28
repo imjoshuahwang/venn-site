@@ -46,7 +46,7 @@ async function run(partner, reducedMotion, tag) {
   if (reducedMotion === 'reduce') {
     // Dim and pauses stay as crossfades, so the popup follows within the pauses; no typing, no confetti.
     await page.locator('[data-popup]').waitFor({ state: 'visible', timeout: 15000 });
-    assert.equal(await page.locator('[data-confetti]').count(), 0, 'no confetti under reduced motion');
+    assert.equal(await page.locator('canvas[data-celebrate]').count(), 0, 'no confetti under reduced motion');
   } else {
     await page.waitForFunction(() => document.querySelector('[data-typed]').textContent.length > 20);
     await shot(page, `${tag}-2-typing`);
@@ -57,7 +57,7 @@ async function run(partner, reducedMotion, tag) {
     await noOverflow(page, 'stood');
     await page.locator('[data-popup]').waitFor({ state: 'visible', timeout: 15000 });
     await page.waitForTimeout(500);
-    assert.ok((await page.locator('[data-confetti]').count()) > 0, 'confetti falls');
+    assert.ok((await page.locator('canvas[data-celebrate]').count()) > 0, 'confetti falls');
   }
   const took = await page.evaluate((t) => window.__popupAt - t, t0);
   assert.ok(took < 9000, `Play to popup took ${Math.round(took)}ms`);
