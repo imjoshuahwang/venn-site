@@ -79,6 +79,12 @@ export async function peerDown(supabase: Pick<SupabaseClient, 'rpc'>, matchId: n
   return { name: r.partner_name ?? undefined, email: r.partner_email };
 }
 
+/** Withdraws this student's "down": the server then returns no partner email to either side. */
+export async function peerPass(supabase: Pick<SupabaseClient, 'rpc'>, matchId: number): Promise<void> {
+  const { error } = await supabase.rpc('peer_pass', { p_match_id: matchId });
+  if (error) throw error;
+}
+
 /** One in-flight call at a time: a second tap while sending shares the first call; a failure clears it so retry works. */
 export function createPeerDownOnce<T>(send: () => Promise<T>): () => Promise<T> {
   let inflight: Promise<T> | null = null;

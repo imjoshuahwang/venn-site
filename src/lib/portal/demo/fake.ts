@@ -18,7 +18,13 @@ const store = (): Map<string, DemoState> => (g.__vennDemo ??= new Map());
 const now = () => new Date().toISOString();
 export const newDemoId = (): string => `demo-${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`;
 
-const LETTER = (o: string) => `Dear Applicant,\n\nThank you for applying this Season. This is the demo letter for ${o}.\n\nThe Venn team`;
+const LETTERS: Record<string, string> = {
+  peer: 'Dear Maya,\n\nWe had far more applicants than seats this season, and we could not fit everyone into a cohort. We did not want you to build alone, so we matched you with one other builder whose work fits yours. Say hello when you are ready.\n\nWarmly,\nThe Venn team',
+  network_waitlist: 'Dear Maya,\n\nYour application was strong, and the Network is open to waitlisted Applicants first. You are on the list, and we will write as each Program opens. Thank you for your patience.\n\nWarmly,\nThe Venn team',
+  track_waitlist: 'Dear Maya,\n\nYou were one of our closest calls. If a Cohort seat goes unclaimed after 5 days, runners-up like you get the first look, and we will write the moment one opens.\n\nWarmly,\nThe Venn team',
+  not_this_season: 'Dear Maya,\n\nWe read your application closely, and we are sorry to say it is a no for this season. That says more about how few seats we have than about your work. We would be glad to see you apply again.\n\nWarmly,\nThe Venn team',
+};
+const LETTER = (o: string) => LETTERS[o] ?? 'Dear Applicant,\n\nThank you for applying this Season.\n\nThe Venn team';
 
 export function seedDemo(outcome: DemoOutcome, opts: { minor: boolean }, id = newDemoId()): DemoState {
   const slug: 'aws' | 'quadron' = outcome === 'cohort-quadron' ? 'quadron' : 'aws';
@@ -60,6 +66,7 @@ function teamRows(s: DemoState) {
 function rpc(s: DemoState, name: string, a: Record<string, any> = {}) {
   switch (name) {
     case 'get_my_peer': return ok(s.result.outcome === 'peer' ? [peerRow(s)] : []);
+    case 'peer_pass': s.peer.i_am_down = false; s.peer.they_are_down = false; return ok();
     case 'peer_down': s.peer.i_am_down = true; s.peer.they_are_down = true; return ok([peerRow(s)]);
     case 'mark_viewed': s.result.viewed_at ??= now(); return ok(s.result.viewed_at);
     case 'finish_ceremony': s.result.ceremony_done_at ??= now(); return ok(s.result.ceremony_done_at);

@@ -1,78 +1,77 @@
 ---
+import '../results/outcome.css';
 import { PEER_COPY } from '../../../data/portal-peer';
+import SlideDeck from '../slides/SlideDeck.astro';
+import Slide from '../slides/Slide.astro';
 import ResultState from './ResultState.astro';
 const { view, endpoint = '/portal/peer-down' } = Astro.props as { view: any; endpoint?: string };
 const views = ([] as any[]).concat(view ?? []).filter((v) => v?.card?.firstName); // one partner, or two in a triad
 ---
 {views.length === 0 ? <ResultState state="empty" /> : (
-  <article class="peer" data-peer-page>
-    <h1>{PEER_COPY.heading}</h1>
-    <p class="lede">{views.length > 1 ? PEER_COPY.notInTwo : PEER_COPY.notIn}</p>
-    {views.map((v) => (
-      <div class="partner" data-peer data-match={v.matchId} data-endpoint={endpoint} data-stage={v.stage}>
-        <section class="card">
+  <SlideDeck label="Your result">
+    <Slide title="Not this cohort, but not alone." lead={views.length > 1 ? PEER_COPY.notInTwo : PEER_COPY.notIn} cta="Meet them" />
+    {views.map((v, i) => (
+      <Slide title={`You got matched with ${v.card.firstName}.`} lead="I think you would be awesome together. Want to meet?" cta="" data-peer-slide>
+        <div class="person" data-peer data-match={v.matchId} data-endpoint={endpoint} data-stage={v.stage} data-i={i}>
           <h2>{v.card.firstName}</h2>
-          <p class="project">{v.card.project}</p>
-          <p class="place">{v.card.place}</p>
-          {v.card.why && <p class="whyLabel">{PEER_COPY.whyLabel}</p>}
-          <p class="why">{v.card.why}</p>
-        </section>
-        <div class="slot">
-          <button class="pill" type="button" data-down hidden={v.stage !== 'none'}>{PEER_COPY.pill}</button>
-          <p class="status" data-waiting hidden={v.stage !== 'waiting'}>{PEER_COPY.waiting}</p>
-          <p class="status" role="alert" data-retry hidden>{PEER_COPY.retry}</p>
-          <div class="both" data-both hidden={v.stage !== 'both'}>
-            <p class="status">{PEER_COPY.both}</p>
+          <p>{[v.card.project, v.card.place].filter(Boolean).join(', ')}</p>
+          {v.card.why && <p class="why">{v.card.why}</p>}
+        </div>
+        <div class="actions">
+          <button class="btn" type="button" data-next data-accept data-for={i}>Accept</button>
+          <button class="btn btn-ghost" type="button" data-next data-decline data-for={i}>Decline</button>
+        </div>
+      </Slide>
+    ))}
+    <Slide title="Here is where you stand." cta="">
+      {views.map((v, i) => (
+        <div class="person" data-result data-for={i} data-stage={v.stage}>
+          <h2>{v.card.firstName}</h2>
+          <p data-waiting hidden={v.stage !== 'waiting'}>{PEER_COPY.waiting}</p>
+          <p data-declined hidden>You passed on this one, and that is completely fine. We will not mention it to them.</p>
+          <p data-retry role="alert" hidden>{PEER_COPY.retry}</p>
+          <div data-both hidden={v.stage !== 'both'}>
+            <p class="why">You both said yes. Your intro is unlocked.</p>
+            <p data-contact></p>
           </div>
         </div>
+      ))}
+      <div class="actions">
+        <a class="btn" href="/portal/next-steps">See what to do next</a>
+        <a class="btn btn-ghost" href="/portal">Back to your home</a>
       </div>
-    ))}
-    <p class="lede">{PEER_COPY.relay}</p>
-  </article>
+    </Slide>
+  </SlideDeck>
 )}
 <script>
+  const show = (box: HTMLElement, stage: 'waiting' | 'declined' | 'both' | 'none') => {
+    box.dataset.stage = stage;
+    (['waiting', 'declined', 'both'] as const).forEach((k) => { box.querySelector<HTMLElement>(`[data-${k}]`)!.hidden = stage !== k; });
+  };
   document.querySelectorAll<HTMLElement>('[data-peer]').forEach((root) => {
-    const q = <T extends HTMLElement>(s: string) => root.querySelector<T>(s)!;
-    const btn = q<HTMLButtonElement>('[data-down]');
-    let inflight = false;
-    const show = (stage: 'none' | 'waiting' | 'both') => {
-      root.dataset.stage = stage;
-      btn.hidden = stage !== 'none';
-      q('[data-waiting]').hidden = stage !== 'waiting';
-      q('[data-both]').hidden = stage !== 'both';
-    };
-    btn.addEventListener('click', () => {
-      if (inflight) return;
-      inflight = true;
-      q('[data-retry]').hidden = true;
-      show('waiting');
+    const i = root.dataset.i!;
+    const box = document.querySelector<HTMLElement>(`[data-result][data-for="${i}"]`)!;
+    const slide = root.closest('[data-slide]')!;
+    if (box.dataset.stage === 'both') show(box, 'both');
+    slide.querySelector('[data-decline]')!.addEventListener('click', () => {
+      show(box, 'declined');
+      // Withdraw any earlier accept on the server, so no contact is ever released after a decline.
+      fetch(root.dataset.endpoint!, { method: 'POST', body: `{"matchId":${Number(root.dataset.match)},"action":"decline"}` }).catch(() => {});
+    });
+    slide.querySelector('[data-accept]')!.addEventListener('click', () => {
+      if (box.dataset.stage === 'both') return;
+      box.querySelector<HTMLElement>('[data-retry]')!.hidden = true;
+      show(box, 'waiting');
       fetch(root.dataset.endpoint!, { method: 'POST', body: `{"matchId":${Number(root.dataset.match)}}` })
         .then(async (r) => {
           if (!r.ok) throw new Error(String(r.status)); // 401 and 5xx share the retry state
           const { contact } = await r.json();
-          if (contact?.email || contact?.name) show('both'); // the contact is never rendered; Josh starts the group
+          if (contact?.email || contact?.name) {
+            box.querySelector('[data-contact]')!.textContent = [contact.name, contact.email].filter(Boolean).join(', ');
+            show(box, 'both');
+          }
         })
-        .catch(() => { show('none'); q('[data-retry]').hidden = false; })
-        .finally(() => { inflight = false; });
+        .catch(() => { show(box, 'none'); box.querySelector<HTMLElement>('[data-retry]')!.hidden = false; });
     });
   });
 </script>
-<style>
-  .partner { display: grid; gap: var(--sp-24); width: 100%; }
-  .peer { display: grid; gap: var(--sp-24); justify-items: start; animation: rise var(--dur-3) var(--ease) both; }
-  h1 { margin: 0; font-size: var(--fs-28); font-weight: var(--fw-800); letter-spacing: var(--track-tight); line-height: 1.15; }
-  h2 { margin: 0; font-size: var(--fs-22); font-weight: var(--fw-800); }
-  .card { width: 100%; display: grid; gap: var(--sp-8); padding: var(--sp-24); border: 1px solid var(--line); border-radius: var(--r-20); background: var(--panel); }
-  .card p { margin: 0; }
-  .project { font-size: var(--fs-17); }
-  .place { font-size: var(--fs-15); color: var(--muted); }
-  .lede { margin: 0; font-size: var(--fs-17); color: var(--body); }
-  .whyLabel { margin-top: var(--sp-8); font-size: var(--fs-13); font-weight: var(--fw-600); color: var(--muted); }
-  .why { font-size: var(--fs-15); color: var(--body); }
-  .slot { display: grid; gap: var(--sp-12); justify-items: start; width: 100%; }
-  .slot [hidden] { display: none; }
-  .status { margin: 0; font-size: var(--fs-17); font-weight: var(--fw-600); animation: rise var(--dur-2) var(--ease) both; }
-  button.pill { border: 0; cursor: pointer; font-family: inherit; min-height: 44px; }
-  @keyframes rise { from { opacity: 0; } }
-  @media (prefers-reduced-motion: reduce) { .peer, .status { animation: none; } }
-</style>

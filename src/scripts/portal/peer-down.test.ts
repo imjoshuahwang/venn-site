@@ -13,3 +13,12 @@ test('no session user is 401 with no body', async () => {
 test('signed in with a bad matchId is 400', async () => {
   assert.equal((await call({ user: { id: 'u' } }, '{}')).status, 400);
 });
+
+test('decline action calls peer_pass, never peer_down, and returns no contact', async () => {
+  const calls: string[] = [];
+  const supabase = { rpc: async (name: string) => { calls.push(name); return { data: null, error: null }; } };
+  const res = await call({ user: { id: 'u' }, supabase }, '{"matchId":1,"action":"decline"}');
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), { contact: null });
+  assert.deepEqual(calls, ['peer_pass']);
+});

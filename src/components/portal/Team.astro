@@ -1,13 +1,17 @@
 ---
 // Team section: co-founders with state words, an add form for the lead, and visible empty and error states.
 // Plain server-posted forms; the button flips to a working state on submit.
+import SlideDeck from './slides/SlideDeck.astro';
+import Slide from './slides/Slide.astro';
+import '../portal/results/outcome.css';
 import { type TeamViewModel } from '../../lib/portal/team';
 interface Props { view: TeamViewModel | null; error?: string; notice?: string; failed?: boolean }
 const { view, error = '', notice = '', failed = false } = Astro.props;
 const msg = failed ? 'We could not load your team. Reload to try again.' : error;
 ---
-<section class="team">
-  <h1>Your team</h1>
+<SlideDeck label="Your team">
+<Slide title="Your team." cta="">
+<div class="team">
   <p class:list={['status', { err: !!msg }]} role={msg ? 'alert' : 'status'} hidden={!msg && !notice}>{msg || notice}</p>
   {view && view.members.length > 0 && (
     <ul class="list">
@@ -28,13 +32,16 @@ const msg = failed ? 'We could not load your team. Reload to try again.' : error
   {view && view.canAdd && (
     <form method="post" action="/portal/team/add" class="add">
       <label>Co-founder email<input name="email" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" required maxlength="320"></label>
-      <button class="pill" type="submit" data-working="Adding...">Add co-founder</button>
+      <button class="btn" type="submit" data-working="Adding...">Add co-founder</button>
     </form>
   )}
-  <a class="back" href="/portal">Back to your result</a>
-</section>
+  <div class="actions"><a class="btn btn-ghost" href="/portal">Back to your home</a></div>
+</div>
+</Slide>
+</SlideDeck>
 <script>
   document.querySelectorAll<HTMLFormElement>('.team form').forEach((f) => {
+    f.addEventListener('keydown', (e) => e.stopPropagation()); // the deck's Enter-to-advance must not swallow a form submit
     f.addEventListener('submit', () => {
       const b = f.querySelector<HTMLButtonElement>('button[type=submit]');
       if (b && f.checkValidity()) { b.textContent = b.dataset.working || 'Working...'; b.setAttribute('aria-busy', 'true'); setTimeout(() => (b.disabled = true), 0); }
@@ -43,7 +50,6 @@ const msg = failed ? 'We could not load your team. Reload to try again.' : error
 </script>
 <style>
   .team { display: grid; gap: 16px; }
-  h1 { font-size: clamp(1.75rem, 7vw, 2.25rem); letter-spacing: -.035em; line-height: 1.1; margin: 0; }
   .status { font-size: 16px; line-height: 1.45; padding: 12px 14px; border-radius: 14px; background: var(--panel); margin: 0; overflow-wrap: anywhere; }
   .status[hidden] { display: none; }
   .status.err { background: var(--panel); color: var(--err); }
@@ -57,6 +63,4 @@ const msg = failed ? 'We could not load your team. Reload to try again.' : error
   label { display: grid; gap: 6px; font-size: 15px; font-weight: 500; }
   input:not([type=hidden]) { font: 17px/1.5 var(--font); min-height: 52px; -webkit-appearance: none; appearance: none; border: 0; box-shadow: inset 0 0 0 1px var(--line); border-radius: 14px; padding: 14px 16px; width: 100%; background: #fff; }
   input:focus { outline: none; box-shadow: inset 0 0 0 2px #000; }
-  .add .pill { border: 0; cursor: pointer; font-family: inherit; }
-  .back { display: inline-flex; align-items: center; min-height: 44px; color: var(--muted); font-size: 15px; }
 </style>

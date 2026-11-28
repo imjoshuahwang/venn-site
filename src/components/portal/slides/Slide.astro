@@ -1,9 +1,9 @@
 ---
 // Props: title, lead, cta (empty hides the button), ghost, error (server message shown on arrival). Slot `more` = links under the button.
 // One full-bleed screen of a SlideDeck. Children (inputs, copy) go in the default slot; the Continue button is added here.
-const { title, lead = '', cta = 'Continue', ghost = false, error = '' } = Astro.props;
+const { title, lead = '', cta = 'Continue', ghost = false, error = '', ...rest } = Astro.props;
 ---
-<section class="slide" data-slide aria-label={title}>
+<section class="slide" data-slide aria-label={title} {...rest}>
   <div class="inner">
     <h1 style="--i:0">{title}</h1>
     {lead && <p class="lead" style="--i:1">{lead}</p>}

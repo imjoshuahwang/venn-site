@@ -1,6 +1,9 @@
 ---
 export const prerender = false;
 import Portal from '../../layouts/Portal.astro';
+import '../../components/portal/results/outcome.css';
+import SlideDeck from '../../components/portal/slides/SlideDeck.astro';
+import Slide from '../../components/portal/slides/Slide.astro';
 import Ceremony from '../../components/portal/Ceremony.astro';
 import { getCeremonyData, stubMode } from '../../lib/portal/ceremony-data';
 import { initialScreen } from '../../lib/portal/ceremony.mjs';
@@ -35,30 +38,23 @@ const failed = ceremony.status === 'error' || consentFailed;
 const hasMatchLink = !stub && !inCeremony && !failed && !none && await getMyMatch(Astro.locals.supabase).then((m) => !!m?.status && ['approved', 'revealed', 'requested', 'accepted'].includes(m.status), () => false);
 ---
 <Portal title="Your Venn home">
-  {inCeremony ? <Ceremony result={replay ? { ...ceremony.result, viewedAt: ceremony.result.viewedAt ?? ceremony.result.doneAt } : ceremony.result} setup={setup} replay={replay} /> : failed ? <><section class="home" data-error><h1 role="alert">We could not load this page</h1><form method="get" action="/portal"><button class="pill" type="submit" data-retry>Try again</button></form></section></> : none ? (
-    <section class="home" data-none>
-      <h1>We could not find a result for {email}</h1>
-      <form method="post" action="/portal/logout"><button class="pill" type="submit">Sign in with a different email</button></form>
-      <p class="help">Questions? Write to <span class="nw"><a href="mailto:contact@joinvenn.org">contact@joinvenn.org</a>.</span></p>
-    </section>
+  {inCeremony ? <Ceremony result={replay ? { ...ceremony.result, viewedAt: ceremony.result.viewedAt ?? ceremony.result.doneAt } : ceremony.result} setup={setup} replay={replay} /> : failed ? (
+    <SlideDeck label="Home"><Slide title="We could not load this page." lead="That one is on us. Give it another go in a moment." cta=""><form method="get" action="/portal"><button class="btn" type="submit" data-retry>Try again</button></form></Slide></SlideDeck>
+  ) : none ? (
+    <SlideDeck label="Home"><Slide title="We could not find a result for you." lead={`Nothing turned up for ${email}. If you applied with another address, sign in with that one.`} cta="">
+      <div class="actions"><form method="post" action="/portal/logout"><button class="btn" type="submit">Sign in with a different email</button></form><a class="btn btn-ghost" href="mailto:contact@joinvenn.org">Write to contact@joinvenn.org</a></div>
+    </Slide></SlideDeck>
   ) : (
-    <section class="home" data-home>
-      {ceremony.status === 'ok' && ceremony.result.cohortName && <p class="cohort" data-cohort-name>{ceremony.result.cohortName}</p>}
-      <h1>Your results are here</h1>
-      <a class="pill" href="/portal/result">View your results</a>
-      {hasMatchLink && <a class="pill" href="/portal/match" data-match-link>Your match</a>}
-      {ceremony.status === 'ok' && ceremony.result.outcome === 'cohort' && <a class="pill ghost" href="/portal/next-steps" data-next-step>Next: {nextStepsFor(null).steps[0]}</a>}
-      {ceremony.status === 'ok' && <a class="pill ghost" href="/portal?replay=1" data-watch-again>Watch again</a>}
-      <a class="pill ghost" href="/portal/consent">Review consent</a>
-    </section>
+    <SlideDeck label="Home" data-home>
+      <Slide title="Your results are here." lead={ceremony.status === 'ok' && ceremony.result.cohortName ? ceremony.result.cohortName : 'Read your letter, then see what comes next.'} cta="">
+        <div class="actions" data-home>
+          <a class="btn" href="/portal/result">View your results</a>
+          {hasMatchLink && <a class="btn btn-ghost" href="/portal/match" data-match-link>Your match</a>}
+          <a class="btn btn-ghost" href="/portal/next-steps" data-next-step>Next: {ceremony.status === 'ok' && ceremony.result.outcome === 'cohort' ? nextStepsFor(null).steps[0] : 'what to do from here'}</a>
+          {ceremony.status === 'ok' && <a class="btn btn-ghost" href="/portal?replay=1" data-watch-again>Watch again</a>}
+          <a class="btn btn-ghost" href="/portal/consent">Review consent</a>
+        </div>
+      </Slide>
+    </SlideDeck>
   )}
 </Portal>
-<style>
-  .home { display: grid; gap: var(--sp-24); justify-items: start; }
-  .home h1 { margin: 0; font-size: var(--fs-28); font-weight: var(--fw-800); letter-spacing: var(--track-tight); line-height: 1.15; }
-  .cohort { margin: 0; font-size: var(--fs-15); font-weight: var(--fw-800); color: var(--muted); }
-  .home .pill.ghost:last-child { margin-top: var(--sp-16); }
-  .nw { white-space: nowrap; }
-  .help { margin: 0; font-size: var(--fs-15); color: var(--muted); }
-  .help a { display: inline-flex; align-items: center; min-height: 44px; color: inherit; text-underline-offset: 3px; }
-</style>

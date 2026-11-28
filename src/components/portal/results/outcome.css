@@ -1,0 +1,12 @@
+/* Shared by the non-cohort result slides and the home/next-steps decks (#323). Tokens only. */
+.deck .letter { margin: 0; white-space: pre-line; font-size: var(--fs-17); line-height: 1.55; color: var(--ink); max-height: 46vh; overflow-y: auto; }
+.deck .list { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--sp-12); font-size: var(--fs-17); color: var(--ink); }
+.deck .list li { padding-left: var(--sp-24); position: relative; }
+.deck .list li::before { content: ''; position: absolute; left: 0; top: .6em; width: 8px; height: 8px; border-radius: var(--r-pill); background: var(--green); }
+.deck .actions { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-12); }
+.deck .actions .btn { text-decoration: none; }
+.deck .person { margin: 0; padding: var(--sp-24); width: 100%; border: 1px solid var(--line); border-radius: var(--r-20); background: var(--panel); display: grid; gap: var(--sp-8); }
+.deck .person h2 { margin: 0; font-size: var(--fs-28); font-weight: var(--fw-800); letter-spacing: var(--track-tight); }
+.deck .person p { margin: 0; color: var(--muted); font-size: var(--fs-15); }
+.deck .person .why { color: var(--ink); font-size: var(--fs-17); }
+.deck [hidden] { display: none !important; }

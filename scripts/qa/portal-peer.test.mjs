@@ -76,8 +76,11 @@ test('peer page renders applicant text as text and keeps tokens', () => {
   const s = read('src/components/portal/results/Peer.astro');
   assert.doesNotMatch(s, /set:html|innerHTML/);
   assert.doesNotMatch(s, /confetti/i);
-  assert.match(s, /min-height:\s*44px|class="pill/);
-  assert.match(s, /prefers-reduced-motion/);
+  assert.match(s, /class="btn"/); // the shared deck button carries the 44px tap target
+  assert.match(read('src/components/portal/slides/Slide.astro'), /prefers-reduced-motion|min-height: 44px/);
+  assert.match(read('src/components/portal/slides/SlideDeck.astro'), /prefers-reduced-motion/);
+  assert.match(read('src/styles/base.css'), /\.btn, \.pill \{[^}]*min-height: 44px/);
+  assert.match(s, /<Slide title=/);
   assert.doesNotMatch(s, /#[0-9a-f]{3,6}\b/i);
 });
 
