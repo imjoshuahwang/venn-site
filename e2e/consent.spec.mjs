@@ -75,8 +75,8 @@ async function login(page, email) {
   await page.click('button[type=submit]');
   await page.waitForURL('**/portal/ceremony');
 }
-const readAll = async (page) => { while (await page.locator('[data-next]').isVisible()) await page.click('[data-next]'); };
-const tick = (page, name) => page.locator(`label.clause:has(input[name=${name}])`).click();
+const readAll = async (page) => { while (await page.locator('[data-slide][data-pos="current"] [data-next]:not(:text("Yes, I understand"))').count()) await page.click('[data-next]'); };
+const tick = (page, name) => page.locator(`label.choice:has(input[name=${name}])`).click();
 const consentRows = async (id) => Object.fromEntries((await admin.from('consents').select('clause,accepted').eq('user_id', id)).data.map((r) => [r.clause, r.accepted]));
 
 async function checkLayout(page, label) {
@@ -103,20 +103,20 @@ for (const [slug, preset] of Object.entries(VIEWPORTS)) {
     await login(page, u.email);
     // Entry point 1: first visit to /portal lands in ceremony setup.
     assert.equal(new URL(page.url()).pathname, '/portal/ceremony');
-    await page.waitForSelector('form.consent');
-    assert.equal(await page.locator('[data-page]:visible').count(), 1);
+    await page.waitForSelector('[data-deck]');
+    assert.equal(await page.locator('[data-slide][data-pos="current"]').count(), 1);
     await shot(page, 'ceremony-consent-empty');
     await checkLayout(page, 'ceremony-consent-empty');
     await page.goto(`${BASE}/portal/consent`);
-    await page.waitForSelector('form.consent');
+    await page.waitForSelector('[data-deck]');
     await shot(page, 'consent-empty');
     await checkLayout(page, 'consent-empty');
     for (let i = 0; i < 3; i++) await page.click('[data-next]');
     await tick(page, 'highlights');
     await readAll(page);
-    assert.equal(await page.locator('[data-yes]').isVisible(), true);
+    assert.equal(await page.locator('[data-slide][data-pos="current"] [data-next]').isVisible(), true);
     await shot(page, 'consent-ready');
-    await page.click('[data-yes]');
+    await page.click('[data-slide][data-pos="current"] [data-next]');
     await page.waitForURL(`${BASE}/portal`);
     await shot(page, 'consent-done');
     assert.deepEqual(await consentRows(u.id), { coordinator_groups: true, highlights: false, full_name_photo: false, data_use: true, retention: true });
@@ -127,7 +127,7 @@ for (const [slug, preset] of Object.entries(VIEWPORTS)) {
     // Entry point 2: home links to /portal/consent, which shows the saved state.
     await page.click('a[href="/portal/consent"]');
     await page.waitForURL(`${BASE}/portal/consent`);
-    await page.waitForSelector('form.consent');
+    await page.waitForSelector('[data-deck]');
     for (let i = 0; i < 3; i++) await page.click('[data-next]');
     // The three required clauses are answered by the final Yes and have no box; only the two optional choices show saved state.
     for (const [n, on] of Object.entries({ highlights: false, full_name_photo: false })) {
@@ -146,7 +146,7 @@ for (const [slug, preset] of Object.entries(VIEWPORTS)) {
     const page = await ctx.newPage();
     await login(page, u.email);
     await readAll(page);
-    await page.click('[data-yes]');
+    await page.click('[data-slide][data-pos="current"] [data-next]');
     await page.waitForURL(`${BASE}/portal`);
     await page.waitForSelector('[data-home]'); // #225 removed the home parent form; co-sign is the /portal/parent link, covered below
     await shot(page, 'cosign');
@@ -163,11 +163,11 @@ for (const [slug, preset] of Object.entries(VIEWPORTS)) {
     for (const n of names) await tick(page, n);
     await readAll(page);
     await page.route('**/portal/consent', (r) => (r.request().method() === 'POST' ? r.abort() : r.continue()));
-    await page.click('[data-yes]');
+    await page.click('[data-slide][data-pos="current"] [data-next]');
     await page.locator('.err').waitFor({ state: 'visible' });
     assert.match(await page.locator('.err').innerText(), /did not save/);
     for (const n of names) assert.equal(await page.locator(`input[name=${n}]`).isChecked(), true);
-    assert.equal(await page.locator('[data-yes]').isDisabled(), false);
+    assert.equal(await page.locator('[data-slide][data-pos="current"] [data-next]').isDisabled(), false);
     await shot(page, 'consent-error');
     await checkLayout(page, 'consent-error');
     assert.deepEqual(await consentRows(u.id), {});
@@ -204,7 +204,7 @@ for (const [slug, preset] of Object.entries(VIEWPORTS)) {
     const page = await ctx.newPage();
     await login(page, u.email);
     await readAll(page);
-    await page.click('[data-yes]');
+    await page.click('[data-slide][data-pos="current"] [data-next]');
     await page.waitForURL(`${BASE}/portal`);
     await page.goto(`${BASE}/portal`);
     await page.waitForSelector('[data-home]');
@@ -237,7 +237,7 @@ for (const [slug, preset] of Object.entries(VIEWPORTS)) {
     const page = await ctx.newPage();
     await login(page, u.email);
     await readAll(page);
-    await page.click('[data-yes]');
+    await page.click('[data-slide][data-pos="current"] [data-next]');
     await page.waitForURL(`${BASE}/portal`);
     const to = `contact+portal-e2e-${run}-x-${slug}@joinvenn.org`;
     const first = (await admin.rpc('request_parent_consent', { p_user_id: u.id, p_parent_email: to })).data;
@@ -265,7 +265,7 @@ for (const [slug, preset] of Object.entries(VIEWPORTS)) {
     const page = await ctx.newPage();
     await login(page, u.email);
     await readAll(page);
-    await page.click('[data-yes]');
+    await page.click('[data-slide][data-pos="current"] [data-next]');
     await page.waitForURL(`${BASE}/portal`);
     assert.equal(await page.locator('form.parent-request').count(), 0);
     const res = await page.request.post(`${BASE}/portal/parent-request`, { form: { parent_email: 'p@example.org' }, headers: { origin: BASE } });

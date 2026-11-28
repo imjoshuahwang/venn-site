@@ -1,124 +1,48 @@
 ---
-// Consent v3 stepper. DRAFT pending Josh's lawyer: see src/data/consent.ts. Do not send to real students until signed off.
+// Consent v3 as slides, one idea per screen. DRAFT pending Josh's lawyer: see src/data/consent.ts. Do not send to real students until signed off.
 import { CONSENT_CLAUSES, CONSENT_DRAFT, CONSENT_PAGES, CONSENT_VERSION } from '../../data/consent';
+import SlideDeck from './slides/SlideDeck.astro';
+import Slide from './slides/Slide.astro';
 interface Props { answers?: Record<string, boolean>; minor?: boolean }
 const { answers = {}, minor = false } = Astro.props;
 const clause = Object.fromEntries(CONSENT_CLAUSES.map((c) => [c.key, c]));
 const checked = (name: string) => (name in answers ? answers[name] : clause[name].default);
-const last = CONSENT_PAGES.length - 1;
 ---
-<form class="consent" data-version={CONSENT_VERSION} data-minor={minor ? '1' : '0'} data-draft={CONSENT_DRAFT ? '1' : '0'} data-last={last} novalidate>
-  <div class="progress" role="group" aria-label="Progress">
-    <p class="count" data-count aria-live="polite">Page 1 of {CONSENT_PAGES.length}</p>
-    <div class="bar" aria-hidden="true"><i data-fill></i></div>
-  </div>
-  {CONSENT_PAGES.map((p, i) => (
-    <section class="page" data-page={i} aria-labelledby={`h-${p.id}`}>
-      <h1 id={`h-${p.id}`} tabindex="-1">{p.title}</h1>
-      <div class="plain">
-        <p class="tag">In plain words</p>
-        <p class="sum">{p.summary}</p>
-      </div>
-      <div class="full">
-        <p class="tag">The full text</p>
-        {p.body.map((t) => <p>{t}</p>)}
-        {(p.choices ?? []).map((n) => (
-          <label class="clause">
-            <input type="checkbox" name={n} checked={checked(n)}>
-            <span class="box" aria-hidden="true"></span>
-            <span class="copy"><strong>{clause[n].label}</strong><span>{clause[n].text}</span></span>
-          </label>
-        ))}
-      </div>
-    </section>
+<SlideDeck label="Consent">
+  <div data-consent data-version={CONSENT_VERSION} data-minor={minor ? '1' : '0'} data-draft={CONSENT_DRAFT ? '1' : '0'} hidden></div>
+  {CONSENT_PAGES.map((p) => (
+    <Slide title={p.title} lead={p.summary} cta="Got it">
+      {(p.choices ?? []).map((n) => (
+        <label class="choice tall">
+          <input type="checkbox" name={n} checked={checked(n)} />
+          <strong>{clause[n].label}</strong>
+          <span>{clause[n].text}</span>
+        </label>
+      ))}
+      <details class="full">
+        <summary>Read the full text</summary>
+        <div class="text">{p.body.map((t) => <p>{t}</p>)}</div>
+      </details>
+    </Slide>
   ))}
-  <p class="err" role="alert" hidden></p>
-  <div class="nav">
-    <button class="ghost" type="button" data-back hidden>Back</button>
-    <button class="pill" type="button" data-next>Next</button>
-    <button class="pill" type="submit" data-yes hidden>Yes, I understand</button>
-  </div>
-</form>
+  <Slide title="Does all of that sound fair?" lead="Saying yes means you have read it, or at least the plain version, and you agree to how Venn will run your season and look after what you tell us. You can come back and change your choices whenever you like." cta="Yes, I understand" />
+</SlideDeck>
 <script>
-  const form = document.querySelector<HTMLFormElement>('form.consent')!;
-  const pages = [...form.querySelectorAll<HTMLElement>('[data-page]')];
-  const last = Number(form.dataset.last);
-  const back = form.querySelector<HTMLButtonElement>('[data-back]')!;
-  const next = form.querySelector<HTMLButtonElement>('[data-next]')!;
-  const yes = form.querySelector<HTMLButtonElement>('[data-yes]')!;
-  const err = form.querySelector<HTMLElement>('.err')!;
-  const count = form.querySelector<HTMLElement>('[data-count]')!;
-  const fill = form.querySelector<HTMLElement>('[data-fill]')!;
-  const boxes = [...form.querySelectorAll<HTMLInputElement>('input[type=checkbox]')];
-  let at = 0;
-  const show = (i: number, focus = true) => {
-    at = Math.max(0, Math.min(last, i));
-    pages.forEach((p, n) => { p.hidden = n !== at; });
-    back.hidden = at === 0;
-    next.hidden = at === last;
-    yes.hidden = at !== last;
-    count.textContent = `Page ${at + 1} of ${last + 1}`;
-    fill.style.width = `${((at + 1) / (last + 1)) * 100}%`;
-    try { history.replaceState(null, '', `#page-${at + 1}`); } catch { /* the hash is a convenience only */ }
-    if (focus) { window.scrollTo(0, 0); pages[at].querySelector<HTMLElement>('h1')!.focus({ preventScroll: true }); }
-  };
-  form.classList.add('js');
-  const fromHash = Number(/^#page-(\d+)$/.exec(location.hash)?.[1]);
-  show(fromHash ? fromHash - 1 : 0, false);
-  next.addEventListener('click', () => show(at + 1));
-  back.addEventListener('click', () => show(at - 1));
-  form.addEventListener('submit', async (e) => {
+  const deck = document.querySelector<HTMLElement>('[data-deck]')!;
+  const meta = deck.querySelector<HTMLElement>('[data-consent]')!;
+  const boxes = [...deck.querySelectorAll<HTMLInputElement>('input[type=checkbox]')];
+  const last = deck.querySelectorAll('[data-slide]').length - 1;
+  deck.addEventListener('deck:before', async (e) => {
+    if (Number(deck.dataset.index) !== last) return;
     e.preventDefault();
-    if (at !== last) return;
-    err.hidden = true;
-    yes.disabled = back.disabled = true;
-    yes.textContent = 'Saving...';
-    boxes.forEach((b) => (b.disabled = true));
-    // The single "Yes, I understand" answers the three required clauses; the optional ones are the choices on the data page.
+    const btn = deck.querySelectorAll<HTMLButtonElement>('[data-next]')[last];
+    const err = deck.querySelectorAll<HTMLElement>('[data-err]')[last];
+    btn.disabled = true; err.textContent = '';
+    // The single yes answers the three required clauses; the optional ones are the choices on the data page.
     const clauses = { coordinator_groups: true, data_use: true, retention: true, ...Object.fromEntries(boxes.map((b) => [b.name, b.checked])) };
-    const res = await fetch('/portal/consent', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ version: form.dataset.version, clauses }),
-    }).catch(() => null);
-    if (res && res.ok) { location.assign(form.dataset.minor === '1' ? '/portal/cosign' : '/portal'); return; }
+    const res = await fetch('/portal/consent', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ version: meta.dataset.version, clauses }) }).catch(() => null);
+    if (res && res.ok) { location.assign(meta.dataset.minor === '1' ? '/portal/cosign' : '/portal'); return; }
+    btn.disabled = false;
     err.textContent = 'That did not save. Check your connection and try again.';
-    err.hidden = false;
-    yes.textContent = 'Yes, I understand';
-    yes.disabled = back.disabled = false;
-    boxes.forEach((b) => (b.disabled = false));
   });
 </script>
-<style>
-  .consent { display: grid; gap: var(--sp-16); }
-  .progress { display: grid; gap: var(--sp-8); }
-  .count { margin: 0; font-size: var(--fs-13); font-weight: var(--fw-600); color: var(--muted); }
-  .bar { height: 6px; border-radius: var(--r-pill); background: var(--line); overflow: hidden; }
-  .bar i { display: block; height: 100%; width: 0; border-radius: var(--r-pill); background: var(--ink); transition: width var(--dur-2) var(--ease); }
-  .page { display: grid; gap: var(--sp-16); }
-  .page[hidden] { display: none; }
-  h1 { font-size: var(--fs-28); font-weight: var(--fw-800); letter-spacing: var(--track-tight); line-height: 1.2; margin: var(--sp-8) 0 0; overflow-wrap: anywhere; }
-  h1:focus { outline: none; }
-  .tag { margin: 0; font-size: var(--fs-13); font-weight: var(--fw-600); color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
-  .plain { display: grid; gap: var(--sp-4); padding: var(--sp-16); border-radius: var(--r-20); background: var(--panel); box-shadow: inset 0 0 0 2px var(--ink); }
-  .sum { margin: 0; font-size: var(--fs-17); font-weight: var(--fw-600); line-height: 1.4; color: var(--ink); overflow-wrap: anywhere; }
-  .full { display: grid; gap: var(--sp-12); }
-  .full p:not(.tag) { margin: 0; font-size: var(--fs-15); line-height: 1.55; color: var(--body); overflow-wrap: anywhere; }
-  .clause { position: relative; display: grid; grid-template-columns: 44px 1fr; align-items: start; min-height: 44px; gap: var(--sp-8); padding: var(--sp-12); border-radius: var(--r-20); background: var(--panel); cursor: pointer; }
-  .clause input { position: absolute; left: var(--sp-12); top: var(--sp-12); opacity: 0; width: 44px; height: 44px; margin: 0; }
-  .box { width: 28px; height: 28px; margin: var(--sp-8); border-radius: var(--r-12); box-shadow: inset 0 0 0 2px var(--ink); background: var(--white); position: relative; flex: none; }
-  input:checked + .box { background: var(--ink); }
-  input:checked + .box::after { content: ''; position: absolute; left: 9px; top: 4px; width: 7px; height: 13px; border: solid var(--white); border-width: 0 3px 3px 0; transform: rotate(45deg); }
-  input:focus-visible + .box { outline: 3px solid var(--ink); outline-offset: var(--sp-4); }
-  .copy { display: grid; gap: var(--sp-4); font-size: var(--fs-15); color: var(--body); line-height: 1.45; padding-top: var(--sp-8); min-width: 0; overflow-wrap: anywhere; }
-  .copy strong { color: var(--ink); font-size: var(--fs-17); }
-  .err { margin: 0; padding: var(--sp-12); border-radius: var(--r-12); background: var(--white); color: var(--ink); box-shadow: inset 0 0 0 2px var(--ink); font-size: var(--fs-15); font-weight: var(--fw-600); }
-  .err[hidden] { display: none; }
-  .nav { display: none; gap: var(--sp-12); margin-top: var(--sp-8); }
-  .js .nav { display: flex; }
-  .nav .pill { flex: 1; border: 0; min-height: 52px; cursor: pointer; font-family: inherit; }
-  .nav .pill[hidden], .nav .ghost[hidden] { display: none; }
-  .pill:disabled, .ghost:disabled { opacity: .4; cursor: default; }
-  .ghost { min-height: 52px; min-width: 88px; padding: 0 var(--sp-24); border: 0; border-radius: var(--r-pill); background: var(--panel); box-shadow: inset 0 0 0 2px var(--ink); color: var(--ink); font-family: inherit; font-size: var(--fs-15); font-weight: var(--fw-600); cursor: pointer; }
-  @media (prefers-reduced-motion: reduce) { .bar i { transition: none; } }
-</style>
