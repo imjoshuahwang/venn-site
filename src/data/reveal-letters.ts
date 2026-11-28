@@ -5,7 +5,7 @@ export type LetterCtx = { seatCap?: number | null };
 
 export const VENN_CONTACT = 'contact@joinvenn.org';
 /** Read from PUBLIC_QUADRON_CONTACT_EMAIL so no real address lives in this public repo (#322). Never shown as text; only the Email Dan action points at it. */
-export const DAN_EMAIL_FALLBACK = 'dan@example.com';
+const DAN_EMAIL_FALLBACK = 'dan@example.com';
 export const DAN_EMAIL: string = (import.meta as { env?: Record<string, string | undefined> }).env?.PUBLIC_QUADRON_CONTACT_EMAIL || DAN_EMAIL_FALLBACK;
 
 const NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
