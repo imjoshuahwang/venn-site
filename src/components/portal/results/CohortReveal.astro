@@ -28,6 +28,7 @@ const title = popupTitle(partner);
   </div>
 </div>
 <script>
+  import { celebrationPlan, runCelebration } from '../../../lib/portal/celebrate';
   const root = document.querySelector<HTMLElement>('[data-cohort-reveal]');
   if (root) {
     const $ = <T extends HTMLElement>(s: string) => root.querySelector<T>(s)!;
@@ -66,25 +67,17 @@ const title = popupTitle(partner);
     Promise.race([Promise.all([logo.decode().catch(() => {}), document.fonts.ready]), new Promise((r) => setTimeout(r, 3000))])
       .then(() => { $<HTMLButtonElement>('[data-reveal-play]').disabled = false; });
 
-    const dead = new Set<Animation>();
-    const stopConfetti = () => { dead.forEach((a) => a.cancel()); dead.clear(); root.querySelectorAll('.confetti').forEach((p) => p.remove()); };
+    let stopFx = () => {};
+    const stopConfetti = () => { stopFx(); root.querySelectorAll('canvas[data-celebrate]').forEach((c) => c.remove()); };
     const confetti = () => {
-      const colors = ['#ffc8dd', '#bde0fe', '#cdb4db', '#b9fbc0', '#fdffb6', '#ffd6a5'];
-      for (let i = 0; i < 48; i++) {
-        const p = document.createElement('i');
-        p.className = 'confetti';
-        p.dataset.confetti = '';
-        p.style.left = `${Math.random() * 100}%`;
-        p.style.background = colors[i % colors.length];
-        root.appendChild(p);
-        const a = p.animate(
-          [{ transform: 'translateY(-20px) rotate(0)', opacity: 1 }, { transform: `translateY(${innerHeight}px) rotate(${360 + Math.random() * 360}deg)`, opacity: 0 }],
-          { duration: 1800 + Math.random() * 1400, delay: Math.random() * 500, easing: 'ease-in', fill: 'forwards' },
-        );
-        dead.add(a);
-        a.onfinish = () => p.remove();
-      }
-      setTimeout(stopConfetti, 3000);
+      stopConfetti();
+      const cv = document.createElement('canvas');
+      cv.dataset.celebrate = '';
+      cv.setAttribute('aria-hidden', 'true');
+      cv.style.cssText = 'position:fixed;inset:0;width:100vw;height:100vh;z-index:1000;pointer-events:none';
+      root.appendChild(cv);
+      stopFx = runCelebration(cv, celebrationPlan({ reduced, width: innerWidth }));
+      setTimeout(stopConfetti, 3800);
       document.addEventListener('visibilitychange', () => { if (document.hidden) stopConfetti(); }, { once: true });
     };
 

@@ -26,7 +26,7 @@ const LETTERS: Record<string, string> = {
 };
 const LETTER = (o: string) => LETTERS[o] ?? 'Dear Applicant,\n\nThank you for applying this Season.\n\nThe Venn team';
 
-export function seedDemo(outcome: DemoOutcome, opts: { minor: boolean }, id = newDemoId()): DemoState {
+export function seedDemo(outcome: DemoOutcome, opts: { minor: boolean; onboarded?: boolean }, id = newDemoId()): DemoState {
   const slug: 'aws' | 'quadron' = outcome === 'cohort-quadron' ? 'quadron' : 'aws';
   const isCohort = outcome.startsWith('cohort');
   const mk = (sl: 'aws' | 'quadron') => ({ id: sl === 'aws' ? 1 : 2, slug: sl, name: `${sl === 'aws' ? 'AWS' : 'Quadron'} Fall Cohort 2026`, company: sl === 'aws' ? 'AWS' : 'Quadron', goal: null, criteria: null, timeline: null, video_url: null, slides_url: null, logo_path: null, seat_cap: sl === 'aws' ? 10 : 20 });
@@ -38,13 +38,13 @@ export function seedDemo(outcome: DemoOutcome, opts: { minor: boolean }, id = ne
   return {
     id, user: { id: `demo-user-${id}`, email: 'demo@example.com' }, minor: opts.minor, season: 'fall-2026', result, cohort, mou: null, guiding: [],
     team: [], nextMember: 1, peer: { match_id: 1, i_am_down: false, they_are_down: false },
-    onboarding: { started: false, profile_done: false, contact_done: false, mou_done: false, name: 'Maya Okafor', org: 'Lincoln High Robotics' },
+    onboarding: { started: !!opts.onboarded, profile_done: !!opts.onboarded, contact_done: !!opts.onboarded, mou_done: !!opts.onboarded, name: 'Maya Okafor', org: 'Lincoln High Robotics' },
     consent: { done: false, answers: {} }, minorMou: { minor_signed: false, parent_signed: false, parent_link_signed: false, parent_name: null, confirmed: false },
     phoneCode: null, parentTokens: new Map(), events: new Set(),
   };
 }
 
-export function createDemoSession(id: string, outcome: DemoOutcome, opts: { minor: boolean }): DemoState {
+export function createDemoSession(id: string, outcome: DemoOutcome, opts: { minor: boolean; onboarded?: boolean }): DemoState {
   const s = seedDemo(outcome, opts, id); store().set(id, s); return s;
 }
 export const getDemoSession = (id: string | null | undefined): DemoState | undefined => (id ? store().get(id) : undefined);

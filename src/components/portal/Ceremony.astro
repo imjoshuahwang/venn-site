@@ -1,143 +1,105 @@
 ---
-import Reveal from './Reveal.astro';
-const { result, setup, replay = false } = Astro.props;
-const slots = { consent: 'Your consent', parent: 'Parent sign-off', phone: 'Text Josh' };
-const config = JSON.stringify({ result, setup, replay });
+// The sealed reveal (#321) on SlideDeck: seal -> weighted pause -> open -> full-screen celebration -> "Am I in?" answered on the first slide.
+// Cohort results then get one `data-letter-slot` slide per cohort (#322 fills the slot; the current letter text sits there for now).
+// Peer hands off to /portal/result after the celebration (#323 owns that page). Props: result, replay (setup is accepted and ignored).
+import SlideDeck from './slides/SlideDeck.astro';
+import Slide from './slides/Slide.astro';
+import { splitLetter } from '../../lib/portal/ceremony.mjs';
+const { result, replay = false } = Astro.props;
+const { headline, body } = splitLetter(result.letter);
+const isCohort = result.outcome === 'cohort';
+const cohorts: { slug: string; name: string }[] = isCohort ? (result.cohorts?.length ? result.cohorts : [{ slug: 'cohort', name: result.cohortName ?? 'Your cohort' }]) : [];
+const lead = isCohort ? cohorts.map((c) => c.name).join(' and ') : result.outcome === 'peer' ? 'Your peer match is ready.' : body[0] ?? '';
+const rest = isCohort || result.outcome === 'peer' ? [] : body.slice(1);
+const answerCta = isCohort ? 'Continue' : result.outcome === 'peer' ? 'See my match' : 'Go to my portal';
+const config = JSON.stringify({ id: result.id, outcome: result.outcome, viewedAt: result.viewedAt, doneAt: result.doneAt, replay, accents: cohorts.map((c) => c.slug) });
 ---
-<div class="ceremony" data-ceremony data-config={config}>
-  <div class="card skel" data-skel role="status" aria-busy="true" aria-label="Loading your portal"><span class="bar w1"></span><span class="bar w2"></span><span class="bar w3"></span><span class="bar w4"></span></div>
-  {Object.entries(slots).map(([id, name]) => (
-    <section class="card step" data-screen={`setup:${id}`} hidden>
-      <p class="eyebrow">One quick step</p>
-      <h1 class="headline">{name}</h1>
-      <p class="muted">This step opens soon. You can skip it for now.</p>
-      <button class="pill" type="button" data-next>Continue</button>
-    </section>
-  ))}
-  <section class="card sealed" data-screen="sealed" hidden>
-    <p class="eyebrow">Fall '26</p>
-    <h1 class="headline">Your Fall '26 Result</h1>
-    <button class="pill seal" type="button" data-reveal-btn aria-label="Open your result">Tap to open</button>
-  </section>
-  <Reveal outcome={result.outcome} letter={result.letter} />
-  <section class="card" data-screen="error" hidden role="alert">
-    <p class="eyebrow">Something went wrong</p>
-    <h1 class="headline">We could not save that</h1>
-    <p class="muted">Your result is safe. Please try once more, or write to <a href="mailto:contact@joinvenn.org">contact@joinvenn.org</a>.</p>
-    <button class="pill" type="button" data-retry>Try again</button>
-    <p class="muted" role="status" data-retry-note></p>
-  </section>
+<div data-ceremony data-config={config} data-outcome={result.outcome}>
+  <SlideDeck label="Your result">
+    <Slide title="Your Fall '26 Result" cta="Open" />
+    <Slide title={headline} lead={lead} cta={answerCta}>
+      {rest.map((p) => <p>{p}</p>)}
+    </Slide>
+    {cohorts.map((c, i) => (
+      <Slide title={c.name} cta={i === cohorts.length - 1 ? 'Go to my portal' : 'Continue'}>
+        <div data-letter-slot data-cohort={c.slug}>{body.map((p) => <p>{p}</p>)}</div>
+      </Slide>
+    ))}
+  </SlideDeck>
+  <canvas class="celebrate" data-celebrate aria-hidden="true"></canvas>
 </div>
+<style is:global>
+  .celebrate { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 40; pointer-events: none; }
+  [data-ceremony] .deck .slide:first-of-type .inner { transition: opacity var(--dur-slide) var(--ease), transform var(--dur-slide) var(--ease); }
+  [data-ceremony] .deck[data-opening] .slide[data-pos="current"] .inner { opacity: .35; transform: scale(.94); }
+  [data-ceremony] [data-letter-slot] p { margin: 0 0 var(--sp-12); font-size: var(--fs-17); }
+</style>
 <script>
-  import { createCeremony, cardFrames, revealKind, timeline, share, sharePayload } from '../../lib/portal/ceremony.mjs';
+  import { createCeremony } from '../../lib/portal/ceremony.mjs';
+  import { celebrationPlan, runCelebration } from '../../lib/portal/celebrate';
+  import { reducedMotion } from '../../lib/portal/motion';
 
   const root = document.querySelector<HTMLElement>('[data-ceremony]')!;
-  const { result, setup, replay } = JSON.parse(root.dataset.config!);
-  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  // Watch again (replay): nothing is written. markViewed is skipped by the engine (viewedAt is set) and finish is a no-op,
-  // so no viewed write and no reveal_started / reveal_finished beats fire a second time.
+  const cfg = JSON.parse(root.dataset.config!) as { id: number; outcome: string; viewedAt: string | null; doneAt: string | null; replay: boolean; accents: string[] };
+  const deck = root.querySelector<HTMLElement>('[data-deck]')!;
+  const canvas = root.querySelector<HTMLCanvasElement>('[data-celebrate]')!;
+  const reduced = reducedMotion();
+  const ACCENT: Record<string, string> = { aws: '#ff9900', quadron: '#2f6bff' };
   const post = async (action: string) => {
-    if (replay) return;
-    const r = await fetch('/portal/api/ceremony', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action, id: result.id }) });
+    if (cfg.replay) return;
+    const r = await fetch('/portal/api/ceremony', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action, id: cfg.id }) });
     if (!r.ok) throw new Error(action);
   };
-  const c = createCeremony({ result, setup, reduced, api: { markViewed: () => post('viewed'), finishCeremony: () => post('finish') } });
-  const $ = (s: string) => root.querySelector<HTMLElement>(s)!;
-  const show = (name: string) => {
-    root.querySelectorAll<HTMLElement>('[data-screen], [data-reveal]').forEach((el) => { el.hidden = (el.dataset.screen ?? 'letter') !== name; });
-    root.dataset.screen = name;
-  };
-  const view = () => {
-    const s = c.state.screen;
-    show(s === 'revealing' ? 'letter' : s);
-  };
-  const go = () => {
-    const s = c.state.screen;
-    if (s === 'finishing') return done();
-    view();
-  };
-  const done = async () => {
-    await c.finish();
-    if (c.state.finishPending) { show('error'); return; }
-    location.assign('/portal');
-  };
+  const c = createCeremony({ result: { id: cfg.id, outcome: cfg.outcome, viewedAt: cfg.viewedAt, doneAt: cfg.doneAt }, setup: { consent: true, parent: true, phone: true }, reduced, api: { markViewed: () => post('viewed'), finishCeremony: () => post('finish') } });
 
-  const anim = (el: Element, kf: Keyframe[], start: number, end: number) =>
-    el.animate(kf, { duration: end - start, delay: start, fill: 'both', easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' });
-
-  function play(): Promise<void> {
-    const kind = revealKind(result.outcome, reduced);
-    const card = $('[data-card]'), glow = $('[data-glow]'), headline = $('[data-headline]'), body = $('[data-body]'), actions = $('[data-actions]');
-    const chars = [...headline.querySelectorAll('.ch')] as HTMLElement[];
-    const hide = (el: Element) => { (el as HTMLElement).style.opacity = '0'; };
-    const beats = Object.fromEntries(timeline(kind).map((b: { name: string; start: number; end: number }) => [b.name, b]));
-    const end = timeline(kind).at(-1)!.end;
-    if (kind === 'reduced') {
-      anim(card, [{ opacity: 0 }, { opacity: 1 }], 0, 200);
-    } else {
-      const lift = cardFrames(kind);
-      card.animate(lift.frames, { duration: lift.duration, fill: 'both', easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' });
-      if (kind === 'big') {
-        const seal = $('[data-seal]');
-        seal.classList.add('on');
-        anim(seal, [{ opacity: 1, clipPath: 'inset(0 0 0 0)' }, { opacity: 0, clipPath: 'inset(0 50% 0 50%)' }], beats.seal.start, beats.seal.end);
-        anim(glow, [{ opacity: 0, transform: 'scale(0.4)' }, { opacity: 1, transform: 'scale(1)' }], beats.bloom.start, beats.bloom.end);
-        chars.forEach(hide); hide(body); hide(actions);
-        const n = chars.length || 1;
-        const t = beats.type;
-        chars.forEach((ch, i) => anim(ch, [{ opacity: 0 }, { opacity: 1 }], t.start + ((t.end - t.start) * i) / n, t.start + ((t.end - t.start) * i) / n + 60));
-        anim(body, [{ opacity: 0 }, { opacity: 1 }], t.end - 400, t.end);
-        anim(actions, [{ opacity: 0 }, { opacity: 1 }], beats.confetti.start, end);
-        confetti(beats.confetti.start);
-      } else {
-        anim(glow, [{ opacity: 0 }, { opacity: 0.5 }], beats.warm.start, beats.warm.end);
-        anim(body, [{ opacity: 0 }, { opacity: 1 }], beats.fade.start, beats.fade.end);
-        anim(actions, [{ opacity: 0 }, { opacity: 1 }], beats.fade.start, beats.fade.end);
-      }
+  // Weighted pause: the seal dims and shrinks for 700ms before the deck opens. A tap or Enter on the seal goes through here.
+  let opened = false, opening = false, replaying = false;
+  const advance = () => { replaying = true; deck.querySelector<HTMLElement>('[data-slide] [data-next]')!.click(); replaying = false; };
+  const open = async () => {
+    if (opening) return;
+    if (!opened) {
+      opening = true;
+      c.reveal();
+      deck.dataset.opening = '';
+      await new Promise((r) => setTimeout(r, reduced ? 150 : 700));
+      delete deck.dataset.opening;
+      opened = true; opening = false;
     }
-    return new Promise((r) => setTimeout(r, end));
-  }
+    advance();
+  };
+  const onSeal = (e: Event) => {
+    if (replaying || deck.dataset.index !== '0') return;
+    if (e instanceof KeyboardEvent && !['Enter', ' ', 'ArrowDown', 'ArrowRight'].includes(e.key)) return;
+    if (e instanceof MouseEvent && !(e.target as HTMLElement).closest('[data-next]')) return;
+    e.preventDefault(); e.stopPropagation();
+    void open();
+  };
+  document.addEventListener('keydown', onSeal, true);
+  deck.addEventListener('click', onSeal, true);
 
-  function confetti(at: number) {
-    const colors = ['#2f6bff', '#1fa971', '#18181a', '#f4b400'];
-    setTimeout(() => {
-      for (let i = 0; i < 36; i++) {
-        const p = document.createElement('i');
-        p.className = 'confetti';
-        p.dataset.confetti = '';
-        p.style.left = `${Math.random() * 100}%`;
-        p.style.background = colors[i % colors.length];
-        root.appendChild(p);
-        p.animate([{ transform: 'translateY(0) rotate(0)', opacity: 1 }, { transform: `translateY(${280 + Math.random() * 200}px) rotate(${Math.random() * 540}deg)`, opacity: 0 }], { duration: 600, easing: 'ease-out', fill: 'forwards' }).onfinish = () => p.remove();
-      }
-    }, at);
-  }
-
-  $('[data-reveal-btn]').addEventListener('click', async () => {
-    if (c.state.screen !== 'sealed') return;
-    c.reveal(); // mark_viewed fires once; a failure never blocks the reveal
-    show('letter');
-    await play();
-    c.revealed();
-  });
-  root.querySelectorAll('[data-next]').forEach((b) => b.addEventListener('click', () => {
-    c.next();
-    go();
-  }));
-  $('[data-share]').addEventListener('click', async () => {
-    const r = await share(navigator, sharePayload());
-    $('[data-note]').textContent = r === 'copied' ? 'Link copied.' : r === 'failed' ? 'Copy joinvenn.org to share.' : '';
-  });
-  $('[data-retry]').addEventListener('click', async () => {
-    const btn = $('[data-retry]') as HTMLButtonElement;
-    btn.disabled = true;
-    const ok = await c.retryFinish();
-    if (ok) { location.assign('/portal'); return; }
-    btn.disabled = false;
-    $('[data-retry-note]').textContent = 'Still not working. Please try again in a moment.';
+  let celebrated = false;
+  deck.addEventListener('deck:change', (e) => {
+    const { index } = (e as CustomEvent).detail;
+    if (index !== 1 || celebrated || !['cohort', 'peer'].includes(cfg.outcome)) return;
+    celebrated = true;
+    canvas.dataset.state = reduced ? 'skipped' : 'running';
+    const stop = runCelebration(canvas, celebrationPlan({ reduced, accent: ACCENT[cfg.accents[0]], width: innerWidth }));
+    document.addEventListener('visibilitychange', () => { if (document.hidden) stop(); }, { once: true });
+    setTimeout(() => { canvas.dataset.state = 'done'; }, reduced ? 400 : 3600);
   });
 
-  view();
-  $('[data-skel]').hidden = true;
+  let finishing = false;
+  deck.addEventListener('deck:finish', async () => {
+    if (finishing) return;
+    finishing = true;
+    const err = deck.querySelector<HTMLElement>('[data-slide][data-pos="current"] [data-err]');
+    await c.finish();
+    if (c.state.finishPending && !(await c.retryFinish())) {
+      finishing = false;
+      if (err) err.textContent = 'We could not save that. Please try once more.';
+      return;
+    }
+    location.assign(cfg.outcome === 'peer' ? '/portal/result' : '/portal');
+  });
   root.dataset.ready = '';
 </script>

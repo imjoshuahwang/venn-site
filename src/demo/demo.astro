@@ -12,7 +12,7 @@ if (Astro.request.method === 'POST') {
   const outcome = String(f.get('outcome'));
   if (!(OUTCOMES as readonly string[]).includes(outcome)) return new Response('bad outcome', { status: 400 });
   const id = newDemoId();
-  createDemoSession(id, outcome as (typeof OUTCOMES)[number], { minor: f.get('age') === 'minor' });
+  createDemoSession(id, outcome as (typeof OUTCOMES)[number], { minor: f.get('age') === 'minor', onboarded: f.get('onboarded') === '1' });
   Astro.cookies.set('venn_demo', id, { path: '/', httpOnly: true, sameSite: 'lax' });
   return Astro.redirect('/portal/set-password', 303);
 }
@@ -24,6 +24,7 @@ if (Astro.request.method === 'POST') {
 <body>
 <h1>Demo</h1>
 <form method="post">
+  <label><input type="checkbox" name="onboarded" value="1"> Already onboarded</label>
   <fieldset><label><input type="radio" name="age" value="adult" checked> 18+</label><label><input type="radio" name="age" value="minor"> Minor</label></fieldset>
   {OUTCOMES.map((o) => <button type="submit" name="outcome" value={o}>{labels[o]}</button>)}
 </form>
