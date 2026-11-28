@@ -1,6 +1,6 @@
 // The one adapter between the ceremony and Supabase. RPCs from #116 are called by name; PORTAL_STUB swaps in fixtures.
 export type Outcome = 'cohort' | 'peer' | 'network_waitlist' | 'track_waitlist' | 'not_this_season';
-export type CeremonyResult = { id: number; outcome: Outcome; letter: string; viewedAt: string | null; doneAt: string | null; cohortName?: string | null; cohorts?: { slug: string; name: string }[] };
+export type CeremonyResult = { id: number; outcome: Outcome; letter: string; viewedAt: string | null; doneAt: string | null; cohortName?: string | null; cohorts?: { slug: string; name: string; seatCap?: number | null }[] };
 export type CeremonyData = { status: 'ok'; result: CeremonyResult } | { status: 'none' } | { status: 'error' };
 
 import { getMyResult, markViewed, finishCeremony } from './api.ts';
@@ -38,7 +38,7 @@ export async function getCeremonyData(Astro: Ctx): Promise<CeremonyData> {
     const { data: r, error } = await getMyResult(Astro.locals.supabase);
     if (error) return { status: 'error' };
     if (!r) return { status: 'none' };
-    return { status: 'ok', result: { id: r.id, outcome: r.outcome, letter: r.letter || LETTERS[r.outcome], viewedAt: r.viewed_at, doneAt: r.ceremony_done_at, cohortName: r.cohort?.name ?? null, cohorts: ((r as { cohorts?: { slug: string; name: string }[] }).cohorts ?? (r.cohort ? [r.cohort] : [])).map((x) => ({ slug: x.slug, name: x.name })) } };
+    return { status: 'ok', result: { id: r.id, outcome: r.outcome, letter: r.letter || LETTERS[r.outcome], viewedAt: r.viewed_at, doneAt: r.ceremony_done_at, cohortName: r.cohort?.name ?? null, cohorts: ((r as { cohorts?: { slug: string; name: string; seatCap?: number | null }[] }).cohorts ?? (r.cohort ? [r.cohort] : [])).map((x) => ({ slug: x.slug, name: x.name, seatCap: (x as { seat_cap?: number | null }).seat_cap ?? null })) } };
   } catch {
     return { status: 'error' };
   }

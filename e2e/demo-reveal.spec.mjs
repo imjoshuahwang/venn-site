@@ -64,11 +64,8 @@ for (const [outcome, answer, partners] of [['cohort-aws', /You are in|Dear Appli
     const gaps = await page.evaluate(() => window.__gaps.slice(5).sort((a, b) => a - b));
     assert.ok(gaps[Math.floor(gaps.length * 0.95)] < 50, `rAF gap p95 ${gaps[Math.floor(gaps.length * 0.95)]}ms`);
     await current(page).getByRole('button', { name: 'Continue' }).click();
-    for (let i = 0; i < partners.length; i++) {
-      await page.locator('[data-slide][data-pos="current"] [data-letter-slot]').waitFor();
-      assert.equal(await page.locator('[data-letter-slot]').count(), partners.length);
-      if (i < partners.length - 1) await current(page).getByRole('button', { name: 'Continue' }).click();
-    }
+    await page.locator('[data-slide][data-pos="current"] [data-letter-slot]').waitFor();
+    assert.deepEqual(await page.locator('[data-letter-slot]').evaluateAll((els) => [...new Set(els.map((e) => e.dataset.cohort))].length), partners.length);
     assert.equal(await page.locator('[data-celebrate][data-state="running"]').count(), 0, 'one celebration only');
     assert.deepEqual(errors, []);
     assert.deepEqual(external, []);

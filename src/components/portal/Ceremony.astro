@@ -5,14 +5,18 @@
 import SlideDeck from './slides/SlideDeck.astro';
 import Slide from './slides/Slide.astro';
 import { splitLetter } from '../../lib/portal/ceremony.mjs';
+import { lettersFor } from '../../data/reveal-letters';
+import { SHARE_TEXT, cohortLine, intentUrl } from '../../lib/portal/letter-share';
 const { result, replay = false } = Astro.props;
 const { headline, body } = splitLetter(result.letter);
 const isCohort = result.outcome === 'cohort';
-const cohorts: { slug: string; name: string }[] = isCohort ? (result.cohorts?.length ? result.cohorts : [{ slug: 'cohort', name: result.cohortName ?? 'Your cohort' }]) : [];
+const cohorts: { slug: string; name: string; seatCap?: number | null }[] = isCohort ? (result.cohorts?.length ? result.cohorts : [{ slug: 'cohort', name: result.cohortName ?? 'Your cohort' }]) : [];
 const lead = isCohort ? cohorts.map((c) => c.name).join(' and ') : result.outcome === 'peer' ? 'Your peer match is ready.' : body[0] ?? '';
 const rest = isCohort || result.outcome === 'peer' ? [] : body.slice(1);
 const answerCta = isCohort ? 'Continue' : result.outcome === 'peer' ? 'See my match' : 'Go to my portal';
-const config = JSON.stringify({ id: result.id, outcome: result.outcome, viewedAt: result.viewedAt, doneAt: result.doneAt, replay, accents: cohorts.map((c) => c.slug) });
+const letters = cohorts.map((c) => ({ c, slides: lettersFor(c.slug, { seatCap: c.seatCap }) }));
+const shareNames = cohorts.map((c) => c.name.replace(/ Fall Cohort 2026$/, ''));
+const config = JSON.stringify({ shareNames, id: result.id, outcome: result.outcome, viewedAt: result.viewedAt, doneAt: result.doneAt, replay, accents: cohorts.map((c) => c.slug) });
 ---
 <div data-ceremony data-config={config} data-outcome={result.outcome}>
   <SlideDeck label="Your result">
@@ -20,11 +24,30 @@ const config = JSON.stringify({ id: result.id, outcome: result.outcome, viewedAt
     <Slide title={headline} lead={lead} cta={answerCta}>
       {rest.map((p) => <p>{p}</p>)}
     </Slide>
-    {cohorts.map((c, i) => (
-      <Slide title={c.name} cta={i === cohorts.length - 1 ? 'Go to my portal' : 'Continue'}>
-        <div data-letter-slot data-cohort={c.slug}>{body.map((p) => <p>{p}</p>)}</div>
+    {letters.map(({ c, slides }) => slides ? slides.map((l) => (
+      <Slide title={l.title} lead={l.lead} cta={l.cta}>
+        <div data-letter-slot data-cohort={c.slug}>
+          {l.paragraphs.map((p) => <p>{p}</p>)}
+          {l.list && <ul class="principles">{l.list.map((x) => <li><strong>{x.head}</strong> {x.text}</li>)}</ul>}
+        </div>
+        {l.action && <a slot="more" data-letter-action href={l.action.href} target={l.action.href.startsWith('http') ? '_blank' : undefined} rel="noopener">{l.action.label}</a>}
       </Slide>
+    )) : (
+      <Slide title={c.name} cta="Continue"><div data-letter-slot data-cohort={c.slug}>{body.map((p) => <p>{p}</p>)}</div></Slide>
     ))}
+    {isCohort && (
+      <Slide title="Show people." lead={`Your card names ${cohortLine(shareNames)}.`} cta="Go to my portal">
+        <div data-share>
+          <img data-share-preview alt={`${SHARE_TEXT}: ${cohortLine(shareNames)}`} width="1200" height="1200" />
+          <div class="share-row">
+            <button type="button" class="btn" data-card-dl="square">Download card</button>
+            <a class="btn btn-ghost" data-linkedin target="_blank" rel="noopener" href={intentUrl()}>Post on LinkedIn</a>
+          </div>
+          <p class="share-note">Attach the card you downloaded to your post.</p>
+          <button type="button" class="linklike" data-card-dl="wide">Download wide version</button>
+        </div>
+      </Slide>
+    )}
   </SlideDeck>
   <canvas class="celebrate" data-celebrate aria-hidden="true"></canvas>
 </div>
@@ -32,15 +55,23 @@ const config = JSON.stringify({ id: result.id, outcome: result.outcome, viewedAt
   .celebrate { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 40; pointer-events: none; }
   [data-ceremony] .deck .slide:first-of-type .inner { transition: opacity var(--dur-slide) var(--ease), transform var(--dur-slide) var(--ease); }
   [data-ceremony] .deck[data-opening] .slide[data-pos="current"] .inner { opacity: .35; transform: scale(.94); }
+  [data-ceremony] .principles { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--sp-8); font-size: var(--fs-17); }
+  [data-ceremony] .principles strong { color: var(--ink); }
+  [data-ceremony] [data-share] { display: grid; gap: var(--sp-12); }
+  [data-ceremony] [data-share] img { width: 100%; height: auto; max-height: 34vh; object-fit: contain; border-radius: var(--r-20); box-shadow: inset 0 0 0 1px var(--line); }
+  [data-ceremony] .share-note { margin: 0; font-size: 0.875rem; opacity: 0.7; }
+  [data-ceremony] .share-row { display: flex; gap: var(--sp-8); flex-wrap: wrap; }
+  [data-ceremony] .linklike { justify-self: start; min-height: 44px; padding: 0; border: 0; background: none; font: inherit; font-size: var(--fs-15); font-weight: 600; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
   [data-ceremony] [data-letter-slot] p { margin: 0 0 var(--sp-12); font-size: var(--fs-17); }
 </style>
 <script>
   import { createCeremony } from '../../lib/portal/ceremony.mjs';
   import { celebrationPlan, runCelebration } from '../../lib/portal/celebrate';
   import { reducedMotion } from '../../lib/portal/motion';
+  import { renderLetterCard } from '../../lib/portal/letter-share';
 
   const root = document.querySelector<HTMLElement>('[data-ceremony]')!;
-  const cfg = JSON.parse(root.dataset.config!) as { id: number; outcome: string; viewedAt: string | null; doneAt: string | null; replay: boolean; accents: string[] };
+  const cfg = JSON.parse(root.dataset.config!) as { id: number; outcome: string; viewedAt: string | null; doneAt: string | null; replay: boolean; accents: string[]; shareNames: string[] };
   const deck = root.querySelector<HTMLElement>('[data-deck]')!;
   const canvas = root.querySelector<HTMLCanvasElement>('[data-celebrate]')!;
   const reduced = reducedMotion();
@@ -76,6 +107,18 @@ const config = JSON.stringify({ id: result.id, outcome: result.outcome, viewedAt
   };
   document.addEventListener('keydown', onSeal, true);
   deck.addEventListener('click', onSeal, true);
+
+  // Share card: rendered once for the preview, again on download so the file is always the requested size. Names come from the cohort rows.
+  const preview = root.querySelector<HTMLImageElement>('[data-share-preview]');
+  if (preview) renderLetterCard(cfg.shareNames, 'square').then((b) => { preview.src = URL.createObjectURL(b); }, () => {});
+  root.querySelectorAll<HTMLButtonElement>('[data-card-dl]').forEach((b) => b.addEventListener('click', async () => {
+    const size = b.dataset.cardDl as 'square' | 'wide';
+    const url = URL.createObjectURL(await renderLetterCard(cfg.shareNames, size));
+    const a = document.createElement('a');
+    a.href = url; a.download = `venn-fall-2026-${cfg.accents.join('-') || 'card'}-${size}.png`;
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }));
 
   let celebrated = false;
   deck.addEventListener('deck:change', (e) => {

@@ -9,7 +9,6 @@ const files = [
   'src/styles/portal.css',
   'src/layouts/Portal.astro',
   'src/components/portal/Ceremony.astro',
-  'src/components/portal/Reveal.astro',
 ];
 
 test('portal.css carries exactly the #112 tokens (one set, main names)', () => {
