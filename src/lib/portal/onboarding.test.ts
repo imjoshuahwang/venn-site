@@ -35,15 +35,15 @@ test('ageRoute: missing, malformed, future or impossible birthdays are rejected'
 
 const FULL = ['profile', 'contact', 'mou'] as const;
 const base: OnboardingState = { required: true, profileDone: false, contactDone: false, minor: false, mouDone: false };
-test('default order stops after the profile: contact and MOU come after the reveal', () => {
-  assert.equal(nextOnboardingPath({ required: true, profileDone: true, contactDone: false, minor: true, mouDone: false }), null);
+test('default order is profile, then a minor MOU; contact comes after the reveal', () => {
+  assert.equal(nextOnboardingPath({ required: true, profileDone: true, contactDone: false, minor: true, mouDone: false }), '/portal/mou/minor');
   assert.equal(nextOnboardingPath({ required: true, profileDone: false, contactDone: false, minor: false, mouDone: false }), '/portal/onboarding/profile');
 });
 test('nextOnboardingPath walks profile, contact, then the MOU for minors only', () => {
   assert.equal(nextOnboardingPath(base, FULL), '/portal/onboarding/profile');
   assert.equal(nextOnboardingPath({ ...base, profileDone: true }, FULL), '/portal/onboarding/contact');
   assert.equal(nextOnboardingPath({ ...base, profileDone: true, contactDone: true }, FULL), null);
-  assert.equal(nextOnboardingPath({ ...base, profileDone: true, contactDone: true, minor: true }, FULL), '/portal/onboarding/mou');
+  assert.equal(nextOnboardingPath({ ...base, profileDone: true, contactDone: true, minor: true }, FULL), '/portal/mou/minor');
   assert.equal(nextOnboardingPath({ ...base, profileDone: true, contactDone: true, minor: true, mouDone: true }, FULL), null);
 });
 test('nextOnboardingPath stays out of the way when onboarding is not required or state is unknown', () => {
@@ -75,6 +75,6 @@ test('consent copy names a trusted Venn team member and WhatsApp as the main cha
 test('step order comes from the config array and can flip', () => {
   const s: OnboardingState = { required: true, profileDone: true, contactDone: false, minor: true, mouDone: false };
   assert.equal(nextOnboardingPath(s, ['profile', 'contact', 'mou']), '/portal/onboarding/contact');
-  assert.equal(nextOnboardingPath(s, ['profile', 'mou', 'contact']), '/portal/onboarding/mou');
+  assert.equal(nextOnboardingPath(s, ['profile', 'mou', 'contact']), '/portal/mou/minor');
   assert.equal(nextOnboardingPath({ ...s, mouDone: true }, ['profile', 'mou', 'contact']), '/portal/onboarding/contact');
 });

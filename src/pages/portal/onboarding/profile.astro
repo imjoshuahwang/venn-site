@@ -1,7 +1,8 @@
 ---
 import { devError } from '../../../lib/portal/dev-fixtures';
-import Portal from '../../../layouts/Portal.astro';
-import OnboardingShell from '../../../components/portal/OnboardingShell.astro';
+import Base from '../../../layouts/Base.astro';
+import SlideDeck from '../../../components/portal/slides/SlideDeck.astro';
+import Slide from '../../../components/portal/slides/Slide.astro';
 import { getOnboarding, nextOnboardingPath, validateProfile } from '../../../lib/portal/onboarding';
 
 export const prerender = false;
@@ -26,26 +27,16 @@ if (Astro.request.method === 'POST') {
 }
 const today = new Date().toISOString().slice(0, 10);
 ---
-<Portal title="Your details | Venn">
-  <OnboardingShell done={1} total={8} start={error ? 2 : 0}>
-    <section class="ob-panel" data-panel>
-      <h1>What's your full name?</h1>
-      <input name="name" autocomplete="name" enterkeyhint="next" maxlength="200" required value={v.name} aria-label="Full name" data-msg="Enter your full name." />
-      <p class="ob-err" data-err role="alert" hidden></p>
-      <div class="ob-nav"><button class="pill" type="button" data-next>Continue</button></div>
-    </section>
-    <section class="ob-panel" data-panel hidden>
-      <h1>Where do you live?</h1>
-      <p class="lede">City and country is plenty.</p>
-      <input name="location" autocomplete="address-level2" enterkeyhint="next" maxlength="200" required value={v.location} aria-label="Where you live" data-msg="Enter where you live, like a city and country." />
-      <p class="ob-err" data-err role="alert" hidden></p>
-      <div class="ob-nav"><button class="pill ghost" type="button" data-back>Back</button><button class="pill" type="button" data-next>Continue</button></div>
-    </section>
-    <section class="ob-panel" data-panel hidden>
-      <h1>When's your birthday?</h1>
-      <input name="birthday" type="date" autocomplete="bday" required min="1900-01-01" max={today} aria-label="Birthday" data-msg="Enter your birthday." />
-      <p class="ob-err" data-err role="alert" hidden={!error}>{error}</p>
-      <div class="ob-nav"><button class="pill ghost" type="button" data-back>Back</button><button class="pill" type="submit">Continue</button></div>
-    </section>
-  </OnboardingShell>
-</Portal>
+<Base title="Your details | Venn" description="A few details so your cohort knows who you are." bare noindex>
+  <SlideDeck action={Astro.url.pathname + Astro.url.search} label="Your details" start={error ? 2 : 0}>
+    <Slide title="First, what should we call you?" lead="Your full name, the way you would want it on a certificate.">
+      <input name="name" autocomplete="name" enterkeyhint="next" maxlength="200" required value={v.name} aria-label="full name" placeholder="Full name" />
+    </Slide>
+    <Slide title="And where do you live?" lead="A city and country is plenty. It helps us place you in a cohort that fits your time zone.">
+      <input name="location" autocomplete="address-level2" enterkeyhint="next" maxlength="200" required value={v.location} aria-label="place you live" placeholder="City, country" />
+    </Slide>
+    <Slide title="When were you born?" lead="We ask once so we know who needs a parent to sign alongside you. Nothing else uses it." cta="Save" error={error}>
+      <input name="birthday" type="date" autocomplete="bday" required min="1900-01-01" max={today} aria-label="birthday" />
+    </Slide>
+  </SlideDeck>
+</Base>

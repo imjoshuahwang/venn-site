@@ -39,8 +39,8 @@ export type OnboardingState = { required: boolean; started?: boolean; profileDon
 export type StepId = 'profile' | 'contact' | 'mou';
 
 /** The step order lives here and nowhere else (#240): flip the array to move phone and WhatsApp before or after the MOU. */
-export const ONBOARDING_ORDER: readonly StepId[] = ['profile']; // #240: org, phone, WhatsApp and the MOU come after the reveal (C2 owns that checklist)
-export const STEP_PATH: Record<StepId, string> = { profile: '/portal/onboarding/profile', contact: '/portal/onboarding/contact', mou: '/portal/onboarding/mou' };
+export const ONBOARDING_ORDER: readonly StepId[] = ['profile', 'mou']; // #240: org and phone come after the reveal; a minor's MOU and parent co-sign come before it (#320)
+export const STEP_PATH: Record<StepId, string> = { profile: '/portal/onboarding/profile', contact: '/portal/onboarding/contact', mou: '/portal/mou/minor' };
 
 const stepDone = (id: StepId, s: OnboardingState): boolean =>
   id === 'profile' ? s.profileDone : id === 'contact' ? s.contactDone : !s.minor || s.mouDone;

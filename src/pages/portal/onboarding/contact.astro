@@ -1,7 +1,8 @@
 ---
 import { devError } from '../../../lib/portal/dev-fixtures';
-import Portal from '../../../layouts/Portal.astro';
-import OnboardingShell from '../../../components/portal/OnboardingShell.astro';
+import Base from '../../../layouts/Base.astro';
+import SlideDeck from '../../../components/portal/slides/SlideDeck.astro';
+import Slide from '../../../components/portal/slides/Slide.astro';
 import { CONTACT_CONSENT_TEXT, getOnboarding, nextOnboardingPath, validateContact } from '../../../lib/portal/onboarding';
 
 export const prerender = false;
@@ -20,38 +21,46 @@ if (Astro.request.method === 'POST') {
   }
 } else if (s && s.required && !s.profileDone) return Astro.redirect('/portal/onboarding/profile', 303);
 else if (s && s.contactDone) return Astro.redirect(nextOnboardingPath(s) ?? '/portal', 303);
-const org = s?.org || 'Your organization';
+const org = s?.org || 'your organization';
 ---
-<Portal title="Your organization and phone | Venn">
-  <OnboardingShell done={4} total={8} start={error ? 3 : 0}>
-    <section class="ob-panel" data-panel>
-      <h1>Is this your organization?</h1>
-      <p class="lede">{org}</p>
-      <label class="ob-choice"><input type="radio" name="orgOk" value="yes" required data-msg="Tell us whether this is your organization." data-auto /> Yes</label>
-      <label class="ob-choice"><input type="radio" name="orgOk" value="no" /> No</label>
-      <div data-if-no><input name="orgCorrection" maxlength="300" aria-label="Your organization" placeholder="Your organization" data-msg="Tell us your organization." /></div>
-      <p class="ob-err" data-err role="alert" hidden></p>
-      <div class="ob-nav"><button class="pill" type="button" data-next>Continue</button></div>
-    </section>
-    <section class="ob-panel" data-panel hidden>
-      <h1>What's your phone number?</h1>
-      <p class="lede">Include the country code.</p>
-      <input name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+14155550123" enterkeyhint="next" maxlength="30" required data-phone aria-label="Phone number" data-msg="Enter your phone number with its country code, like +14155550123." />
-      <p class="ob-err" data-err role="alert" hidden></p>
-      <div class="ob-nav"><button class="pill ghost" type="button" data-back>Back</button><button class="pill" type="button" data-next>Continue</button></div>
-    </section>
-    <section class="ob-panel" data-panel hidden>
-      <h1>Do you use WhatsApp on this number?</h1>
-      <label class="ob-choice"><input type="radio" name="whatsapp" value="yes" required data-msg="Tell us whether you use WhatsApp." data-auto /> Yes</label>
-      <label class="ob-choice"><input type="radio" name="whatsapp" value="no" data-auto /> No</label>
-      <p class="ob-err" data-err role="alert" hidden></p>
-      <div class="ob-nav"><button class="pill ghost" type="button" data-back>Back</button></div>
-    </section>
-    <section class="ob-panel" data-panel hidden>
-      <h1>One last thing.</h1>
-      <label class="ob-consent"><input type="checkbox" name="consent" value="on" required data-msg="Tick the box to agree." /><span data-consent-text>{CONTACT_CONSENT_TEXT}</span></label>
-      <p class="ob-err" data-err role="alert" hidden={!error}>{error}</p>
-      <div class="ob-nav"><button class="pill ghost" type="button" data-back>Back</button><button class="pill" type="submit">Finish</button></div>
-    </section>
-  </OnboardingShell>
-</Portal>
+<Base title="Your organization and phone | Venn" description="Confirm your organization and the number your cohort can reach you on." bare noindex>
+  <SlideDeck action={Astro.url.pathname + Astro.url.search} label="Your organization and phone" start={error ? 3 : 0}>
+    <Slide title={`Are you here with ${org}?`} lead="We matched you to this organization from your application, so tell us if we got it wrong." cta="">
+      <label class="choice"><input type="radio" name="orgOk" value="yes" data-auto /> Yes, that's me</label>
+      <label class="choice"><input type="radio" name="orgOk" value="no" /> Not quite</label>
+      <div data-if-no hidden>
+        <input name="orgCorrection" maxlength="300" aria-label="your organization" placeholder="Which organization, then?" />
+        <button type="button" class="btn" data-next>Continue</button>
+      </div>
+    </Slide>
+    <Slide title="What number can we reach you on?" lead="Include the country code, like +14155550123, so a message from us lands in the right place.">
+      <input name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+14155550123" enterkeyhint="next" maxlength="30" required aria-label="phone number" />
+    </Slide>
+    <Slide title="Do you use WhatsApp on that number?" lead="It is where most of your cohort talks, so a yes means you will not miss anything." cta="">
+      <label class="choice"><input type="radio" name="whatsapp" value="yes" data-auto /> Yes</label>
+      <label class="choice"><input type="radio" name="whatsapp" value="no" data-auto /> No</label>
+    </Slide>
+    <Slide title="Is it okay if we message you?" lead={CONTACT_CONSENT_TEXT} cta="Yes, that's fine" error={error}>
+      <input type="hidden" name="consent" value="on" />
+    </Slide>
+  </SlideDeck>
+</Base>
+<script>
+  // Choosing an answer is the whole step, so it moves on by itself. "Not quite" waits for the correction.
+  const deck = document.querySelector<HTMLElement>('[data-deck]')!;
+  const hint = deck.querySelector<HTMLElement>('[data-if-no]')!;
+  deck.addEventListener('change', (e) => {
+    const t = e.target as HTMLInputElement;
+    if (t.type !== 'radio') return;
+    if (t.name === 'orgOk') {
+      const no = t.value === 'no';
+      hint.hidden = !no;
+      if (no) hint.querySelector('input')!.focus({ preventScroll: true });
+    }
+    if (t.hasAttribute('data-auto')) deck.dispatchEvent(new Event('deck:next'));
+  });
+</script>
+<style is:global>
+  .deck [data-if-no] { width: 100%; display: flex; flex-direction: column; gap: var(--sp-16); }
+  .deck [data-if-no][hidden] { display: none; }
+</style>

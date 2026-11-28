@@ -1,73 +1,57 @@
 ---
-// Under-18 MOU (#224): terms, student signature, parent signature (here or by emailed link), confirm.
-// The terms text is the consent pages (DRAFT pending the lawyer, src/data/consent.ts).
-import { CONSENT_PAGES, CONSENT_VERSION } from '../../data/consent';
+// Under-18 MOU (#224) as slides: terms, student signature, parent here or by emailed link, confirm.
+// The terms text is the consent pages (DRAFT pending the lawyer, src/data/consent.ts). Slides are linear indexes; the
+// parent choice jumps over the branch it does not use with deck:goto, and Back retraces what the student actually saw.
+import { CONSENT_PAGES } from '../../data/consent';
+import SlideDeck from './slides/SlideDeck.astro';
+import Slide from './slides/Slide.astro';
 interface Props { state: { minor_signed: boolean; parent_signed: boolean; parent_link_signed: boolean; parent_name: string | null }; email: string }
-const { state, email } = Astro.props;
-const start = !state.minor_signed ? 'minor' : (state.parent_signed || state.parent_link_signed) ? 'confirm' : 'parent';
+const { state } = Astro.props;
+const start = !state.minor_signed ? 0 : (state.parent_signed || state.parent_link_signed) ? 6 : 2;
 ---
-<div class="mm" data-start={start} data-version={CONSENT_VERSION}>
-  <section data-step="terms" hidden>
-    <h1 tabindex="-1">Your MOU</h1>
-    <p class="lead">Read the terms below, then sign. Because you are under 18, a parent or guardian signs too.</p>
+<SlideDeck label="Your MOU" start={start}>
+  <Slide title="Here is what you are agreeing to." lead="Because you are under 18, a parent or guardian signs next to you. Read it through first, and ask us anything that is unclear." cta="I've read it">
     <div class="terms" tabindex="0" role="region" aria-label="Terms">
       {CONSENT_PAGES.map((p) => (<><h2>{p.title}</h2>{p.body.map((t) => <p>{t}</p>)}</>))}
     </div>
-    <button class="pill" type="button" data-go="minor">Continue to sign</button>
-  </section>
-  <section data-step="minor" hidden>
-    <h1 tabindex="-1">Your signature</h1>
-    <p class="lead">Sign with your finger or mouse.</p>
+  </Slide>
+  <Slide title="Sign your name." lead="Use your finger or your mouse, the way you would on paper." cta="Save my signature">
     <div class="pad"><canvas data-pad="minor" aria-label="Your signature"></canvas></div>
-    <p class="err" role="alert" hidden></p>
-    <div class="row"><button class="ghost" type="button" data-clear>Clear</button><button class="pill" type="button" data-save="minor">Save my signature</button></div>
-  </section>
-  <section data-step="parent" hidden>
-    <h1 tabindex="-1">Parent or guardian</h1>
-    <p class="lead">A parent or guardian signs next. Hand over your device, or send them a link.</p>
-    <div class="row"><button class="pill" type="button" data-go="parent-here">They are here</button><button class="ghost" type="button" data-go="parent-link">Send a link</button></div>
-  </section>
-  <section data-step="parent-here" hidden>
-    <h1 tabindex="-1">Parent or guardian signature</h1>
-    <label class="f">Full name<input name="parent_name" autocomplete="off" maxlength="120" value={state.parent_name ?? ''}></label>
+    <button slot="more" type="button" class="link" data-clear>Start over</button>
+  </Slide>
+  <Slide title="Now a parent or guardian." lead="Is one of them with you right now? If so, pass them the screen. If not, we will email them a link they can sign from their own phone." cta="">
+    <button type="button" class="btn" data-jump="3">They are here with me</button>
+    <button type="button" class="btn btn-ghost" data-jump="5">Email them a link</button>
+  </Slide>
+  <Slide title="What is their full name?" lead="Exactly as they would sign it.">
+    <input name="parent_name" autocomplete="off" maxlength="120" value={state.parent_name ?? ''} aria-label="parent or guardian full name" placeholder="Full name" />
+  </Slide>
+  <Slide title="Parent or guardian, please sign." lead="By signing, you confirm you are this student's parent or legal guardian and you agree to the terms they just read." cta="Save signature">
     <div class="pad"><canvas data-pad="parent" aria-label="Parent or guardian signature"></canvas></div>
-    <p class="err" role="alert" hidden></p>
-    <div class="row"><button class="ghost" type="button" data-clear>Clear</button><button class="pill" type="button" data-save="parent">Save signature</button></div>
-  </section>
-  <section data-step="parent-link" hidden>
-    <h1 tabindex="-1">Send a link</h1>
-    <label class="f">Parent or guardian email<input name="parent_email" type="email" autocomplete="off" inputmode="email"></label>
-    <p class="err" role="alert" hidden></p>
-    <div class="row"><button class="ghost" type="button" data-go="parent">Back</button><button class="pill" type="button" data-send>Send link</button></div>
-    <p class="note" data-sent hidden>Link sent. Once they sign it, come back and confirm.</p>
-  </section>
-  <section data-step="confirm" hidden>
-    <h1 tabindex="-1">Confirm</h1>
-    <p class="lead">Your signature and your parent or guardian's are saved. Confirm to finish.</p>
-    <p class="err" role="alert" hidden></p>
-    <button class="pill" type="button" data-confirm>Confirm my MOU</button>
-  </section>
-</div>
+    <button slot="more" type="button" class="link" data-clear>Start over</button>
+  </Slide>
+  <Slide title="Where should we send it?" lead="Their email, not yours. The link works on any phone and takes about a minute." cta="Send the link">
+    <input name="parent_email" type="email" autocomplete="off" inputmode="email" autocapitalize="off" enterkeyhint="go" aria-label="parent or guardian email" placeholder="parent@email.com" />
+  </Slide>
+  <Slide title="That is everything." cta="Confirm my MOU">
+    <p class="lead via" data-via="here">Your signature and your parent or guardian's are saved. Confirm and you are in.</p>
+    <p class="lead via" data-via="link" hidden>The link is on its way. When they have signed it, come back here and confirm.</p>
+  </Slide>
+</SlideDeck>
 <script>
-  const root = document.querySelector<HTMLElement>('.mm')!;
-  const steps = [...root.querySelectorAll<HTMLElement>('[data-step]')];
-  const show = (n: string) => {
-    steps.forEach((s) => { s.hidden = s.dataset.step !== n; });
-    window.scrollTo(0, 0);
-    root.querySelector<HTMLElement>(`[data-step=${n}] h1`)?.focus({ preventScroll: true });
-    size();
-  };
+  const deck = document.querySelector<HTMLElement>('[data-deck]')!;
+  const slides = [...deck.querySelectorAll<HTMLElement>('[data-slide]')];
+  const go = (i: number) => deck.dispatchEvent(new CustomEvent('deck:goto', { detail: i }));
   const post = async (b: object) => {
     const r = await fetch('/portal/mou/minor/api', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(b) }).catch(() => null);
     return { ok: !!r?.ok, error: r ? (await r.json().catch(() => ({}))).error as string | undefined : 'No connection. Try again.' };
   };
-  const fail = (btn: HTMLElement, msg?: string) => {
-    const e = btn.closest<HTMLElement>('[data-step]')!.querySelector<HTMLElement>('.err')!;
-    e.textContent = msg ?? 'That did not save. Try again.'; e.hidden = false;
-  };
+  const errOf = (i: number) => slides[i].querySelector<HTMLElement>('[data-err]')!;
+  const fail = (i: number, msg?: string) => { errOf(i).textContent = msg ?? 'That did not save. Try again.'; };
+  const busy = (i: number, on: boolean) => { const b = slides[i].querySelector<HTMLButtonElement>('[data-next]'); if (b) b.disabled = on; };
   // Canvas: DPR-sized, pointer events, remembers whether a real stroke (not a dot) was drawn.
   const pads = new Map<HTMLCanvasElement, { drawn: number }>();
-  root.querySelectorAll<HTMLCanvasElement>('canvas').forEach((c) => {
+  deck.querySelectorAll<HTMLCanvasElement>('canvas').forEach((c) => {
     const ctx = c.getContext('2d')!; const st = { drawn: 0 }; pads.set(c, st);
     let last: [number, number] | null = null;
     const pt = (e: PointerEvent): [number, number] => { const r = c.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
@@ -88,60 +72,57 @@ const start = !state.minor_signed ? 'minor' : (state.parent_signed || state.pare
       const ctx = c.getContext('2d')!; ctx.scale(d, d); ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.strokeStyle = '#111';
     });
   }
-  root.querySelectorAll<HTMLElement>('[data-clear]').forEach((b) => b.addEventListener('click', () => {
-    const c = b.closest('[data-step]')!.querySelector('canvas')!; const st = pads.get(c)!;
-    c.getContext('2d')!.clearRect(0, 0, c.width, c.height); st.drawn = 0;
+  deck.addEventListener('deck:change', size);
+  size();
+  deck.querySelectorAll<HTMLElement>('[data-clear]').forEach((b) => b.addEventListener('click', () => {
+    const c = b.closest('[data-slide]')!.querySelector('canvas')!;
+    c.getContext('2d')!.clearRect(0, 0, c.width, c.height); pads.get(c)!.drawn = 0;
   }));
-  root.querySelectorAll<HTMLElement>('[data-go]').forEach((b) => b.addEventListener('click', () => show(b.dataset.go!)));
-  root.querySelectorAll<HTMLButtonElement>('[data-save]').forEach((b) => b.addEventListener('click', async () => {
-    const role = b.dataset.save!; const step = b.closest('[data-step]')!;
-    const c = step.querySelector('canvas')!; const err = step.querySelector<HTMLElement>('.err')!; err.hidden = true;
-    const name = role === 'parent' ? step.querySelector<HTMLInputElement>('[name=parent_name]')!.value.trim() : undefined;
-    if (role === 'parent' && (name!.length < 2)) return fail(b, 'Type the parent or guardian\'s full name.');
-    if (pads.get(c)!.drawn < 40) return fail(b, 'Please sign in the box.');
-    b.disabled = true;
+  deck.querySelectorAll<HTMLElement>('[data-jump]').forEach((b) => b.addEventListener('click', () => go(Number(b.dataset.jump))));
+
+  const sign = async (i: number, role: 'minor' | 'parent', name?: string) => {
+    const c = slides[i].querySelector('canvas')!;
+    if (pads.get(c)!.drawn < 40) return fail(i, 'Please sign in the box.');
+    busy(i, true);
     const r = await post({ action: 'sign', role, png: c.toDataURL('image/png').split(',')[1], parentName: name });
-    b.disabled = false;
-    if (!r.ok) return fail(b, r.error);
-    show(role === 'minor' ? 'parent' : 'confirm');
-  }));
-  root.querySelector<HTMLButtonElement>('[data-send]')!.addEventListener('click', async (e) => {
-    const b = e.currentTarget as HTMLButtonElement; const step = b.closest('[data-step]')!;
-    step.querySelector<HTMLElement>('.err')!.hidden = true;
-    b.disabled = true;
-    const r = await post({ action: 'send', parentEmail: step.querySelector<HTMLInputElement>('[name=parent_email]')!.value });
-    b.disabled = false;
-    if (!r.ok) return fail(b, r.error);
-    step.querySelector<HTMLElement>('[data-sent]')!.hidden = false;
-    show('confirm');
+    busy(i, false);
+    if (!r.ok) return fail(i, r.error);
+    errOf(i).textContent = '';
+    go(role === 'minor' ? 2 : 6);
+  };
+  // Slides that save something take over the advance; everything else moves on by itself.
+  deck.addEventListener('deck:before', async (e) => {
+    const i = (e as CustomEvent<{ index: number }>).detail.index;
+    if (i < 1 || i === 3) {
+      if (i === 3 && deck.querySelector<HTMLInputElement>('[name=parent_name]')!.value.trim().length < 2) { e.preventDefault(); fail(3, 'Type the parent or guardian\'s full name.'); }
+      return;
+    }
+    e.preventDefault();
+    if (i === 1) await sign(1, 'minor');
+    else if (i === 4) await sign(4, 'parent', deck.querySelector<HTMLInputElement>('[name=parent_name]')!.value.trim());
+    else if (i === 5) {
+      busy(5, true);
+      const r = await post({ action: 'send', parentEmail: deck.querySelector<HTMLInputElement>('[name=parent_email]')!.value });
+      busy(5, false);
+      if (!r.ok) return fail(5, r.error);
+      deck.querySelector<HTMLElement>('[data-via=here]')!.hidden = true;
+      deck.querySelector<HTMLElement>('[data-via=link]')!.hidden = false;
+      go(6);
+    } else if (i === 6) {
+      busy(6, true);
+      const r = await post({ action: 'confirm' });
+      if (r.ok) { location.assign('/portal'); return; }
+      busy(6, false); fail(6, r.error);
+    }
   });
-  root.querySelector<HTMLButtonElement>('[data-confirm]')!.addEventListener('click', async (e) => {
-    const b = e.currentTarget as HTMLButtonElement; b.disabled = true;
-    const r = await post({ action: 'confirm' });
-    if (r.ok) { location.assign('/portal'); return; }
-    b.disabled = false; fail(b, r.error);
-  });
-  show(root.dataset.start === 'minor' ? 'terms' : root.dataset.start!);
 </script>
-<style>
-  .mm { display: grid; gap: var(--sp-16); }
-  [data-step] { display: grid; gap: var(--sp-16); }
-  [data-step][hidden] { display: none; }
-  h1 { font-size: var(--fs-28); font-weight: var(--fw-800); letter-spacing: var(--track-tight); line-height: 1.2; margin: var(--sp-8) 0 0; }
-  h1:focus { outline: none; }
-  h2 { font-size: var(--fs-17); margin: var(--sp-16) 0 var(--sp-4); }
-  .lead, .note { margin: 0; font-size: var(--fs-15); line-height: 1.5; color: var(--body); }
-  .terms { max-height: 45vh; overflow-y: auto; padding: var(--sp-16); border-radius: var(--r-20); background: var(--panel); font-size: var(--fs-15); line-height: 1.55; color: var(--body); overflow-wrap: anywhere; }
-  .terms p { margin: 0 0 var(--sp-8); }
-  .pad { border-radius: var(--r-20); background: var(--white); box-shadow: inset 0 0 0 2px var(--ink); }
-  canvas { display: block; width: 100%; height: 180px; touch-action: none; }
-  .f { display: grid; gap: var(--sp-4); font-size: var(--fs-13); font-weight: var(--fw-600); color: var(--muted); }
-  .f input { min-height: 48px; padding: 0 var(--sp-12); border: 0; border-radius: var(--r-12); box-shadow: inset 0 0 0 2px var(--ink); font: inherit; font-size: var(--fs-17); color: var(--ink); background: var(--white); }
-  .row { display: flex; gap: var(--sp-12); }
-  .row > * { flex: 1; }
-  .pill { border: 0; min-height: 52px; cursor: pointer; font-family: inherit; }
-  .pill:disabled { opacity: .4; }
-  .ghost { min-height: 52px; padding: 0 var(--sp-16); border: 0; border-radius: var(--r-pill); background: var(--panel); box-shadow: inset 0 0 0 2px var(--ink); color: var(--ink); font: inherit; font-size: var(--fs-15); font-weight: var(--fw-600); cursor: pointer; }
-  .err { margin: 0; padding: var(--sp-12); border-radius: var(--r-12); box-shadow: inset 0 0 0 2px var(--ink); font-size: var(--fs-15); font-weight: var(--fw-600); }
-  .err[hidden], .note[hidden] { display: none; }
+<style is:global>
+  .deck h2 { font-size: var(--fs-17); margin: var(--sp-16) 0 var(--sp-4); }
+  .deck h2:first-child { margin-top: 0; }
+  .deck .terms { max-height: 42vh; overflow-y: auto; padding: var(--sp-16); border-radius: var(--r-20); background: var(--panel); font-size: var(--fs-15); line-height: 1.55; color: var(--body); overflow-wrap: anywhere; }
+  .deck .terms p { margin: 0 0 var(--sp-8); }
+  .deck .pad { width: 100%; border-radius: var(--r-20); background: var(--white); box-shadow: inset 0 0 0 1px var(--line); }
+  .deck canvas { display: block; width: 100%; height: 200px; touch-action: none; }
+  .deck .via[hidden] { display: none; }
+  .deck .body > .btn { width: 100%; }
 </style>
