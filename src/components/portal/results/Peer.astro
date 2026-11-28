@@ -53,7 +53,11 @@ const views = ([] as any[]).concat(view ?? []).filter((v) => v?.card?.firstName)
     const box = document.querySelector<HTMLElement>(`[data-result][data-for="${i}"]`)!;
     const slide = root.closest('[data-slide]')!;
     if (box.dataset.stage === 'both') show(box, 'both');
-    slide.querySelector('[data-decline]')!.addEventListener('click', () => show(box, 'declined'));
+    slide.querySelector('[data-decline]')!.addEventListener('click', () => {
+      show(box, 'declined');
+      // Withdraw any earlier accept on the server, so no contact is ever released after a decline.
+      fetch(root.dataset.endpoint!, { method: 'POST', body: `{"matchId":${Number(root.dataset.match)},"action":"decline"}` }).catch(() => {});
+    });
     slide.querySelector('[data-accept]')!.addEventListener('click', () => {
       if (box.dataset.stage === 'both') return;
       box.querySelector<HTMLElement>('[data-retry]')!.hidden = true;

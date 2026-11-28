@@ -55,6 +55,15 @@ test('peer flow: down reveals email only once both are down', async () => {
   assert.equal((await sb(id).rpc('get_my_peer')).data[0].partner_email, after.partner_email);
 });
 
+test('peer flow: accept then decline returns no contact', async () => {
+  const id = newDemoId(); createDemoSession(id, 'peer', { minor: false });
+  const m = (await sb(id).rpc('get_my_peer', { p_season: 'fall-2026' })).data[0].match_id;
+  assert.ok((await sb(id).rpc('peer_down', { p_match_id: m })).data[0].partner_email);
+  await sb(id).rpc('peer_pass', { p_match_id: m });
+  const after = (await sb(id).rpc('get_my_peer')).data[0];
+  assert.equal(after.i_am_down, false); assert.equal(after.partner_email, null);
+});
+
 test('onboarding, consent, team, phone, guiding, minor and parent RPCs', async () => {
   const id = newDemoId(); createDemoSession(id, 'cohort-aws', { minor: true });
   const c = sb(id);

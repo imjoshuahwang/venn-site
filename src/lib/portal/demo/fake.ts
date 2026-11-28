@@ -66,6 +66,7 @@ function teamRows(s: DemoState) {
 function rpc(s: DemoState, name: string, a: Record<string, any> = {}) {
   switch (name) {
     case 'get_my_peer': return ok(s.result.outcome === 'peer' ? [peerRow(s)] : []);
+    case 'peer_pass': s.peer.i_am_down = false; s.peer.they_are_down = false; return ok();
     case 'peer_down': s.peer.i_am_down = true; s.peer.they_are_down = true; return ok([peerRow(s)]);
     case 'mark_viewed': s.result.viewed_at ??= now(); return ok(s.result.viewed_at);
     case 'finish_ceremony': s.result.ceremony_done_at ??= now(); return ok(s.result.ceremony_done_at);

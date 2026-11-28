@@ -67,7 +67,7 @@ for (const outcome of ['network_waitlist', 'track_waitlist', 'not_this_season', 
   });
 }
 
-test('peer: Decline lands on the stand slide, says passed, never unlocks the intro, and sends no peer_down', async () => {
+test('peer: Decline lands on the stand slide, says passed, never unlocks the intro, and a decline call goes out', async () => {
   const { page, errors, external } = await start('peer');
   await page.goto(`${BASE}/portal/result`);
   await cur(page).waitFor();
@@ -96,6 +96,25 @@ test('cohort next steps (two steps then done) and team are slide decks', async (
   await cur(page).locator('[data-tick]').first().waitFor();
   await page.goto(`${BASE}/portal/team`);
   await cur(page).getByRole('heading', { name: 'Your team.' }).waitFor();
+  assert.deepEqual(errors, []);
+  assert.deepEqual(external, []);
+  await page.context().close();
+});
+
+test('peer: Accept then Decline withdraws the accept and shows no contact', async () => {
+  const { page, errors, external } = await start('peer');
+  await page.goto(`${BASE}/portal/result`);
+  await cur(page).waitFor();
+  await advance(page);
+  await cur(page).getByRole('heading', { name: /You got matched with Maya/ }).waitFor();
+  await cur(page).getByRole('button', { name: 'Accept' }).click();
+  await page.waitForTimeout(450);
+  await cur(page).getByRole('button', { name: 'Decline' }).click();
+  await page.waitForTimeout(450);
+  await cur(page).getByText('You passed on this one').waitFor();
+  assert.equal(await page.getByText('maya.demo@example.com').isVisible(), false);
+  const peer = await page.evaluate(() => fetch('/portal/peer-down', { method: 'POST', body: JSON.stringify({ matchId: 1, action: 'decline' }) }).then((r) => r.json()));
+  assert.equal(peer.contact, null);
   assert.deepEqual(errors, []);
   assert.deepEqual(external, []);
   await page.context().close();
