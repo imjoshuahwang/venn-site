@@ -35,7 +35,7 @@ test('ageRoute: missing, malformed, future or impossible birthdays are rejected'
 
 const FULL = ['profile', 'contact', 'mou'] as const;
 const base: OnboardingState = { required: true, profileDone: false, contactDone: false, minor: false, mouDone: false };
-test('default order is profile, then a minor's MOU; contact comes after the reveal', () => {
+test('default order is profile, then a minor MOU; contact comes after the reveal', () => {
   assert.equal(nextOnboardingPath({ required: true, profileDone: true, contactDone: false, minor: true, mouDone: false }), '/portal/mou/minor');
   assert.equal(nextOnboardingPath({ required: true, profileDone: false, contactDone: false, minor: false, mouDone: false }), '/portal/onboarding/profile');
 });

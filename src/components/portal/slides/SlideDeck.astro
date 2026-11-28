@@ -1,7 +1,8 @@
 ---
 // One question per screen. Props: strict (validation blocks instead of nudging once), action (wraps slides in a POST form that
 // submits when the last slide advances), method, start (first slide index), label. Slot: <Slide> children.
-// Events on the deck element: `deck:change` {index, count}, `deck:finish` {form} (cancelable).
+// Events on the deck element: `deck:change` {index, count}, `deck:finish` {form} (cancelable),
+// `deck:before` {index, slide} (cancelable, fires before every advance), `deck:next` (dispatch to advance), and `deck:goto` (dispatch with detail = slide index to jump; Back retraces).
 const { strict = false, action, method = 'post', start = 0, label = 'Steps' } = Astro.props;
 const Tag = action ? 'form' : 'div';
 ---
@@ -27,7 +28,7 @@ const Tag = action ? 'form' : 'div';
   @media (prefers-reduced-motion: reduce) { .deck .bar i, .deck .back { transition: none; } .deck .back:active { transform: none; } }
 </style>
 <script>
-  import { createDeck, attempt, retreat, progress, keyAction, checkSlide, type FieldInfo, type DeckState } from './deck';
+  import { createDeck, attempt, retreat, goTo, progress, keyAction, checkSlide, type FieldInfo, type DeckState } from './deck';
   import { reducedMotion } from '../../../lib/portal/motion';
 
   document.querySelectorAll<HTMLElement>('[data-deck]').forEach((deck) => {
@@ -62,7 +63,11 @@ const Tag = action ? 'form' : 'div';
       }
     };
 
+    const hist: number[] = [];
     const next = () => {
+      // A page can take over a slide (save a signature, send a link): cancel deck:before and call deck:goto itself.
+      if (!deck.dispatchEvent(new CustomEvent('deck:before', { cancelable: true, detail: { index: s.index, slide: slides[s.index] } }))) return;
+      const from = s.index;
       const a = attempt(s, checkSlide(fieldsOf(slides[s.index])), strict);
       s = a.state;
       if (a.result === 'nudge') return setErr(a.message);
@@ -73,12 +78,13 @@ const Tag = action ? 'form' : 'div';
         if (ok && form) form.requestSubmit();
         return;
       }
+      hist.push(from);
       render(true);
       announce();
     };
     const prev = () => {
       if (s.index === 0) return;
-      s = retreat(s);
+      s = hist.length ? goTo(s, hist.pop()!) : retreat(s);
       render(true);
       announce();
     };
@@ -89,6 +95,13 @@ const Tag = action ? 'form' : 'div';
       else if (t.closest('[data-back]')) prev();
     });
     deck.addEventListener('input', () => setErr(''));
+    deck.addEventListener('deck:next', next);
+    deck.addEventListener('deck:goto', (e) => {
+      hist.push(s.index);
+      s = goTo(s, (e as CustomEvent<number>).detail);
+      render(true);
+      announce();
+    });
     // Only the last slide may submit a real form; Enter on earlier slides is already handled as "next".
     deck.addEventListener('submit', (e) => { if (s.index < s.count - 1) e.preventDefault(); });
     document.addEventListener('keydown', (e) => {
