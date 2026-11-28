@@ -4,11 +4,11 @@ import { seedDemo, createDemoSession, demoClientFor, getDemoSession, OUTCOMES, n
 
 const sb = (id: string) => demoClientFor(id) as any;
 
-test('seedDemo builds all six outcomes, cohort fixtures carry seat_cap 20', () => {
-  assert.deepEqual([...OUTCOMES], ['cohort-aws', 'cohort-quadron', 'peer', 'network_waitlist', 'track_waitlist', 'not_this_season']);
+test('seedDemo builds all seven outcomes, cohort fixtures carry seat_cap 20', () => {
+  assert.deepEqual([...OUTCOMES], ['cohort-aws', 'cohort-quadron', 'cohort-both', 'peer', 'network_waitlist', 'track_waitlist', 'not_this_season']);
   for (const o of OUTCOMES) {
     const s = seedDemo(o, { minor: false });
-    if (o.startsWith('cohort')) { assert.equal(s.result.outcome, 'cohort'); assert.equal(s.cohort?.seat_cap, 20); }
+    if (o.startsWith('cohort')) { assert.equal(s.result.outcome, 'cohort'); assert.equal(s.cohort?.seat_cap, o === 'cohort-quadron' ? 20 : 10); }
     else { assert.equal(s.cohort, null); assert.equal(s.result.outcome, o); }
   }
   assert.equal(seedDemo('cohort-quadron', { minor: false }).cohort?.slug, 'quadron');
@@ -28,7 +28,7 @@ test('auth accepts anything and no network is touched', async () => {
 test('results table: thenable builder, select/eq/maybeSingle, embedded cohort', async () => {
   const id = newDemoId(); createDemoSession(id, 'cohort-aws', { minor: false });
   const r = await sb(id).from('results').select('*, cohort:cohorts(*)').eq('season', 'fall-2026').limit(1).maybeSingle();
-  assert.equal(r.error, null); assert.equal(r.data.outcome, 'cohort'); assert.equal(r.data.cohort.seat_cap, 20);
+  assert.equal(r.error, null); assert.equal(r.data.outcome, 'cohort'); assert.equal(r.data.cohort.seat_cap, 10);
   const none = await sb(id).from('results').select('*').eq('season', 'zzz').limit(1).maybeSingle();
   assert.equal(none.data, null);
   const list = await sb(id).from('results').select('outcome, letter').eq('status', 'approved');
@@ -100,4 +100,10 @@ test('generic RPCs: rate limit, links, funnel, viewed, ceremony, match mail, ref
   const r = (await c.from('results').select('*').limit(1).maybeSingle()).data;
   assert.ok(r.viewed_at); assert.ok(r.ceremony_done_at);
   assert.match((await c.rpc('nope_unknown')).error.message, /nope_unknown/);
+});
+
+test('dual acceptance exposes both cohorts, others keep the single shape', () => {
+  const b = seedDemo('cohort-both', { minor: false });
+  assert.deepEqual(b.result.cohorts.map((c: any) => [c.slug, c.seat_cap]), [['aws', 10], ['quadron', 20]]);
+  assert.equal(seedDemo('cohort-aws', { minor: false }).result.cohorts, undefined);
 });

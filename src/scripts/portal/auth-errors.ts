@@ -28,7 +28,7 @@ export const TURNSTILE_MESSAGE = "We couldn't confirm you're a person. Refresh t
 export const RATE_MESSAGE = 'Too many tries. Wait a few minutes and try again.';
 
 type Action = 'login' | 'set-password' | 'reset' | 'resend';
-export interface GuardDeps { form?: FormData; store?: Store; fetch?: any; secret?: string; siteKey?: string }
+export interface GuardDeps { form?: FormData; store?: Store; fetch?: any; secret?: string; siteKey?: string; skipTurnstile?: boolean }
 
 /** Cloudflare's test secret, dev builds only. Vite folds DEV to false in production so the key never ships; outside Vite (plain node) there is no fallback. */
 async function devSecret(): Promise<string> {
@@ -51,7 +51,7 @@ export async function authGuard(action: Action, request: Request, deps: GuardDep
   const secret = deps.secret ?? process.env.TURNSTILE_SECRET_KEY ?? await devSecret();
   const siteKey = deps.siteKey ?? process.env.PUBLIC_TURNSTILE_SITE_KEY ?? (await devSecret() ? 'dev' : '');
   // Turnstile is enforced only when BOTH keys are set (#169); otherwise the widget is not rendered and rate limits below still apply.
-  if (secret && siteKey) {
+  if (!deps.skipTurnstile && secret && siteKey) { // skipTurnstile: dev demo session (#318), set from locals.demo
     const token = String(form.get('cf-turnstile-response') ?? '');
     if (!(await verifyTurnstile(token, secret, ip, deps.fetch))) return TURNSTILE_MESSAGE;
   }

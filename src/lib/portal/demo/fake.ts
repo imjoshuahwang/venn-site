@@ -1,5 +1,5 @@
 // In-memory fake Supabase client for demo mode. Pure data, no network, no imports beyond types.
-export const OUTCOMES = ['cohort-aws', 'cohort-quadron', 'peer', 'network_waitlist', 'track_waitlist', 'not_this_season'] as const;
+export const OUTCOMES = ['cohort-aws', 'cohort-quadron', 'cohort-both', 'peer', 'network_waitlist', 'track_waitlist', 'not_this_season'] as const;
 export type DemoOutcome = (typeof OUTCOMES)[number];
 
 type Row = Record<string, any>;
@@ -21,11 +21,14 @@ export const newDemoId = (): string => `demo-${Math.random().toString(36).slice(
 const LETTER = (o: string) => `Dear Applicant,\n\nThank you for applying this Season. This is the demo letter for ${o}.\n\nThe Venn team`;
 
 export function seedDemo(outcome: DemoOutcome, opts: { minor: boolean }, id = newDemoId()): DemoState {
-  const slug = outcome === 'cohort-quadron' ? 'quadron' : 'aws';
+  const slug: 'aws' | 'quadron' = outcome === 'cohort-quadron' ? 'quadron' : 'aws';
   const isCohort = outcome.startsWith('cohort');
-  const cohort = isCohort ? { id: 1, slug, name: `${slug === 'aws' ? 'AWS' : 'Quadron'} Fall Cohort 2026`, company: slug === 'aws' ? 'AWS' : 'Quadron', goal: null, criteria: null, timeline: null, video_url: null, slides_url: null, logo_path: null, seat_cap: 20 } : null;
+  const mk = (sl: 'aws' | 'quadron') => ({ id: sl === 'aws' ? 1 : 2, slug: sl, name: `${sl === 'aws' ? 'AWS' : 'Quadron'} Fall Cohort 2026`, company: sl === 'aws' ? 'AWS' : 'Quadron', goal: null, criteria: null, timeline: null, video_url: null, slides_url: null, logo_path: null, seat_cap: sl === 'aws' ? 10 : 20 });
+  const cohort = isCohort ? mk(slug) : null;
+  // The results schema is unique (application_id, season) with one cohort_id, so a dual acceptance exists only in the demo: `cohorts` lists both (#318).
+  const cohorts = outcome === 'cohort-both' ? [mk('aws'), mk('quadron')] : undefined;
   const o = isCohort ? 'cohort' : outcome;
-  const result = { id: 1, outcome: o, status: 'approved', approved_at: now(), cohort_id: cohort ? 1 : null, why_matched: 'You build for teachers and ship.', letter: isCohort ? 'Dear Applicant,\n\nWe picked you for this cohort. The Venn team' : LETTER(o), season: 'fall-2026', viewed_at: null, ceremony_done_at: null };
+  const result = { id: 1, outcome: o, status: 'approved', approved_at: now(), cohort_id: cohort ? cohort.id : null, ...(cohorts ? { cohorts } : {}), why_matched: 'You build for teachers and ship.', letter: isCohort ? 'Dear Applicant,\n\nWe picked you for this cohort. The Venn team' : LETTER(o), season: 'fall-2026', viewed_at: null, ceremony_done_at: null };
   return {
     id, user: { id: `demo-user-${id}`, email: 'demo@example.com' }, minor: opts.minor, season: 'fall-2026', result, cohort, mou: null, guiding: [],
     team: [], nextMember: 1, peer: { match_id: 1, i_am_down: false, they_are_down: false },

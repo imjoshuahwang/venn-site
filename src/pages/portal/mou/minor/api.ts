@@ -26,7 +26,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
   if (body?.action === 'send') {
     const email = String(body.parentEmail ?? '').trim();
     if (!parentEmailDiffers(locals.user.email ?? '', email)) return json(400, { error: 'Use a parent or guardian email that is not your own.' });
-    const svc = createClient(import.meta.env.PUBLIC_SUPABASE_URL, import.meta.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+    const svc = locals.demo ? locals.supabase : createClient(import.meta.env.PUBLIC_SUPABASE_URL, import.meta.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
     const { data: token, error } = await svc.rpc('request_parent_consent', { p_user_id: locals.user.id, p_parent_email: email });
     if (error || !token) return json(400, { error: 'We could not send that link.' });
     let sent = false;
