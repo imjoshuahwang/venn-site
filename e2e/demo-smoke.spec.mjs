@@ -15,7 +15,7 @@ const CASES = [
 ];
 
 before(async () => {
-  const env = { ...process.env }; for (const k of Object.keys(env)) if (/SUPABASE|TURNSTILE|RESEND/.test(k)) delete env[k];
+  const env = Object.fromEntries(Object.entries(process.env).filter(([k]) => !/SUPABASE|TURNSTILE|RESEND/.test(k)));
   server = spawn('npx', ['astro', 'dev', '--host', '127.0.0.1', '--port', '8030'], { env: localServerEnv('http://127.0.0.1:1', 'x', {}, env), stdio: 'ignore', detached: true });
   for (let i = 0; i < 120; i++) {
     if (await fetch(`${BASE}/demo`).then((r) => r.ok, () => false)) break;
