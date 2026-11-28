@@ -1,0 +1,104 @@
+---
+// One question per screen. Props: strict (validation blocks instead of nudging once), action (wraps slides in a POST form that
+// submits when the last slide advances), method, start (first slide index), label. Slot: <Slide> children.
+// Events on the deck element: `deck:change` {index, count}, `deck:finish` {form} (cancelable).
+const { strict = false, action, method = 'post', start = 0, label = 'Steps' } = Astro.props;
+const Tag = action ? 'form' : 'div';
+---
+<Tag class="deck" data-deck data-strict={strict ? '1' : undefined} data-start={start} action={action} method={action ? method : undefined} novalidate role="group" aria-label={label}>
+  <div class="bar" aria-hidden="true"><i data-bar></i></div>
+  <button type="button" class="back" data-back aria-label="Back"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4 6 10l6 6" /></svg></button>
+  <slot />
+</Tag>
+<style is:global>
+  .deck { position: fixed; inset: 0; z-index: 10; background: var(--white); overflow: hidden; }
+  .deck .bar { position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--line); z-index: 2; }
+  .deck .bar i { display: block; height: 100%; background: var(--ink); transform-origin: left; transform: scaleX(.34); transition: transform var(--dur-slide) var(--ease-spring); }
+  .deck .back {
+    position: absolute; z-index: 2; top: max(var(--sp-16), env(safe-area-inset-top)); left: max(var(--sp-12), env(safe-area-inset-left));
+    display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0;
+    border: 0; border-radius: var(--r-pill); background: transparent; color: var(--ink); cursor: pointer;
+    transition: opacity var(--dur-2) var(--ease), transform var(--dur-1) var(--ease), background var(--dur-2) var(--ease);
+  }
+  .deck .back:hover { background: var(--panel); }
+  .deck .back:active { transform: scale(.92); }
+  .deck .back[data-off] { opacity: 0; pointer-events: none; }
+  .deck :focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+  @media (prefers-reduced-motion: reduce) { .deck .bar i, .deck .back { transition: none; } .deck .back:active { transform: none; } }
+</style>
+<script>
+  import { createDeck, attempt, retreat, progress, keyAction, checkSlide, type FieldInfo, type DeckState } from './deck';
+  import { reducedMotion } from '../../../lib/portal/motion';
+
+  document.querySelectorAll<HTMLElement>('[data-deck]').forEach((deck) => {
+    const slides = [...deck.querySelectorAll<HTMLElement>('[data-slide]')];
+    const bar = deck.querySelector<HTMLElement>('[data-bar]')!;
+    const back = deck.querySelector<HTMLButtonElement>('[data-back]')!;
+    const strict = deck.dataset.strict === '1';
+    let s: DeckState = createDeck(slides.length, Number(deck.dataset.start ?? 0));
+    if (reducedMotion()) deck.dataset.reduced = '1';
+
+    const fieldsOf = (slide: HTMLElement): FieldInfo[] =>
+      [...slide.querySelectorAll<HTMLInputElement>('input, textarea')].map((el) => ({
+        value: el.value, type: el.type, required: el.required, minLength: el.minLength > 0 ? el.minLength : undefined,
+        label: el.getAttribute('aria-label') ?? el.name ?? undefined,
+      }));
+    const setErr = (msg: string) => { const e = slides[s.index].querySelector<HTMLElement>('[data-err]'); if (e) e.textContent = msg; };
+    const announce = () => deck.dispatchEvent(new CustomEvent('deck:change', { detail: { index: s.index, count: s.count } }));
+
+    const render = (focus: boolean) => {
+      slides.forEach((el, i) => {
+        el.dataset.pos = i < s.index ? 'before' : i > s.index ? 'after' : 'current';
+        el.toggleAttribute('inert', i !== s.index);
+        el.setAttribute('aria-hidden', i === s.index ? 'false' : 'true');
+      });
+      bar.style.transform = `scaleX(${progress(s)})`;
+      back.toggleAttribute('data-off', s.index === 0);
+      back.tabIndex = s.index === 0 ? -1 : 0;
+      deck.dataset.index = String(s.index);
+      if (focus) {
+        const cur = slides[s.index];
+        (cur.querySelector<HTMLElement>('input, textarea, select') ?? cur.querySelector<HTMLElement>('[data-next]'))?.focus({ preventScroll: true });
+      }
+    };
+
+    const next = () => {
+      const a = attempt(s, checkSlide(fieldsOf(slides[s.index])), strict);
+      s = a.state;
+      if (a.result === 'nudge') return setErr(a.message);
+      setErr('');
+      if (a.result === 'finish') {
+        const form = deck instanceof HTMLFormElement ? deck : null;
+        const ok = deck.dispatchEvent(new CustomEvent('deck:finish', { cancelable: true, detail: { form } }));
+        if (ok && form) form.requestSubmit();
+        return;
+      }
+      render(true);
+      announce();
+    };
+    const prev = () => {
+      if (s.index === 0) return;
+      s = retreat(s);
+      render(true);
+      announce();
+    };
+
+    deck.addEventListener('click', (e) => {
+      const t = e.target as HTMLElement;
+      if (t.closest('[data-next]')) next();
+      else if (t.closest('[data-back]')) prev();
+    });
+    deck.addEventListener('input', () => setErr(''));
+    // Only the last slide may submit a real form; Enter on earlier slides is already handled as "next".
+    deck.addEventListener('submit', (e) => { if (s.index < s.count - 1) e.preventDefault(); });
+    document.addEventListener('keydown', (e) => {
+      const act = keyAction({ key: e.key, target: (e.target as HTMLElement)?.tagName, shiftKey: e.shiftKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey, isComposing: e.isComposing });
+      if (!act) return;
+      e.preventDefault();
+      if (act === 'next') next(); else prev();
+    });
+    render(false);
+    deck.dataset.ready = '1';
+    requestAnimationFrame(() => slides[s.index].querySelector<HTMLElement>('input, textarea, select')?.focus({ preventScroll: true }));
+  });
+</script>
