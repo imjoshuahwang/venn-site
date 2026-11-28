@@ -16,8 +16,6 @@ const { firstName, code = '', phone = '', josh } = Astro.props;
   .text-josh label:not(.wa) { display: grid; gap: 8px; font-size: 15px; }
   .wa { display: flex; align-items: center; gap: 12px; box-sizing: border-box; width: 100%; min-height: 44px; cursor: pointer; }
   .wa input { flex: none; width: 24px; height: 24px; margin: 0; }
-  .pill { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 24px; border-radius: 999px; background: var(--ink, #111); color: var(--bg, #fff); text-decoration: none; }
-  .pill[hidden] { display: none; }
 </style>
 <script>
   import { pillHref } from '../../scripts/portal/text-link';

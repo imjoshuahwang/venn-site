@@ -1,17 +1,3 @@
-:root {
-  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", system-ui, sans-serif;
-  --black: #18181a;
-  --text: #222226;
-  --body: #444;
-  --muted: #6b6b6b;
-  --faint: #999;
-  --line: #eee;
-  --panel: #f7f7f7;
-  --accent: #5b7bb4;
-  --ease: cubic-bezier(.25, 1, .5, 1);
-}
-
 *, *::before, *::after { box-sizing: border-box; }
 html { scroll-behavior: smooth; scroll-padding-top: 88px; }
 body {
@@ -39,20 +25,6 @@ p { margin: 0; }
   font: 400 12px/1.4 var(--mono); letter-spacing: .12em;
   text-transform: uppercase; color: var(--muted);
 }
-
-/* Buttons */
-.btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  background: #000; color: #fff; text-decoration: none; border: 0; cursor: pointer;
-  font: 500 16px/1 var(--font); padding: 16px 28px; border-radius: 999px;
-  transition: background .3s var(--ease), transform .3s var(--ease);
-}
-.btn:hover { background: #1f2937; }
-.btn:active { transform: scale(.975); }
-.btn-sm { font-size: 14px; padding: 9px 18px; }
-@media (pointer: coarse) { .btn-sm { min-height: 44px; } }
-.btn-ghost { background: transparent; color: var(--black); box-shadow: inset 0 0 0 1px #ddd; }
-.btn-ghost:hover { background: var(--panel); }
 
 /* Nav: transparent, then a frosted pill once you scroll */
 .nav { position: fixed; inset: 0 0 auto; z-index: 50; padding: calc(12px + env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 12px max(16px, env(safe-area-inset-left)); }
