@@ -1,4 +1,5 @@
 ---
+import { teamFixture } from '../../lib/portal/dev-fixtures';
 export const prerender = false;
 import Portal from '../../layouts/Portal.astro';
 import Team from '../../components/portal/Team.astro';
@@ -8,7 +9,8 @@ import { teamView } from '../../lib/portal/team';
 let view = null;
 let failed = false;
 try {
-  const r = await getMyTeam(Astro.locals.supabase);
+  const stub = import.meta.env.DEV ? Astro.url.searchParams.get('stub') : null;
+  const r = stub ? { data: teamFixture(stub), error: stub === 'error' ? { message: 'fixture' } : null } : await getMyTeam(Astro.locals.supabase);
   if (r.error) failed = true;
   else view = teamView(r.data ?? []);
 } catch {

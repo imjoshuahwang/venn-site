@@ -11,9 +11,13 @@ import { nextStepsFor } from '../../data/next-steps';
 import { getMyMatch } from '../../lib/portal/match-rpc';
 
 import { onboardingRedirect } from '../../lib/portal/onboarding';
-const onboarding = await onboardingRedirect(Astro.locals.supabase);
+import { fixture } from '../../lib/portal/ceremony-data';
+import { STUB_EMAIL } from '../../lib/portal/dev-fixtures';
+// Dev only (#314): ?stub=<outcome>|none|error[&done=1] renders the home or the ceremony with no session.
+const stub = import.meta.env.DEV ? Astro.url.searchParams.get('stub') : null;
+const onboarding = stub ? null : await onboardingRedirect(Astro.locals.supabase);
 if (onboarding) return Astro.redirect(onboarding, 303);
-const home = await loadHome({
+const home = stub ? { ceremony: fixture(stub, Astro.url.searchParams.get('done') === '1'), consentFailed: false, redirectToConsent: false } : await loadHome({
   ceremony: () => getCeremonyData(Astro),
   consent: () => getConsentState(Astro.locals.supabase, CONSENT_VERSION),
 });
@@ -24,11 +28,11 @@ const inCeremony = replay || (ceremony.status === 'ok' && initialScreen(ceremony
 const showSlots = !replay && !!stubMode() && Astro.url.searchParams.get('setup') !== '0';
 const setup = { consent: !showSlots, parent: !showSlots, phone: !showSlots };
 if (home.redirectToConsent) return Astro.redirect('/portal/ceremony', 303);
-const email = Astro.locals.user?.email ?? '';
+const email = stub ? STUB_EMAIL : Astro.locals.user?.email ?? '';
 const none = ceremony.status === 'none' && !consentFailed;
 const failed = ceremony.status === 'error' || consentFailed;
 // The match page is offered once a match is approved or past it; a failing lookup just hides the link.
-const hasMatchLink = !inCeremony && !failed && !none && await getMyMatch(Astro.locals.supabase).then((m) => !!m?.status && ['approved', 'revealed', 'requested', 'accepted'].includes(m.status), () => false);
+const hasMatchLink = !stub && !inCeremony && !failed && !none && await getMyMatch(Astro.locals.supabase).then((m) => !!m?.status && ['approved', 'revealed', 'requested', 'accepted'].includes(m.status), () => false);
 ---
 <Portal title="Your Venn home">
   {inCeremony ? <Ceremony result={replay ? { ...ceremony.result, viewedAt: ceremony.result.viewedAt ?? ceremony.result.doneAt } : ceremony.result} setup={setup} replay={replay} /> : failed ? <><section class="home" data-error><h1 role="alert">We could not load this page</h1><form method="get" action="/portal"><button class="pill" type="submit" data-retry>Try again</button></form></section></> : none ? (

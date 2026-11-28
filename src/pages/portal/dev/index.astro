@@ -1,0 +1,13 @@
+---
+export const prerender = false;
+import Portal from '../../../layouts/Portal.astro';
+import { GALLERY } from '../../../lib/portal/dev-fixtures';
+if (!import.meta.env.DEV) return new Response(null, { status: 404 });
+---
+<Portal title="Dev gallery">
+  <ul class="dev">{GALLERY.map(([label, href]) => <li><a href={href}>{label}</a></li>)}</ul>
+</Portal>
+<style>
+  .dev { list-style: none; margin: 0; padding: 0; }
+  .dev a { display: flex; align-items: center; min-height: 44px; color: inherit; text-underline-offset: 3px; }
+</style>

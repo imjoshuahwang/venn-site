@@ -1,4 +1,5 @@
 ---
+import { devError } from '../../lib/portal/dev-fixtures';
 import Base from '../../layouts/Base.astro';
 import AuthForm from '../../components/portal/AuthForm.astro';
 import { rpcStore } from '../../lib/portal/ratelimit';
@@ -6,7 +7,7 @@ import { authGuard, guardStatus, authMessage, safeRedirect } from '../../scripts
 
 export const prerender = false;
 const next = safeRedirect(Astro.url.searchParams.get('next'));
-let error = '';
+let error = import.meta.env.DEV ? devError(Astro.url.searchParams.get('stub')) : '';
 let email = '';
 if (Astro.locals.user && Astro.request.method === 'GET') return Astro.redirect(next, 303);
 

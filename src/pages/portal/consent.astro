@@ -1,4 +1,5 @@
 ---
+import { consentFixture } from '../../lib/portal/dev-fixtures';
 import Portal from '../../layouts/Portal.astro';
 import ConsentForm from '../../components/portal/ConsentForm.astro';
 import { CONSENT_VERSION } from '../../data/consent';
@@ -13,7 +14,8 @@ if (Astro.request.method === 'POST') {
   return new Response(null, { status: r.error ? 400 : 204 });
 }
 
-const { data: state, error } = await getConsentState(sb, CONSENT_VERSION);
+const stub = import.meta.env.DEV ? Astro.url.searchParams.get('stub') : null;
+const { data: state, error } = stub ? { data: consentFixture(stub), error: null } : await getConsentState(sb, CONSENT_VERSION);
 ---
 <Portal title="Consent">
   {error || !state ? <p role="alert">We could not load this page. Reload to try again.</p>
