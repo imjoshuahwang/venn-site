@@ -1,12 +1,14 @@
 ---
+import { minorMouFixture, STUB_EMAIL } from '../../../lib/portal/dev-fixtures';
 import Portal from '../../../layouts/Portal.astro';
 import MouMinor from '../../../components/portal/MouMinor.astro';
 
 export const prerender = false;
-const { data: state, error } = await Astro.locals.supabase.rpc('minor_mou_state');
+const stub = import.meta.env.DEV ? Astro.url.searchParams.get('stub') : null;
+const { data: state, error } = stub ? { data: minorMouFixture(stub), error: null } : await Astro.locals.supabase.rpc('minor_mou_state');
 if (!error && state && (!state.minor || state.confirmed)) return Astro.redirect('/portal');
 ---
 <Portal title="Your MOU">
   {error || !state ? <p role="alert">We could not load this page. Reload to try again.</p>
-    : <MouMinor state={state} email={Astro.locals.user?.email ?? ''} />}
+    : <MouMinor state={state} email={stub ? STUB_EMAIL : Astro.locals.user?.email ?? ''} />}
 </Portal>

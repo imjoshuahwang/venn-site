@@ -1,11 +1,13 @@
 ---
+import { devError } from '../../../lib/portal/dev-fixtures';
 import Portal from '../../../layouts/Portal.astro';
 import OnboardingShell from '../../../components/portal/OnboardingShell.astro';
 import { getOnboarding, nextOnboardingPath, validateProfile } from '../../../lib/portal/onboarding';
 
 export const prerender = false;
 const sb = Astro.locals.supabase;
-let error = '';
+const stub = import.meta.env.DEV ? Astro.url.searchParams.get('stub') : null;
+let error = devError(stub);
 let v = { name: '', location: '' };
 if (Astro.request.method === 'POST') {
   const f = await Astro.request.formData();

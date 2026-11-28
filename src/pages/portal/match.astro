@@ -7,10 +7,11 @@ import { getMyMatch, getMyIncoming, type MyMatch, type Incoming } from '../../li
 import { peerTile, stateLabel } from '../../lib/portal/match-stage.mjs';
 import { searchLine } from '../../data/match-facts';
 
-// Dev only: ?stub=unmatched|first|replay renders fixtures with no session. import.meta.env.DEV is false in every build.
+// Dev only: ?stub=unmatched|first|replay|invited|requested|accepted|declined|expired renders fixtures with no session. import.meta.env.DEV is false in every build.
 const stub = import.meta.env.DEV ? Astro.url.searchParams.get('stub') : null;
-const fixture = (viewed: boolean): MyMatch => ({
-  match_id: 1, status: viewed ? 'revealed' : 'approved', viewed_at: viewed ? '2026-11-27T00:00:00Z' : null,
+const ASKED = ['requested', 'accepted', 'declined', 'expired'];
+const fixture = (viewed: boolean, asked?: string): MyMatch => ({
+  match_id: 1, status: asked ?? (viewed ? 'revealed' : 'approved'), viewed_at: viewed ? '2026-11-27T00:00:00Z' : null,
   fit: { you_do: 'You run a robotics club of 14 that builds one working tool a term.', they_do: 'Daniel leads a STEM collective that gets teams from idea to a real user.', together: ['Swap how each club picks a first project.', 'Share one build night over video.'], common: ['Robotics', 'Small teams', 'Teaching tools'], ask: 'How does your club get new members to finish a first build?' },
   peer_first_name: 'Daniel', peer_org: 'Ohio STEM Collective', peer_region: 'Ohio', peer_project: 'Robotics',
 } as MyMatch);
@@ -21,7 +22,7 @@ let failed = false;
 try {
   if (stub === 'invited') inc = invitedFixture;
   else if (!stub) { const i = await getMyIncoming(Astro.locals.supabase).catch(() => null); if (i?.state === 'requested') inc = i; }
-  if (!inc) m = stub ? (stub === 'unmatched' ? ({ status: 'unmatched' } as MyMatch) : fixture(stub === 'replay')) : await getMyMatch(Astro.locals.supabase);
+  if (!inc) m = stub ? (stub === 'unmatched' ? ({ status: 'unmatched' } as MyMatch) : fixture(stub === 'replay' || ASKED.includes(stub), ASKED.includes(stub) ? stub : undefined)) : await getMyMatch(Astro.locals.supabase);
 } catch { failed = true; }
 const you = { name: stub ? 'Maya' : 'You', org: stub ? 'Lincoln HS Robotics Club' : '', region: stub ? 'Texas' : (m?.own_region ?? '') };
 const peer = { first_name: m?.peer_first_name, headline: m?.peer_project, org: m?.peer_org, region: m?.peer_region, field: m?.peer_project };

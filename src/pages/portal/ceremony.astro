@@ -1,4 +1,5 @@
 ---
+import { consentFixture } from '../../lib/portal/dev-fixtures';
 // Ceremony shell: #117 adds sealed card, reveal, letter, share
 import Portal from '../../layouts/Portal.astro';
 import ConsentForm from '../../components/portal/ConsentForm.astro';
@@ -6,7 +7,8 @@ import { CONSENT_VERSION } from '../../data/consent';
 import { getConsentState } from '../../lib/portal/api';
 
 export const prerender = false;
-const { data: state, error } = await getConsentState(Astro.locals.supabase, CONSENT_VERSION);
+const stub = import.meta.env.DEV ? Astro.url.searchParams.get('stub') : null;
+const { data: state, error } = stub ? { data: consentFixture(stub), error: null } : await getConsentState(Astro.locals.supabase, CONSENT_VERSION);
 if (state?.done) return Astro.redirect('/portal', 303);
 ---
 <Portal title="Welcome">
