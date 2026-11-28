@@ -1,13 +1,24 @@
 ---
 import Portal from '../../layouts/Portal.astro';
 import NextSteps from '../../components/portal/NextSteps.astro';
+import SlideDeck from '../../components/portal/slides/SlideDeck.astro';
+import Slide from '../../components/portal/slides/Slide.astro';
+import '../../components/portal/results/outcome.css';
 import { nextStepsFor } from '../../data/next-steps';
-import { portalEvent } from '../../lib/portal/api.ts';
+import { portalEvent, getMyResult } from '../../lib/portal/api.ts';
+import { OTHER_STEPS } from '../../data/next-steps-other';
 
 export const prerender = false;
 if (Astro.locals.user) await portalEvent(Astro.locals.supabase, 'next_steps_opened');
+const outcome = Astro.locals.user ? ((await getMyResult(Astro.locals.supabase).catch(() => null))?.data?.outcome ?? 'cohort') : 'cohort';
+const other = Object.hasOwn(OTHER_STEPS, outcome) ? OTHER_STEPS[outcome] : null;
 const config = nextStepsFor(Astro.url.searchParams.get('partner'));
 ---
 <Portal title="Next steps">
-  <NextSteps config={config} />
+  {other ? (
+    <SlideDeck label="Next steps">
+      {other.slides.map((s) => <Slide title={s.title} lead={s.lead} cta="Continue"><ul class="list">{s.points.map((p) => <li>{p}</li>)}</ul></Slide>)}
+      <Slide title={other.last.title} lead={other.last.lead} cta=""><div class="actions" data-steps-done><a class="btn" href="/portal">Back to your home</a><a class="btn btn-ghost" href="mailto:contact@joinvenn.org">Write to us</a></div></Slide>
+    </SlideDeck>
+  ) : <NextSteps config={config} />}
 </Portal>

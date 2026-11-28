@@ -1,24 +1,23 @@
 ---
+import '../results/outcome.css';
 import { CONTACT, viewFor } from '../../../data/portal-copy';
+import SlideDeck from '../slides/SlideDeck.astro';
+import Slide from '../slides/Slide.astro';
 import ResultState from './ResultState.astro';
 const { outcome, letter } = Astro.props as { outcome: 'network_waitlist' | 'track_waitlist'; letter: unknown };
 const v = viewFor(outcome, letter);
 ---
 {v.letter === null ? <ResultState state="empty" /> : (
-  <article class="result">
-    <h1>{v.heading}</h1>
-    <p class="letter">{v.letter}</p>
-    <p class="note">{v.note}</p>
-    <ul>{v.perks.map((p) => <li>{p}</li>)}</ul>
-    <a class="pill" href={`mailto:${CONTACT}`}>{CONTACT}</a>
-  </article>
+  <SlideDeck label="Your result">
+    <Slide title={v.heading} lead={v.note} cta="Read your letter" />
+    <Slide title="A note from the Venn team" cta="Continue"><p class="letter">{v.letter}</p></Slide>
+    <Slide title="What waiting gets you" lead="You are not out, you are next in line, and here is what that means in practice." cta="">
+      <ul class="list">{v.perks.map((p) => <li>{p}</li>)}</ul>
+      <div class="actions">
+        <a class="btn" href="/portal/next-steps">See what to do next</a>
+        <a class="btn btn-ghost" href="/portal">Back to your home</a>
+        <a class="btn btn-ghost" href={`mailto:${CONTACT}`}>Write to us</a>
+      </div>
+    </Slide>
+  </SlideDeck>
 )}
-<style>
-  .result { display: grid; gap: var(--sp-24); justify-items: start; animation: rise var(--dur-3) var(--ease) both; }
-  h1 { margin: 0; font-size: var(--fs-28); font-weight: var(--fw-800); letter-spacing: var(--track-tight); line-height: 1.15; }
-  .letter { margin: 0; white-space: pre-line; font-size: var(--fs-17); color: var(--ink); }
-  .note { margin: 0; font-size: var(--fs-15); color: var(--muted); }
-  ul { margin: 0; padding: var(--sp-16) var(--sp-24); list-style: none; display: grid; gap: var(--sp-8); width: 100%; border: 1px solid var(--line); border-radius: var(--r-20); background: var(--panel); font-size: var(--fs-15); }
-  @keyframes rise { from { opacity: 0; } }
-  @media (prefers-reduced-motion: reduce) { .result { animation: none; } }
-</style>

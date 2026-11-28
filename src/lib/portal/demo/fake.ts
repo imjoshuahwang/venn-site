@@ -18,7 +18,13 @@ const store = (): Map<string, DemoState> => (g.__vennDemo ??= new Map());
 const now = () => new Date().toISOString();
 export const newDemoId = (): string => `demo-${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`;
 
-const LETTER = (o: string) => `Dear Applicant,\n\nThank you for applying this Season. This is the demo letter for ${o}.\n\nThe Venn team`;
+const LETTERS: Record<string, string> = {
+  peer: 'Dear Maya,\n\nWe had far more applicants than seats this season, and we could not fit everyone into a cohort. We did not want you to build alone, so we matched you with one other builder whose work fits yours. Say hello when you are ready.\n\nWarmly,\nThe Venn team',
+  network_waitlist: 'Dear Maya,\n\nYour application was strong, and the Network is open to waitlisted Applicants first. You are on the list, and we will write as each Program opens. Thank you for your patience.\n\nWarmly,\nThe Venn team',
+  track_waitlist: 'Dear Maya,\n\nYou were one of our closest calls. If a Cohort seat goes unclaimed after 5 days, runners-up like you get the first look, and we will write the moment one opens.\n\nWarmly,\nThe Venn team',
+  not_this_season: 'Dear Maya,\n\nWe read your application closely, and we are sorry to say it is a no for this season. That says more about how few seats we have than about your work. We would be glad to see you apply again.\n\nWarmly,\nThe Venn team',
+};
+const LETTER = (o: string) => LETTERS[o] ?? 'Dear Applicant,\n\nThank you for applying this Season.\n\nThe Venn team';
 
 export function seedDemo(outcome: DemoOutcome, opts: { minor: boolean }, id = newDemoId()): DemoState {
   const slug: 'aws' | 'quadron' = outcome === 'cohort-quadron' ? 'quadron' : 'aws';
