@@ -66,3 +66,37 @@ for (const outcome of ['network_waitlist', 'track_waitlist', 'not_this_season', 
     await page.context().close();
   });
 }
+
+test('peer: Decline lands on the stand slide, says passed, never unlocks the intro, and sends no peer_down', async () => {
+  const { page, errors, external } = await start('peer');
+  await page.goto(`${BASE}/portal/result`);
+  await cur(page).waitFor();
+  await advance(page);
+  await cur(page).getByRole('heading', { name: /You got matched with Maya/ }).waitFor();
+  await cur(page).getByRole('button', { name: 'Decline' }).click();
+  await page.waitForTimeout(450);
+  await cur(page).getByText('You passed on this one').waitFor();
+  assert.equal(await page.getByText('Your intro is unlocked').isVisible(), false);
+  await cur(page).getByRole('link', { name: 'See what to do next' }).waitFor();
+  assert.deepEqual(errors, []);
+  assert.deepEqual(external, []);
+  await page.context().close();
+});
+
+test('cohort next steps (two steps then done) and team are slide decks', async () => {
+  const { page, errors, external } = await start('cohort-aws');
+  await page.goto(`${BASE}/portal/next-steps?partner=aws`);
+  await cur(page).waitFor();
+  await cur(page).locator('[data-next]').first().click();
+  await page.waitForTimeout(450);
+  await cur(page).locator('#ns-body').waitFor();
+  await page.evaluate(() => { window.open = () => null; });
+  await cur(page).locator('[data-send]').click();
+  await page.waitForTimeout(450);
+  await cur(page).locator('[data-tick]').first().waitFor();
+  await page.goto(`${BASE}/portal/team`);
+  await cur(page).getByRole('heading', { name: 'Your team.' }).waitFor();
+  assert.deepEqual(errors, []);
+  assert.deepEqual(external, []);
+  await page.context().close();
+});

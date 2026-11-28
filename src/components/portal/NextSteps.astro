@@ -1,116 +1,53 @@
 ---
 import type { NextStepsConfig } from '../../data/next-steps';
 import { mailtoUrl } from '../../lib/portal/gmail';
+import SlideDeck from './slides/SlideDeck.astro';
+import Slide from './slides/Slide.astro';
+import './results/outcome.css';
 interface Props { config: NextStepsConfig }
 const { config } = Astro.props;
 const draft = config.prompts.map((p) => `${p}\n\n`).join('');
 ---
-<div class="ns" data-next-steps data-subject={config.subject}>
-  <nav class="ns-bar" aria-label="Progress">
-    <p class="ns-count" data-count aria-live="polite">Step 1 of 2</p>
-    <ol>
-      {config.steps.map((s, i) => <li data-dot={i + 1}><span>{i + 1}</span>{s}</li>)}
-    </ol>
-  </nav>
-  <section class="ns-step" data-step="1" aria-labelledby="ns-h1">
+<SlideDeck label="Next steps">
+  <Slide title={config.steps[0]} cta="Next" data-step="1">
     {config.logo && <img src={config.logo} alt="" class="ns-logo" />}
-    <h1 id="ns-h1">{config.steps[0]}</h1>
-    <ul>{config.legal.map((l) => <li>{l}</li>)}</ul>
-    <div class="ns-actions"><button type="button" class="pill" data-go="2">Next</button></div>
-  </section>
-  <section class="ns-step" data-step="2" aria-labelledby="ns-h2" hidden>
-    <h2 id="ns-h2">{config.steps[1]}</h2>
-    <label class="ns-label" for="ns-body">Message to your mentor</label>
-    <textarea id="ns-body" rows="14">{draft}</textarea>
-    <div class="ns-actions">
-      <button type="button" class="ns-back" data-go="1">Back</button>
-      <button type="button" class="pill" data-send>Send</button>
+    <ul class="list">{config.legal.map((l) => <li>{l}</li>)}</ul>
+  </Slide>
+  <Slide title={config.steps[1]} cta="" data-step="2">
+    <div data-ns data-subject={config.subject}>
+      <label class="ns-label" for="ns-body">Message to your mentor</label>
+      <textarea id="ns-body" rows="10">{draft}</textarea>
     </div>
-    <p class="ns-alt">No Gmail? <a data-mailto href={mailtoUrl({ subject: config.subject, body: draft })}>Open your mail app instead</a>.</p>
-    <div class="ns-sent" data-sent hidden>
-      <p>Did your email go through?</p>
-      <button type="button" class="pill" data-sent-btn>I sent it</button>
+    <div class="actions">
+      <button type="button" class="btn" data-send data-next>Send</button>
+      <a class="ns-alt" data-mailto href={mailtoUrl({ subject: config.subject, body: draft })}>No Gmail? Open your mail app instead</a>
     </div>
-  </section>
-  <section class="ns-step ns-done" data-done tabindex="-1" aria-labelledby="ns-hd" hidden>
-    <h2 id="ns-hd">{config.done.title}</h2>
-    <p>{config.done.lead}</p>
-    <ol class="ns-ticks">
-      {config.steps.map((s) => <li data-tick>{s}</li>)}
-    </ol>
-    <ol class="ns-next">{config.done.next.map((n) => <li>{n}</li>)}</ol>
-  </section>
-</div>
+    <div class="actions" data-sent hidden>
+      <p class="ns-alt">Did your email go through?</p>
+      <button type="button" class="btn btn-ghost" data-sent-btn data-next>I sent it</button>
+    </div>
+  </Slide>
+  <Slide title={config.done.title} lead={config.done.lead} cta="" data-done>
+    <ol class="list">{config.done.next.map((n) => <li>{n}</li>)}</ol>
+    <ol class="ns-ticks">{config.steps.map((st) => <li data-tick>{st}</li>)}</ol>
+    <div class="actions"><a class="btn" href="/portal">Back to your home</a></div>
+  </Slide>
+</SlideDeck>
 <script>
   import { gmailComposeUrl, mailtoUrl } from '../../lib/portal/gmail';
-  const root = document.querySelector<HTMLElement>('[data-next-steps]')!;
-  const steps = [...root.querySelectorAll<HTMLElement>('[data-step]')];
-  const done = root.querySelector<HTMLElement>('[data-done]')!;
+  const root = document.querySelector<HTMLElement>('[data-ns]')!;
   const body = () => (root.querySelector('#ns-body') as HTMLTextAreaElement).value;
-  const dots = [...root.querySelectorAll<HTMLElement>('[data-dot]')];
-  function finish() {
-    steps.forEach((s) => { s.hidden = true; });
-    done.hidden = false;
-    dots.forEach((d) => d.setAttribute('data-on', ''));
-    root.querySelector('[data-count]')!.textContent = 'All done';
-    root.style.setProperty('--ns-p', '1');
-    if (location.hash !== '#done') location.hash = 'done';
-    done.focus();
-  }
-  function show(n: number) {
-    done.hidden = true;
-    steps.forEach((s) => { s.hidden = Number(s.dataset.step) !== n; });
-    dots.forEach((d) => d.toggleAttribute('data-on', Number(d.dataset.dot) <= n));
-    root.querySelector('[data-count]')!.textContent = `Step ${n} of ${steps.length}`;
-    root.style.setProperty('--ns-p', String(n / steps.length));
-  }
-  const fromHash = () => (location.hash === '#step-2' ? 2 : 1);
-  const sent = root.querySelector<HTMLElement>('[data-sent]')!;
-  const reveal = () => { sent.hidden = false; };
-  root.querySelectorAll<HTMLElement>('[data-go]').forEach((b) => b.addEventListener('click', () => {
-    location.hash = `step-${b.dataset.go}`;
-  }));
-  addEventListener('hashchange', () => { if (location.hash !== '#done') show(fromHash()); });
-  root.querySelector('[data-sent-btn]')!.addEventListener('click', () => { finish(); });
-  const mailto = root.querySelector<HTMLAnchorElement>('[data-mailto]')!;
-  mailto.addEventListener('click', () => { mailto.href = mailtoUrl({ subject: root.dataset.subject!, body: body() }); reveal(); });
-  show(fromHash());
-  root.querySelector('[data-send]')!.addEventListener('click', () => {
+  const sent = document.querySelector<HTMLElement>('[data-sent]')!;
+  const mailto = document.querySelector<HTMLAnchorElement>('[data-mailto]')!;
+  mailto.addEventListener('click', () => { mailto.href = mailtoUrl({ subject: root.dataset.subject!, body: body() }); sent.hidden = false; });
+  document.querySelector('[data-send]')!.addEventListener('click', () => {
     window.open(gmailComposeUrl({ subject: root.dataset.subject!, body: body() }), '_blank', 'noopener');
-    finish();
   });
 </script>
 <style>
-  .ns { display: grid; gap: var(--sp-24); width: min(960px, calc(100vw - 2 * var(--gutter))); position: relative; left: 50%; transform: translateX(-50%); }
-  .ns-bar { display: grid; gap: var(--sp-12); align-content: start; }
-  .ns-count { margin: 0; font-size: var(--fs-13); color: var(--muted); }
-  .ns-bar ol { list-style: none; margin: 0; padding: 0; display: flex; gap: var(--sp-8); }
-  .ns-bar li { flex: 1; display: flex; align-items: center; gap: var(--sp-8); padding-top: var(--sp-8); border-top: 4px solid var(--line); font-size: var(--fs-13); color: var(--muted); }
-  .ns-bar li span { display: none; }
-  .ns-bar li[data-on] { border-top-color: var(--ink); color: var(--ink); font-weight: var(--fw-600); }
-  .ns-step { display: grid; gap: var(--sp-16); align-content: start; padding: var(--sp-24); border-radius: var(--r-20); background: var(--panel); border: 1px solid var(--line); min-width: 0; }
-  .ns-step[hidden] { display: none; }
-  .ns-step h1, .ns-step h2 { margin: 0; font-size: var(--fs-22); font-weight: var(--fw-600); letter-spacing: var(--track-tight); }
-  .ns-step ul { margin: 0; padding-left: var(--sp-24); display: grid; gap: var(--sp-12); font-size: var(--fs-15); }
   .ns-logo { height: 32px; width: auto; justify-self: start; }
-  .ns-label { font-size: var(--fs-13); color: var(--muted); }
-  textarea { width: 100%; font: inherit; font-size: var(--fs-16, 16px); padding: var(--sp-12); border: 1px solid var(--line); border-radius: var(--r-12); background: var(--white); color: var(--ink); resize: vertical; }
-  .ns-actions { display: flex; gap: var(--sp-12); justify-content: flex-end; align-items: center; }
-  .ns-back { min-height: 44px; min-width: 44px; padding: 0 var(--sp-16); border: 0; background: none; font: inherit; font-size: var(--fs-15); color: var(--ink); cursor: pointer; }
-  .ns-alt, .ns-sent p, .ns-done p { margin: 0; font-size: var(--fs-15); color: var(--muted); }
-  .ns-alt a { color: var(--ink); display: inline-block; padding: 12px 0; margin: -12px 0; }
-  .ns-sent { display: flex; flex-wrap: wrap; gap: var(--sp-12); align-items: center; justify-content: space-between; }
-  .ns-sent .pill { white-space: nowrap; flex-shrink: 0; }
-  .ns-sent[hidden] { display: none; }
-  .ns-ticks, .ns-next { margin: 0; padding: 0; display: grid; gap: var(--sp-12); font-size: var(--fs-15); }
-  .ns-ticks { list-style: none; }
-  .ns-ticks li::before { content: '\2713'; margin-right: var(--sp-8); font-weight: var(--fw-600); }
-  .ns-next { list-style-position: inside; }
-  .ns-done:focus { outline: none; }
-  @media (min-width: 900px) {
-    .ns { grid-template-columns: 280px 1fr; align-items: start; }
-    .ns-bar ol { flex-direction: column; gap: var(--sp-16); }
-    .ns-bar li { border-top: 0; border-left: 4px solid var(--line); padding: var(--sp-4) 0 var(--sp-4) var(--sp-12); }
-    .ns-bar li[data-on] { border-left-color: var(--ink); }
-  }
+  .ns-label { display: block; margin-bottom: var(--sp-8); font-size: var(--fs-13); color: var(--muted); }
+  .ns-alt { margin: 0; font-size: var(--fs-15); color: var(--muted); display: inline-flex; align-items: center; min-height: 44px; }
+  .ns-ticks { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-8); font-size: var(--fs-15); color: var(--muted); }
+  .ns-ticks li::before { content: '\2713'; margin-right: var(--sp-8); font-weight: var(--fw-600); color: var(--ink); }
 </style>

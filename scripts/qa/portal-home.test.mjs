@@ -7,9 +7,10 @@ const read = (p) => fs.readFileSync(p, 'utf8');
 
 test('home has one heading and one button to the result', () => {
   const s = read('src/pages/portal/index.astro');
-  assert.equal((s.match(/<h1[ >]/g) ?? []).length, 3); // home, none and error states, never together
+  assert.equal((s.match(/<Slide[ >]/g) ?? []).length, 3); // home, none and error states are one Slide each (the deck renders its h1), never together
+  assert.equal((s.match(/<SlideDeck[ >]/g) ?? []).length, 3);
   assert.match(s, /Your results are here/);
-  assert.match(s, /<a class="pill"[^>]*href="\/portal\/result"/);
+  assert.match(s, /<a class="btn"[^>]*href="\/portal\/result"/);
   for (const gone of ['NextStep', 'TextJosh', 'data-team', 'parent-request', '<details']) assert.doesNotMatch(s, new RegExp(gone), gone);
 });
 
@@ -32,7 +33,8 @@ test('home reads go through loadHome (parallel) and vercel runs in sfo1', () => 
 
 test('none state names the email, offers a different sign-in and the contact address; error offers Try again and logs nothing', () => {
   const s = read('src/pages/portal/index.astro');
-  assert.match(s, /We could not find a result for \{email\}/);
+  assert.match(s, /We could not find a result for you\./);
+  assert.match(s, /Nothing turned up for \$\{email\}/);
   assert.match(s, /Sign in with a different email/);
   assert.match(s, /contact@joinvenn\.org/);
   assert.match(s, /data-retry/);
@@ -42,7 +44,7 @@ test('none state names the email, offers a different sign-in and the contact add
 
 test('post-reveal home: partner name as text (no logo until #241), next step link, Watch again replays without writes', () => {
   const s = read('src/pages/portal/index.astro');
-  assert.match(s, /data-cohort-name/);
+  assert.match(s, /lead=\{ceremony\.status === 'ok' && ceremony\.result\.cohortName/); // partner name is the slide lead, plain text
   assert.match(s, /href="\/portal\/next-steps"/);
   assert.match(s, /href="\/portal\?replay=1"[^>]*data-watch-again/);
   assert.doesNotMatch(s, /<img/);
