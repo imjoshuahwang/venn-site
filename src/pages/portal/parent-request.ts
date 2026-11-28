@@ -15,7 +15,7 @@ export const POST: APIRoute = async ({ locals, request, redirect }) => {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return redirect('/portal?parent=invalid', 303);
   const { data: state } = await getConsentState(locals.supabase, CONSENT_VERSION);
   if (!state?.minor) return new Response(null, { status: 403 });
-  const svc = createClient(import.meta.env.PUBLIC_SUPABASE_URL, import.meta.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+  const svc = locals.demo ? locals.supabase : createClient(import.meta.env.PUBLIC_SUPABASE_URL, import.meta.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
   const { data: token, error } = await svc.rpc('request_parent_consent', { p_user_id: locals.user.id, p_parent_email: email });
   if (error || !token) return redirect('/portal?parent=error', 303);
   let sent = false;

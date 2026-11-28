@@ -14,7 +14,7 @@ let email = '';
 if (Astro.request.method === 'POST') {
   const f = await Astro.request.formData();
   email = String(f.get('email') ?? '').trim();
-  error = (await authGuard('resend', Astro.request, { form: f, store: rpcStore(Astro.locals.supabase) })) ?? '';
+  error = (await authGuard('resend', Astro.request, { skipTurnstile: !!Astro.locals.demo, form: f, store: rpcStore(Astro.locals.supabase) })) ?? '';
   if (error) Astro.response.status = guardStatus(error);
   if (!error) {
     notice = await requestResend(email, {

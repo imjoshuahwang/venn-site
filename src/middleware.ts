@@ -12,8 +12,21 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return res;
   };
 
-  context.locals.supabase = createServerClient(context);
-  context.locals.user = await getUser(context);
+  // Dev only: a live `venn_demo` session swaps in the in-memory fake. Dead-code eliminated from every build (G4).
+  let demo = null;
+  if (import.meta.env.DEV) {
+    const m = await import('./lib/portal/demo/index.ts');
+    const id = context.cookies.get('venn_demo')?.value;
+    demo = id && m.getDemoSession(id) ? m.demoClientFor(id) : null;
+    if (demo) context.locals.demo = true;
+  }
+  if (demo) {
+    context.locals.supabase = demo as never;
+    context.locals.user = (await demo.auth.getUser()).data.user;
+  } else {
+    context.locals.supabase = createServerClient(context);
+    context.locals.user = await getUser(context);
+  }
 
   // Dev only: `?stub=` fixtures (result.astro) render without a session. import.meta.env.DEV is false in every build.
   const devStub = import.meta.env.DEV && context.url.searchParams.has('stub');

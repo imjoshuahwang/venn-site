@@ -15,7 +15,7 @@ if (Astro.request.method === 'POST') {
   const f = await Astro.request.formData();
   email = String(f.get('email') ?? '').trim();
   const target = safeRedirect(String(f.get('next') ?? next));
-  error = (await authGuard('login', Astro.request, { form: f, store: rpcStore(Astro.locals.supabase) })) ?? '';
+  error = (await authGuard('login', Astro.request, { skipTurnstile: !!Astro.locals.demo, form: f, store: rpcStore(Astro.locals.supabase) })) ?? '';
   if (error) Astro.response.status = guardStatus(error);
   if (!error) {
     const { error: e } = await Astro.locals.supabase.auth.signInWithPassword({ email, password: String(f.get('password') ?? '') });

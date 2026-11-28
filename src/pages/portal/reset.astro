@@ -14,7 +14,7 @@ let notice = '';
 if (Astro.request.method === 'POST') {
   const f = await Astro.request.formData();
   const email = String(f.get('email') ?? '').trim().toLowerCase();
-  error = (await authGuard('reset', Astro.request, { form: f, store: rpcStore(Astro.locals.supabase) })) ?? '';
+  error = (await authGuard('reset', Astro.request, { skipTurnstile: !!Astro.locals.demo, form: f, store: rpcStore(Astro.locals.supabase) })) ?? '';
   if (error) Astro.response.status = guardStatus(error);
   if (!error) {
     if (RESET_ALLOWED.includes(email)) {

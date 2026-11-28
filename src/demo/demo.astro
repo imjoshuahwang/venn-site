@@ -1,0 +1,30 @@
+---
+// Dev-only demo entry (#318). Injected by astro.config only for `astro dev`; absent from every build.
+import { OUTCOMES, newDemoId, createDemoSession } from '../lib/portal/demo/index.ts';
+export const prerender = false;
+
+const labels: Record<string, string> = {
+  'cohort-aws': 'AWS cohort', 'cohort-quadron': 'Quadron cohort', 'cohort-both': 'AWS + Quadron', peer: 'Peer match',
+  network_waitlist: 'Network waitlist', track_waitlist: 'Track waitlist', not_this_season: 'Not this season',
+};
+if (Astro.request.method === 'POST') {
+  const f = await Astro.request.formData();
+  const outcome = String(f.get('outcome'));
+  if (!(OUTCOMES as readonly string[]).includes(outcome)) return new Response('bad outcome', { status: 400 });
+  const id = newDemoId();
+  createDemoSession(id, outcome as (typeof OUTCOMES)[number], { minor: f.get('age') === 'minor' });
+  Astro.cookies.set('venn_demo', id, { path: '/', httpOnly: true, sameSite: 'lax' });
+  return Astro.redirect('/portal/set-password', 303);
+}
+---
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Demo</title>
+<style>body{font:16px system-ui;margin:0;padding:24px 16px;max-width:420px}form{display:grid;gap:12px}button{font:inherit;padding:14px;border-radius:10px;border:1px solid #111;background:#fff}fieldset{border:0;padding:0;display:flex;gap:16px}</style></head>
+<body>
+<h1>Demo</h1>
+<form method="post">
+  <fieldset><label><input type="radio" name="age" value="adult" checked> 18+</label><label><input type="radio" name="age" value="minor"> Minor</label></fieldset>
+  {OUTCOMES.map((o) => <button type="submit" name="outcome" value={o}>{labels[o]}</button>)}
+</form>
+</body></html>
