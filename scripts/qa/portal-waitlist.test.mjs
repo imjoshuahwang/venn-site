@@ -63,7 +63,7 @@ test('real /portal renders results via the adapter', () => {
 });
 
 // Beauty bar: sizes, spacing, motion only from portal.css tokens.
-const css = read('src/styles/portal.css');
+const css = read('src/styles/base.css');
 const FS = [13, 15, 17, 22, 28, 40, 56];
 const SP = [4, 8, 12, 16, 24, 32, 48, 64];
 

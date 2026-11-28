@@ -1,6 +1,9 @@
 ---
 import Base from '../../layouts/Base.astro';
-import AuthForm from '../../components/portal/AuthForm.astro';
+import SlideDeck from '../../components/portal/slides/SlideDeck.astro';
+import Slide from '../../components/portal/slides/Slide.astro';
+import AuthBits from '../../components/portal/AuthBits.astro';
+import { TURNSTILE_TEST } from '../../lib/portal/turnstile-test-keys.ts';
 import { rpcStore } from '../../lib/portal/ratelimit';
 import { authGuard, guardStatus } from '../../scripts/portal/auth-errors';
 
@@ -9,6 +12,7 @@ export const prerender = false;
 const RESET_ALLOWED = ['contact+portal-t1@joinvenn.org'];
 const expired = Astro.url.searchParams.get('expired') === '1';
 let error = '';
+const siteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || (import.meta.env.DEV ? TURNSTILE_TEST.siteKey : '');
 let notice = '';
 
 if (Astro.request.method === 'POST') {
@@ -26,8 +30,21 @@ if (Astro.request.method === 'POST') {
 }
 ---
 <Base title="Reset password | Venn" description="Reset your Venn portal password." bare noindex>
-  <AuthForm turnstile title={expired ? 'That link has expired' : 'Reset your password'}
-    lede={expired ? 'Links work once and only for a short while. Enter your email and we will send a new one.' : 'Enter your email and we will send you a link.'}
-    fields={notice ? [] : ['email']} submit="Send link" error={error} notice={notice}
-    links={[{ href: '/portal/login', label: 'Back to sign in' }]} />
+  {notice ? (
+    <SlideDeck label="Reset your password">
+      <Slide title="Check your inbox." lead={notice} cta="">
+        <a slot="more" href="/portal/login">Back to sign in</a>
+      </Slide>
+    </SlideDeck>
+  ) : (
+    <SlideDeck action={Astro.url.pathname + Astro.url.search} label="Reset your password">
+      <Slide title={expired ? 'That link expired.' : 'Forgot your password?'} lead={expired ? 'They only work once. Pop your email in for a fresh one.' : 'No stress. What email did you sign up with?'} cta="Send link" error={error}>
+        <input name="email" type="email" aria-label="email" autocomplete="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go" maxlength="320" placeholder="you@school.edu" required />
+        {siteKey && <div class="cf-turnstile" data-sitekey={siteKey} data-appearance="interaction-only"></div>}
+        <a slot="more" href="/portal/login">Back to sign in</a>
+      </Slide>
+    </SlideDeck>
+  )}
+  <AuthBits />
+  {siteKey && <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>}
 </Base>

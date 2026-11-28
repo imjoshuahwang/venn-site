@@ -35,7 +35,7 @@ test('header rules keep their sources and header names', () => {
   ]);
 });
 test('portal layout drops pill transition under reduced motion', () => {
-  const css = readFileSync(new URL('../../src/layouts/Portal.astro', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../../src/styles/base.css', import.meta.url), 'utf8');
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)\s*\{[^}]*\.pill\s*\{\s*transition:\s*none/);
 });
 

@@ -1,0 +1,18 @@
+---
+export const prerender = false;
+import Portal from '../../../layouts/Portal.astro';
+import SlideDeck from '../../../components/portal/slides/SlideDeck.astro';
+import Slide from '../../../components/portal/slides/Slide.astro';
+if (!import.meta.env.DEV) return new Response(null, { status: 404 });
+---
+<Portal title="Sample deck" dataLine={false}>
+  <SlideDeck label="Sample deck">
+    <Slide title="What should we call you?" lead="First name is plenty."><input name="name" aria-label="name" autocomplete="given-name" placeholder="Your name" required /></Slide>
+    <Slide title="Where can we reach you?"><input name="email" type="email" aria-label="email" autocomplete="email" placeholder="you@school.edu" required /></Slide>
+    <Slide title="You are in." lead="That is the whole deck." cta="Finish"></Slide>
+  </SlideDeck>
+</Portal>
+<script>
+  const deck = document.querySelector('[data-deck]');
+  deck?.addEventListener('deck:finish', (e) => { e.preventDefault(); deck.setAttribute('data-done', '1'); });
+</script>

@@ -1,4 +1,5 @@
 ---
+import '../styles/base.css';
 import '../styles/portal.css';
 import Icons from '../components/Icons.astro';
 const { title = 'Portal', dataLine = true } = Astro.props;
@@ -46,10 +47,5 @@ const email = user?.email ?? 'Account';
   .blobs .g { background: var(--green); top: -30vmax; left: -25vmax; }
   .blobs .b { background: var(--blue); bottom: -35vmax; right: -30vmax; }
   a:focus-visible, button:focus-visible { outline: 3px solid var(--ink); outline-offset: var(--sp-4); }
-  .pill { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; padding: var(--sp-12) var(--sp-24); border-radius: var(--r-pill); background: var(--ink); color: var(--white); font-size: var(--fs-15); font-weight: var(--fw-600); text-decoration: none; transition: opacity var(--dur-1) var(--ease); }
   button, input, select, textarea { font-family: inherit; }
-  .pill.ghost { background: var(--white); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
-  button.pill { border: 0; cursor: pointer; }
-  .pill:hover { opacity: 0.85; }
-  @media (prefers-reduced-motion: reduce) { .pill { transition: none; } }
 </style>

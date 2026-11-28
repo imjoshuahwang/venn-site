@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { checkTokens, contrast } from '../../src/lib/portal/tokens.mjs';
 
 const root = new URL('../../', import.meta.url);
-const css = readFileSync(new URL('src/styles/portal.css', root), 'utf8');
+const css = readFileSync(new URL('src/styles/base.css', root), 'utf8');
 const files = [
   'src/styles/portal.css',
   'src/layouts/Portal.astro',

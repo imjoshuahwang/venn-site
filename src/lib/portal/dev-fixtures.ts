@@ -24,6 +24,7 @@ export const EMAILS = ['results-ready', 'results-not-this-season', 'invite', 'ma
 const cb = '/portal/auth/callback?token_hash=fixturetoken1234';
 // The index: one label per screen state. Every href must resolve to a route (dev-gallery.test.ts).
 export const GALLERY: [string, string][] = [
+  ['Slide deck sample', '/portal/dev/deck'],
   ['Sign in', '/portal/login'], ['Sign in error', '/portal/login?stub=error'],
   ['Reset password', '/portal/reset'], ['Reset link expired', '/portal/reset?expired=1'],
   ['Resend link', '/portal/resend'], ['Link expired', '/portal/resend?expired=1'],

@@ -1,0 +1,50 @@
+---
+// Props: title, lead, cta (empty hides the button), ghost, error (server message shown on arrival). Slot `more` = links under the button.
+// One full-bleed screen of a SlideDeck. Children (inputs, copy) go in the default slot; the Continue button is added here.
+const { title, lead = '', cta = 'Continue', ghost = false, error = '' } = Astro.props;
+---
+<section class="slide" data-slide aria-label={title}>
+  <div class="inner">
+    <h1 style="--i:0">{title}</h1>
+    {lead && <p class="lead" style="--i:1">{lead}</p>}
+    <div class="body" style="--i:2"><slot /></div>
+    <p class="err" role="alert" aria-live="polite" data-err style="--i:3">{error}</p>
+    {cta && <button type="button" class:list={['btn', { 'btn-ghost': ghost }]} data-next style="--i:3">{cta}</button>}
+    <div class="more" style="--i:4"><slot name="more" /></div>
+  </div>
+</section>
+<style is:global>
+  .deck .more:empty { display: none; }
+  .deck .more a, .deck .more button.link { display: inline-flex; align-items: center; min-height: 44px; font: inherit; font-size: var(--fs-17); font-weight: 600; color: var(--muted); background: none; border: 0; padding: 0; cursor: pointer; text-underline-offset: 3px; }
+  .deck .more a:hover { color: var(--ink); }
+  .deck .pw { position: relative; }
+  .deck .pw input { padding-right: 72px; }
+  .deck .pw .show { position: absolute; right: 0; top: 0; min-width: 64px; min-height: 100%; background: none; border: 0; font: inherit; font-size: var(--fs-17); font-weight: 600; color: var(--muted); cursor: pointer; }
+  .deck .slide {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    padding: var(--sp-64) max(var(--sp-24), env(safe-area-inset-right)) var(--sp-48) max(var(--sp-24), env(safe-area-inset-left));
+    opacity: 0; visibility: hidden; transform: translate3d(0, 28px, 0);
+    transition: opacity var(--dur-slide) var(--ease), transform var(--dur-slide) var(--ease-spring), visibility 0s linear var(--dur-slide);
+  }
+  .deck .slide[data-pos="before"] { transform: translate3d(0, -28px, 0); }
+  .deck .slide[data-pos="current"], .deck:not([data-ready]) .slide:first-of-type { opacity: 1; visibility: visible; transform: none; transition-delay: 0s; }
+  .deck .inner { width: 100%; max-width: 440px; display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-16); }
+  .deck .inner > * { opacity: 0; transform: translate3d(0, 14px, 0); transition: opacity var(--dur-slide) var(--ease), transform var(--dur-slide) var(--ease-spring); }
+  .deck .slide[data-pos="current"] .inner > *, .deck:not([data-ready]) .slide:first-of-type .inner > * {
+    opacity: 1; transform: none; transition-delay: calc(var(--i, 0) * var(--dur-stagger));
+  }
+  .deck h1 { margin: 0; font-size: var(--fs-40); font-weight: var(--fw-800); letter-spacing: var(--track-tight); line-height: 1.08; color: var(--ink); }
+  .deck .lead { margin: 0; font-size: var(--fs-17); color: var(--muted); }
+  .deck .body { width: 100%; display: flex; flex-direction: column; gap: var(--sp-16); }
+  .deck .body input, .deck .body select, .deck .body textarea {
+    width: 100%; font: inherit; font-size: var(--fs-22); color: var(--ink); background: transparent; border: 0; border-radius: 0;
+    border-bottom: 1px solid var(--line); padding: var(--sp-12) 0; min-height: 44px; outline: none;
+    transition: border-color var(--dur-2) var(--ease);
+  }
+  .deck .body input:focus, .deck .body textarea:focus { border-bottom-color: var(--ink); }
+  .deck .body input::placeholder { color: var(--faint); }
+  .deck .err { margin: 0; min-height: 1.5em; font-size: var(--fs-15); color: var(--err); }
+  @media (prefers-reduced-motion: reduce) {
+    .deck .slide, .deck .inner > * { transition: opacity 1ms linear; transform: none !important; transition-delay: 0s !important; }
+  }
+</style>

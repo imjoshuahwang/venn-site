@@ -1,0 +1,19 @@
+---
+// Behaviour shared by the auth decks: Show/Hide on password fields, and the last email typed (this device only) prefilled.
+---
+<script>
+  const KEY = 'venn_last_email';
+  const email = document.querySelector<HTMLInputElement>('.deck input[name=email]');
+  try { const saved = localStorage.getItem(KEY); if (email && !email.value && saved) email.value = saved; } catch { /* storage blocked */ }
+  document.querySelector('.deck')?.addEventListener('submit', () => {
+    try { const v = email?.value.trim(); if (v) localStorage.setItem(KEY, v); } catch { /* storage blocked */ }
+  });
+  document.querySelectorAll<HTMLButtonElement>('[data-show]').forEach((b) => b.addEventListener('click', () => {
+    const i = b.parentElement?.querySelector('input');
+    if (!i) return;
+    const on = i.type === 'password';
+    i.type = on ? 'text' : 'password';
+    b.textContent = on ? 'Hide' : 'Show';
+    b.setAttribute('aria-pressed', String(on));
+  }));
+</script>

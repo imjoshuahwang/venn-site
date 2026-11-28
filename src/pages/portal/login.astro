@@ -1,7 +1,10 @@
 ---
 import { devError } from '../../lib/portal/dev-fixtures';
 import Base from '../../layouts/Base.astro';
-import AuthForm from '../../components/portal/AuthForm.astro';
+import SlideDeck from '../../components/portal/slides/SlideDeck.astro';
+import Slide from '../../components/portal/slides/Slide.astro';
+import AuthBits from '../../components/portal/AuthBits.astro';
+import { TURNSTILE_TEST } from '../../lib/portal/turnstile-test-keys.ts';
 import { rpcStore } from '../../lib/portal/ratelimit';
 import { authGuard, guardStatus, authMessage, safeRedirect } from '../../scripts/portal/auth-errors';
 
@@ -9,6 +12,7 @@ export const prerender = false;
 const next = safeRedirect(Astro.url.searchParams.get('next'));
 let error = import.meta.env.DEV ? devError(Astro.url.searchParams.get('stub')) : '';
 let email = '';
+const siteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || (import.meta.env.DEV ? TURNSTILE_TEST.siteKey : '');
 if (Astro.locals.user && Astro.request.method === 'GET') return Astro.redirect(next, 303);
 
 if (Astro.request.method === 'POST') {
@@ -25,6 +29,17 @@ if (Astro.request.method === 'POST') {
 }
 ---
 <Base title="Sign in | Venn" description="Sign in to your Venn portal." bare noindex>
-  <AuthForm turnstile title="Sign in" fields={['email', 'current-password']} submit="Sign in" error={error} next={next === '/portal' ? '' : next} email={email}
-    links={[{ href: '/portal/reset', label: 'Forgot your password?' }]} />
+  <SlideDeck action={Astro.url.pathname + Astro.url.search} label="Sign in" start={error ? 1 : 0}>
+    {next !== '/portal' && <input type="hidden" name="next" value={next} />}
+    <Slide title="Welcome back." lead="What email did you sign up with?">
+      <input name="email" type="email" aria-label="email" autocomplete="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="next" maxlength="320" placeholder="you@school.edu" value={email} required />
+    </Slide>
+    <Slide title="And your password?" cta="Sign in" error={error}>
+      <input name="password" type="password" aria-label="password" autocomplete="current-password" enterkeyhint="go" maxlength="200" placeholder="Password" required />
+      {siteKey && <div class="cf-turnstile" data-sitekey={siteKey} data-appearance="interaction-only"></div>}
+      <a slot="more" href="/portal/reset">Forgot it?</a>
+    </Slide>
+  </SlideDeck>
+  <AuthBits />
+  {siteKey && <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>}
 </Base>
