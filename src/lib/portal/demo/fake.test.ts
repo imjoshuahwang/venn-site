@@ -4,7 +4,7 @@ import { seedDemo, createDemoSession, demoClientFor, getDemoSession, OUTCOMES, n
 
 const sb = (id: string) => demoClientFor(id) as any;
 
-test('seedDemo builds all seven outcomes, cohort fixtures carry seat_cap 20', () => {
+test('seedDemo builds all seven outcomes, cohort fixtures carry seat_cap 10 (AWS) or 20 (Quadron)', () => {
   assert.deepEqual([...OUTCOMES], ['cohort-aws', 'cohort-quadron', 'cohort-both', 'peer', 'network_waitlist', 'track_waitlist', 'not_this_season']);
   for (const o of OUTCOMES) {
     const s = seedDemo(o, { minor: false });
