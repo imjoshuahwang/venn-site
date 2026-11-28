@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { lettersFor } from './reveal-letters.ts';
+import { lettersFor, DAN_EMAIL } from './reveal-letters.ts';
 import { SHARE_TEXT, intentUrl, cohortLine, SIZES } from '../lib/portal/letter-share.ts';
 
 const text = (slug: string, seatCap?: number | null) => lettersFor(slug, { seatCap })!.flatMap((s) => [s.title, s.lead ?? '', ...s.paragraphs, ...(s.list ?? []).map((x) => x.head + ' ' + x.text)]).join('\n');
@@ -37,4 +37,10 @@ test('dual card names both cohorts; sizes match the contract', () => {
   assert.equal(cohortLine(['AWS', 'Quadron']), 'AWS and Quadron');
   assert.equal(cohortLine(['AWS']), 'AWS');
   assert.deepEqual(SIZES, { square: { w: 1200, h: 1200 }, wide: { w: 1200, h: 627 } });
+});
+
+test('Email Dan falls back to the example.com placeholder when no env var is set', () => {
+  assert.equal(DAN_EMAIL, 'dan@example.com');
+  const a = lettersFor('quadron', { seatCap: 20 })!.find((s) => s.action?.label === 'Email Dan')!.action!;
+  assert.ok(a.href.startsWith('mailto:dan@example.com?'));
 });

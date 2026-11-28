@@ -4,8 +4,9 @@ export type LetterSlide = { title: string; lead?: string; paragraphs: string[]; 
 export type LetterCtx = { seatCap?: number | null };
 
 export const VENN_CONTACT = 'contact@joinvenn.org';
-/** Placeholder until Dan's address is in the facts doc (#322). Never shown as text; only the Email Dan action points at it. */
-export const DAN_EMAIL = 'dan@example.com';
+/** Read from PUBLIC_QUADRON_CONTACT_EMAIL so no real address lives in this public repo (#322). Never shown as text; only the Email Dan action points at it. */
+export const DAN_EMAIL_FALLBACK = 'dan@example.com';
+export const DAN_EMAIL: string = (import.meta as { env?: Record<string, string | undefined> }).env?.PUBLIC_QUADRON_CONTACT_EMAIL || DAN_EMAIL_FALLBACK;
 
 const NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
 const count = (n: number) => NUMBER_WORDS[n] ?? String(n);
