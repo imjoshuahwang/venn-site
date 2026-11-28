@@ -4,6 +4,7 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import * as pw from 'playwright';
+import { localServerEnv } from '../scripts/qa/portal.mjs';
 import { stopServer } from '../scripts/qa/dev-server.mjs';
 
 const BASE = 'http://127.0.0.1:8030';
@@ -15,7 +16,7 @@ const CASES = [
 
 before(async () => {
   const env = { ...process.env }; for (const k of Object.keys(env)) if (/SUPABASE|TURNSTILE|RESEND/.test(k)) delete env[k];
-  server = spawn('npx', ['astro', 'dev', '--host', '127.0.0.1', '--port', '8030'], { env, stdio: 'ignore', detached: true });
+  server = spawn('npx', ['astro', 'dev', '--host', '127.0.0.1', '--port', '8030'], { env: localServerEnv('http://127.0.0.1:1', 'x', {}, env), stdio: 'ignore', detached: true });
   for (let i = 0; i < 120; i++) {
     if (await fetch(`${BASE}/demo`).then((r) => r.ok, () => false)) break;
     await new Promise((r) => setTimeout(r, 500));
