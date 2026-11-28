@@ -32,7 +32,7 @@ export const GALLERY: [string, string][] = [
   ['Set password', '/portal/set-password?stub=1'], ['Set password error', '/portal/set-password?stub=error'],
   ['Onboarding name', '/portal/onboarding/profile?stub=1'], ['Onboarding name error', '/portal/onboarding/profile?stub=error'],
   ['Onboarding contact', '/portal/onboarding/contact?stub=1'], ['Onboarding contact error', '/portal/onboarding/contact?stub=error'],
-  ['Onboarding MOU', '/portal/onboarding/mou?stub=1'],
+  ['Onboarding MOU', '/portal/mou/minor?stub=1'],
   ['Minor MOU: student signs', '/portal/mou/minor?stub=minor'], ['Minor MOU: parent signs', '/portal/mou/minor?stub=parent'], ['Minor MOU: confirm', '/portal/mou/minor?stub=confirm'],
   ['Parent co-sign', '/portal/dev/parent?state=ok'], ['Parent co-sign used', '/portal/dev/parent?state=used'], ['Parent co-sign expired', '/portal/dev/parent?state=expired'],
   ['Consent', '/portal/consent?stub=adult'], ['Consent under 18', '/portal/consent?stub=minor'], ['Ceremony consent', '/portal/ceremony?stub=adult'],
