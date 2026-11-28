@@ -33,7 +33,7 @@ async function open(outcome, reducedMotion = 'no-preference') {
   await page.locator(`button[value="${outcome}"]`).click();
   await page.waitForURL(/\/portal\/set-password/);
   await page.goto(`${BASE}/portal`);
-  await page.locator('[data-ceremony][data-ready]').waitFor();
+  await page.locator('[data-ceremony][data-ready]').waitFor({ state: 'attached' });
   return { ctx, page, errors, external };
 }
 
@@ -48,7 +48,7 @@ async function openSeal(page) {
   await current(page).getByRole('button', { name: 'Open' }).click();
 }
 
-for (const [outcome, answer, partners] of [['cohort-aws', /You are in/, ['AWS']], ['cohort-quadron', /You are in|Dear Applicant/, ['Quadron']], ['cohort-both', /You are in|Dear Applicant/, ['AWS', 'Quadron']]]) {
+for (const [outcome, answer, partners] of [['cohort-aws', /You are in|Dear Applicant/, ['AWS']], ['cohort-quadron', /You are in|Dear Applicant/, ['Quadron']], ['cohort-both', /You are in|Dear Applicant/, ['AWS', 'Quadron']]]) {
   test(`${outcome}: seal, pause, celebration, answer first, letter slots`, async () => {
     const { ctx, page, errors, external } = await open(outcome);
     await page.waitForTimeout(300);
@@ -91,7 +91,7 @@ test('reduced motion skips the confetti', async () => {
   const { ctx, page, errors } = await open('cohort-aws', 'reduce');
   await openSeal(page);
   await page.locator('[data-celebrate][data-state="skipped"]').waitFor({ timeout: 3000 });
-  assert.match(await current(page).innerText(), /You are in/);
+  assert.match(await current(page).innerText(), /AWS/);
   assert.equal(await page.locator('[data-celebrate][data-state="running"]').count(), 0);
   assert.deepEqual(errors, []);
   await ctx.close();

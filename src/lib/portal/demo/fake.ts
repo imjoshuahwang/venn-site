@@ -39,7 +39,7 @@ export function seedDemo(outcome: DemoOutcome, opts: { minor: boolean; onboarded
     id, user: { id: `demo-user-${id}`, email: 'demo@example.com' }, minor: opts.minor, season: 'fall-2026', result, cohort, mou: null, guiding: [],
     team: [], nextMember: 1, peer: { match_id: 1, i_am_down: false, they_are_down: false },
     onboarding: { started: !!opts.onboarded, profile_done: !!opts.onboarded, contact_done: !!opts.onboarded, mou_done: !!opts.onboarded, name: 'Maya Okafor', org: 'Lincoln High Robotics' },
-    consent: { done: false, answers: {} }, minorMou: { minor_signed: false, parent_signed: false, parent_link_signed: false, parent_name: null, confirmed: false },
+    consent: { done: !!opts.onboarded, answers: {} }, minorMou: { minor_signed: false, parent_signed: false, parent_link_signed: false, parent_name: null, confirmed: false },
     phoneCode: null, parentTokens: new Map(), events: new Set(),
   };
 }
